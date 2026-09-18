@@ -10,7 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import hr from '../../services/hr';
+import hr from '../../services/hr.service';
 import AuthLayout from '../../components/AuthLayout';
 import StatusBadge from '../../components/StatusBadge';
 

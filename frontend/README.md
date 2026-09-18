@@ -1,16 +1,45 @@
-# React + Vite
+# Vardhan — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The React + Vite + Material UI dashboard for Vardhan's hospital management platform. See the [root README](../README.md) for the full project overview, setup, and role flows.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19
+- Vite (build) + Oxlint (lint)
+- Material UI 9 (`@mui/material`, `@mui/icons-material`)
+- React Router DOM 7
+- Axios
+- `@fontsource/roboto` (self-hosted Roboto 400/500/700)
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run dev      # start the Vite dev server
+npm run build    # production build
+npm run lint     # oxlint
+npm run preview  # preview the production build
+```
 
-## Expanding the Oxlint configuration
+## Structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+- `src/components/` — app shell (`AppLayout`, `Navbar`, `Sidebar`) and shared UI primitives (`DataTable`, `StatCard`, `SectionCard`, `InfoRow`, `StatusBadge`, `Modal`, `ConfirmDialog`, `Loading`, etc.)
+- `src/pages/` — grouped by role: `auth/` (login, register, password flows, landing, HR invite), `admin/` (`AdminDashboard`, `Hospital`, `Departments`, `DepartmentDetails`), `hr/` (`HRDashboard`, `HRProfile`, `MyHospital`, `MyDepartment`), `super-admin/` (dashboard + hospitals views), `shared/` (`Profile`); page-scoped create/edit/invite modals are inlined in their pages
+- `src/routes/index.jsx` — data-driven route array with role guards and role-aware redirects
+- `src/services/` — feature API wrappers over the shared axios client in `api/client.js` (token injection + 401 handling in `api/interceptors.js`)
+- `src/theme/theme.js` — the monochrome design system (radii, spacing, typography, component overrides)
+
+## Design system highlights
+
+- Monochrome palette: black actions, white surfaces, light-gray borders and canvas
+- Explicit pixel corner radii (8px controls, 12px cards, 14px dialogs) — no numeric-radius multiplier surprises
+- Roboto typography with a strict hierarchy (28–32px titles, 18px sections, 13–15px body)
+- Shared `InfoRow` for consistent label/value rows; `DataTable` collapses to cards on mobile
+- Single `Loading` spinner component for every async state; skeletons were removed
+
+## Environment
+
+```env
+VITE_API_URL=http://localhost:3000/api
+```
+
+Defaults to `http://localhost:3000/api` if unset.

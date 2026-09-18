@@ -10,7 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import auth from '../../services/auth';
+import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
 
 const ForgotPassword = () => {

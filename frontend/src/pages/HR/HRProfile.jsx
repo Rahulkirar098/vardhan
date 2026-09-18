@@ -1,8 +1,8 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Alert, Box, Button, Stack } from '@mui/material';
 import { ArrowBackRounded } from '@mui/icons-material';
-import hrService from '../../services/hr';
-import auth from '../../services/auth';
+import hrService from '../../services/hr.service';
+import auth from '../../services/auth.service';
 import { useEffect, useState } from 'react';
 import PageHeader from '../../components/PageHeader';
 import SectionCard from '../../components/SectionCard';

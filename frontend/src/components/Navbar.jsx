@@ -2,7 +2,7 @@ import { AppBar, Box, IconButton, Stack, Toolbar, Typography } from '@mui/materi
 import { MenuRounded } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import InitialsAvatar from './InitialsAvatar';
-import { getRoleDisplayName } from './Sidebar/sidebar.config';
+import { getRoleDisplayName } from './sidebar.config';
 
 export const NAVBAR_HEIGHT = 64;
 

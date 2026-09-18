@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { ArrowBackRounded, EditRounded, GroupAddRounded, SwapVertRounded } from '@mui/icons-material';
-import departmentService from '../../services/department';
-import hrService from '../../services/hr';
-import auth from '../../services/auth';
+import departmentService from '../../services/department.service';
+import hrService from '../../services/hr.service';
+import auth from '../../services/auth.service';
 import PageHeader from '../../components/PageHeader';
 import SectionCard from '../../components/SectionCard';
 import StatCard from '../../components/StatCard';
@@ -15,8 +15,7 @@ import DataTable from '../../components/DataTable';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import ErrorState from '../../components/ErrorState';
 import AppLayout from '../../components/AppLayout';
-import EditDepartmentModal from './components/EditDepartmentModal';
-import InviteHRModal from './components/InviteHRModal';
+import Modal from '../../components/Modal';
 
 const formatStatus = (status) => {
   if (!status) return 'Active';
@@ -26,6 +25,168 @@ const formatStatus = (status) => {
 const formatDate = (dateString) => {
   if (!dateString) return '—';
   return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const EditDepartmentModal = ({ open, onClose, onSuccess, department, resetKey = 0 }) => {
+  const [form, setForm] = useState({ name: '', code: '', description: '', status: 'active' });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open && department) {
+      setForm({
+        name: department.name || '',
+        code: department.code || '',
+        description: department.description || '',
+        status: department.status || 'active',
+      });
+      setError('');
+    }
+  }, [open, department, resetKey]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+
+    if (!form.name.trim() || !form.code.trim()) {
+      setError('Department name and code are required.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await departmentService.update(department._id, {
+        name: form.name.trim(),
+        code: form.code.trim(),
+        description: form.description.trim(),
+        status: form.status,
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Unable to update department.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Edit Department"
+      description="Update the details of this department."
+      submitLabel="Update"
+      submittingLabel="Updating..."
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      error={error}
+      resetKey={resetKey}
+      maxWidth="sm"
+    >
+      <Stack spacing={2.5} sx={{ pt: 0.5 }}>
+        <TextField label="Department Name" name="name" value={form.name} onChange={handleChange} required />
+        <TextField label="Department Code" name="code" value={form.code} onChange={handleChange} required />
+        <TextField
+          label="Description"
+          name="description"
+          value={form.description}
+          onChange={handleChange}
+          multiline
+          minRows={3}
+        />
+        <FormControl>
+          <InputLabel>Status</InputLabel>
+          <Select name="status" value={form.status} label="Status" onChange={handleChange}>
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="inactive">Inactive</MenuItem>
+          </Select>
+        </FormControl>
+      </Stack>
+    </Modal>
+  );
+};
+
+const inviteInitialForm = {
+  name: '',
+  email: '',
+  phone: '',
+};
+
+const InviteHRModal = ({ open, onClose, onSuccess, department, resetKey = 0 }) => {
+  const [form, setForm] = useState(inviteInitialForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setForm(inviteInitialForm);
+      setSubmitting(false);
+      setError('');
+      setServerError('');
+    }
+  }, [open, resetKey]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setServerError('');
+
+    if (!form.name.trim() || !form.email.trim()) {
+      setError('HR name and email are required.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await departmentService.inviteHr(department._id, {
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
+      });
+      onSuccess();
+    } catch (err) {
+      setServerError(err?.response?.data?.message || 'Unable to send invitation.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Invite HR"
+      description="Invite a member to join the HR team."
+      submitLabel="Send Invitation"
+      submittingLabel="Sending Invitation..."
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      error={serverError}
+      resetKey={resetKey}
+      maxWidth="sm"
+    >
+      <Box sx={{ pt: 1 }}>
+        <Stack spacing={2.5}>
+          <TextField label="Department" value={department?.name || ''} disabled fullWidth />
+          {error && <Alert severity="error">{error}</Alert>}
+          <TextField label="HR Name" name="name" value={form.name} onChange={handleChange} required />
+          <TextField label="Email" type="email" name="email" value={form.email} onChange={handleChange} required />
+          <TextField label="Phone" name="phone" value={form.phone} onChange={handleChange} />
+        </Stack>
+      </Box>
+    </Modal>
+  );
 };
 
 const DepartmentDetails = () => {

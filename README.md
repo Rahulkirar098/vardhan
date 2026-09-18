@@ -7,7 +7,7 @@ A full-stack hospital management system built with Node.js, Express, MongoDB, Re
   <img src="https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white" alt="Express 5" />
   <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white" alt="MongoDB" />
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React 19" />
-  <img src="https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/MUI-9.x-007FFF?logo=mui&logoColor=white" alt="MUI" />
 </p>
 
@@ -60,6 +60,7 @@ The platform enforces controlled ownership and access rules:
 - Invite HR personnel
 - Resend and cancel pending invitations
 - View and manage hospital HR records
+- Activate or deactivate departments
 - Navigate a role-aware dashboard shell
 
 ### HR management
@@ -80,12 +81,13 @@ The platform enforces controlled ownership and access rules:
 
 ### User experience
 
-- Responsive dashboard layout
-- Shared sidebar navigation by role
-- Reusable app shell and layout system
-- Premium black-and-white design system
+- Responsive dashboard layout with a 250px sidebar and 64px navbar
+- Reusable app shell and role-based navigation config
+- Premium black-and-white design system with Roboto typography
+- Compact, shared UI primitives (DataTable, StatCard, SectionCard, InfoRow, StatusBadge)
+- Shared Modal and ConfirmDialog for every create/edit/delete action
+- Consistent single Loading component for all async states (no per-page skeletons)
 - Show/hide password UX in auth forms
-- Skeleton/loading states for role-driven session screens
 
 ---
 
@@ -111,14 +113,16 @@ The platform enforces controlled ownership and access rules:
 - Material UI
 - React Router DOM
 - Axios
+- @fontsource/roboto
 
 ### Design system
 
 - Custom MUI theme
 - Minimal monochrome palette
-- Rounded cards and surfaces
-- Consistent dashboard components
-- Clean and modern admin UI
+- Controlled border radius system (8px controls, 12px cards, 14px dialogs)
+- Flat surfaces with subtle borders and near-flat shadows
+- Shared information-row layout across all pages
+- Responsive DataTable that collapses to cards on mobile
 
 ---
 
@@ -136,32 +140,27 @@ vardhan/
 │       │   ├── department.controller.js
 │       │   ├── hospital.controller.js
 │       │   ├── hr.controller.js
-│       │   ├── hrInvitation.controller.js
-│       │   ├── index.js
-│       │   └── superAdmin.controller.js
+│       │   ├── superAdmin.controller.js
 │       ├── middleware/
 │       │   ├── auth.middleware.js
-│       │   ├── index.js
 │       │   └── role.middleware.js
+│       ├── models/
+│       │   ├── department.model.js
+│       │   ├── hospital.model.js
+│       │   ├── hrInvitation.model.js
+│       │   ├── revokedToken.model.js
+│       │   └── user.model.js
 │       ├── routes/
 │       │   ├── auth.route.js
 │       │   ├── department.route.js
 │       │   ├── hospital.route.js
 │       │   ├── hr.route.js
-│       │   ├── index.js
 │       │   └── superAdmin.route.js
-│       ├── schemas/
-│       │   ├── department.schema.js
-│       │   ├── hospital.schema.js
-│       │   ├── hrInvitation.schema.js
-│       │   ├── index.js
-│       │   └── user.schema.js
-│       ├── utils/
-│       │   ├── index.js
-│       │   ├── jwt.util.js
-│       │   ├── mail.util.js
-│       │   └── password.util.js
-│       └──
+│       └── utils/
+│           ├── jwt.js
+│           ├── mail.js
+│           ├── password.js
+│           └── validate.js
 │
 ├── frontend/
 │   ├── .env
@@ -173,35 +172,62 @@ vardhan/
 │       ├── App.jsx
 │       ├── main.jsx
 │       ├── index.css
-│       ├── assets/
 │       ├── components/
-│       │   ├── common/
-│       │   ├── layout/
-│       │   │   ├── AppLayout.jsx
-│       │   │   └── Sidebar/
-│       │   │       ├── AppSidebar.jsx
-│       │   │       ├── SidebarItem.jsx
-│       │   │       ├── SidebarSection.jsx
-│       │   │       ├── SidebarUser.jsx
-│       │   │       ├── SidebarSkeleton.jsx
-│       │   │       └── sidebar.config.js
-│       ├── config/
+│       │   ├── AppLayout.jsx
+│       │   ├── AuthLayout.jsx
+│       │   ├── ConfirmDialog.jsx
+│       │   ├── DataTable.jsx
+│       │   ├── EmptyState.jsx
+│       │   ├── ErrorState.jsx
+│       │   ├── GlassCard.jsx
+│       │   ├── InfoRow.jsx
+│       │   ├── InitialsAvatar.jsx
+│       │   ├── Loading.jsx
+│       │   ├── Modal.jsx
+│       │   ├── Navbar.jsx
+│       │   ├── PageHeader.jsx
+│       │   ├── SectionCard.jsx
+│       │   ├── Sidebar.jsx
+│       │   ├── StatCard.jsx
+│       │   ├── StatusBadge.jsx
+│       │   └── sidebar.config.js
 │       ├── pages/
-│       │   ├── Auth/
-│       │   ├── Dashboard/
-│       │   ├── Departments/
-│       │   ├── Hospital/
-│       │   ├── HR/
-│       │   ├── Landing/
-│       │   └── SuperAdmin/
+│       │   ├── auth/
+│       │   │   ├── AcceptHRInvitation.jsx
+│       │   │   ├── ForgotPassword.jsx
+│       │   │   ├── Landing.jsx
+│       │   │   ├── Login.jsx
+│       │   │   ├── Register.jsx
+│       │   │   └── ResetPassword.jsx
+│       │   ├── admin/
+│       │   │   ├── AdminDashboard.jsx
+│       │   │   ├── DepartmentDetails.jsx
+│       │   │   ├── Departments.jsx
+│       │   │   └── Hospital.jsx
+│       │   ├── hr/
+│       │   │   ├── HRDashboard.jsx
+│       │   │   ├── HRProfile.jsx
+│       │   │   ├── MyDepartment.jsx
+│       │   │   └── MyHospital.jsx
+│       │   ├── shared/
+│       │   │   └── Profile.jsx
+│       │   └── super-admin/
+│       │       ├── SuperAdminDashboard.jsx
+│       │       ├── SuperAdminHospitalDetails.jsx
+│       │       └── SuperAdminHospitals.jsx
 │       ├── routes/
 │       │   └── index.jsx
 │       ├── services/
-│       │   ├── endpoints.js
-│       │   └── http.js
-│       ├── theme/
-│       │   └── theme.js
-│       └── utils/
+│       │   ├── api/
+│       │   │   ├── client.js
+│       │   │   └── interceptors.js
+│       │   ├── auth.service.js
+│       │   ├── department.service.js
+│       │   ├── hospital.service.js
+│       │   ├── hr.service.js
+│       │   └── superAdmin.service.js
+│       └── theme/
+│           └── theme.js
 │
 └── README.md
 ```
@@ -245,6 +271,7 @@ FRONTEND_URL=http://localhost:5173
 - Hospital
 - Department
 - HR Invitation
+- Revoked Token
 
 ### Key business rules
 
@@ -262,9 +289,9 @@ The frontend uses a custom Material UI theme with a premium, monochrome visual l
 
 - black primary actions
 - white and light-gray surfaces
-- rounded cards and inputs
-- clean typography hierarchy
-- consistent admin dashboard shell
+- controlled border radius system
+- Roboto typography with a clear size hierarchy
+- consistent dashboard shell (250px sidebar, 64px navbar, max-width content)
 
 ### Theme file
 
@@ -272,11 +299,13 @@ The frontend uses a custom Material UI theme with a premium, monochrome visual l
 
 Key design choices include:
 
-- white-paper surfaces
-- subtle border styling
-- large headline typography
-- clean button treatment
-- lowered shadows for a minimal office dashboard look
+- monochrome palette (`#0A0A0A` ink, `#6B6B6B` muted, `#E5E5E5` borders, `#FAFAFA` canvas)
+- explicit pixel radius values — buttons and inputs `8px`, cards `12px`, dialogs `14px`
+- subtle `0 1px 2px` shadows for a near-flat, minimal office look
+- compact table cells and consistent 40px form inputs
+- global `overflow-wrap` so long values wrap instead of overflowing
+- shared `InfoRow` for label/value rows on every information section
+- shared `DataTable` that renders a compact table on desktop and cards on mobile
 
 ---
 
@@ -318,6 +347,8 @@ Typical value:
 VITE_API_URL=http://localhost:3000/api
 ```
 
+If unset, the axios instance defaults to `http://localhost:3000/api` (`frontend/src/services/api/client.js`).
+
 ---
 
 ## ▶️ Run locally
@@ -339,6 +370,14 @@ npm run dev
 ```
 
 The backend runs on port `3000` by default and the frontend uses Vite on `http://localhost:5173`.
+
+### Verify a production build
+
+```bash
+cd frontend
+npm run build   # vite build
+npm run lint    # oxlint
+```
 
 ---
 
@@ -373,6 +412,7 @@ The backend runs on port `3000` by default and the frontend uses Vite on `http:/
 - passwords are hashed before storage using bcrypt
 - protected routes enforce authorization rules
 - invitation tokens are hashed and expire after a set window
+- revoked tokens are tracked server-side for logout
 - hospital and department access remain scoped to the user's ownership chain
 - logout revokes the current token
 
@@ -380,11 +420,13 @@ The backend runs on port `3000` by default and the frontend uses Vite on `http:/
 
 ## 🧩 Important implementation notes
 
-- backend route registration is centralized in `backend/src/routes/index.js`
+- backend route registration is centralized in `backend/src/routes`
 - authentication middleware is in `backend/src/middleware/auth.middleware.js`
 - role enforcement happens in the middleware layer
 - frontend routing is centralized in `frontend/src/routes/index.jsx`
-- sidebar navigation is managed through the shared layout system
+- sidebar navigation is role-driven from `frontend/src/components/sidebar.config.js`
+- all API wrappers live in `frontend/src/services` over the shared axios client (`api/client.js`), with auth/injection + 401 handling in `api/interceptors.js`
+- shared UI lives in `frontend/src/components` — pages stay thin and compose primitives
 - SMTP emails require valid configured credentials; otherwise, the app fails cleanly with a clear error message
 
 ---
@@ -396,11 +438,12 @@ This project is a functioning hospital management platform with:
 - auth flow
 - role-based dashboards
 - hospital creation and ownership checks
-- department management
-- HR invitation flow
+- department management (create, edit, activate/deactivate)
+- HR invitation flow (invite, resend, cancel)
 - invitation acceptance flow
 - protected routing and UI layout
-- shared sidebar navigation
+- role-driven shared sidebar navigation
+- polished monochrome SaaS UI
 
 It is ready for local development and can be extended with modules like appointments, staff records, billing, patient modules, and analytics.
 

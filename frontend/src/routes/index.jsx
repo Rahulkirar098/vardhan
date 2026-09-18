@@ -1,20 +1,22 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import Landing from '../pages/Landing/Landing';
-import Login from '../pages/Auth/Login';
-import Register from '../pages/Auth/Register';
-import ForgotPassword from '../pages/Auth/ForgotPassword';
-import ResetPassword from '../pages/Auth/ResetPassword';
-import Dashboard from '../pages/Dashboard/Dashboard';
-import Hospital from '../pages/Hospital/Hospital';
-import Profile from '../pages/Profile/Profile';
-import AcceptHRInvitation from '../pages/HR/AcceptHRInvitation';
-import HRProfile from '../pages/HR/HRProfile';
-import MyHospital from '../pages/HR/MyHospital';
-import MyDepartment from '../pages/HR/MyDepartment';
-import Departments from '../pages/Departments/Departments';
-import DepartmentDetails from '../pages/Departments/DepartmentDetails';
-import Hospitals from '../pages/SuperAdmin/Hospitals';
-import HospitalDetails from '../pages/SuperAdmin/HospitalDetails';
+import Landing from '../pages/auth/Landing';
+import Login from '../pages/auth/Login';
+import Register from '../pages/auth/Register';
+import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
+import AcceptHRInvitation from '../pages/auth/AcceptHRInvitation';
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import HRDashboard from '../pages/hr/HRDashboard';
+import SuperAdminDashboard from '../pages/super-admin/SuperAdminDashboard';
+import Hospital from '../pages/admin/Hospital';
+import Profile from '../pages/shared/Profile';
+import Departments from '../pages/admin/Departments';
+import DepartmentDetails from '../pages/admin/DepartmentDetails';
+import HRProfile from '../pages/hr/HRProfile';
+import MyHospital from '../pages/hr/MyHospital';
+import MyDepartment from '../pages/hr/MyDepartment';
+import Hospitals from '../pages/super-admin/SuperAdminHospitals';
+import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 
 const getUserRole = () => {
   const token = localStorage.getItem('token');
@@ -70,7 +72,7 @@ const AppRoutes = () => {
         path="/dashboard"
         element={
           <ProtectedRoute allowedRoles={['admin']}>
-            <Navigate to="/hospital" replace />
+            <AdminDashboard />
           </ProtectedRoute>
         }
       />
@@ -94,6 +96,14 @@ const AppRoutes = () => {
         path="/super-admin/dashboard"
         element={
           <ProtectedRoute allowedRoles={['super_admin']}>
+            <SuperAdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/super-admin/hospitals"
+        element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
             <Hospitals />
           </ProtectedRoute>
         }
@@ -110,7 +120,7 @@ const AppRoutes = () => {
         path="/hr/dashboard"
         element={
           <ProtectedRoute allowedRoles={['hr']}>
-            <Dashboard />
+            <HRDashboard />
           </ProtectedRoute>
         }
       />

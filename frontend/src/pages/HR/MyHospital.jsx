@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Stack, Typography } from '@mui/material';
-import hr from '../../services/hr';
-import auth from '../../services/auth';
+import hr from '../../services/hr.service';
+import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
 import SectionCard from '../../components/SectionCard';

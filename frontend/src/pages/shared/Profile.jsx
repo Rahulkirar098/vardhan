@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Box, Stack } from '@mui/material';
-import auth from '../../services/auth';
+import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
 import SectionCard from '../../components/SectionCard';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import InfoRow from '../../components/InfoRow';
 import StatusBadge from '../../components/StatusBadge';
-import { getRoleDisplayName } from '../../components/Sidebar/sidebar.config';
+import { getRoleDisplayName } from '../../components/sidebar.config';
 
 const Profile = () => {
   const navigate = useNavigate();

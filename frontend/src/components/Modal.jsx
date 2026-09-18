@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 
-const FormModal = forwardRef(
+const Modal = forwardRef(
   (
     {
       open,
@@ -140,6 +140,6 @@ const FormModal = forwardRef(
   }
 );
 
-FormModal.displayName = 'FormModal';
+Modal.displayName = 'Modal';
 
-export default FormModal;
+export default Modal;
