@@ -4,8 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   CircularProgress,
   Divider,
   IconButton,
@@ -17,6 +15,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth';
+import AuthLayout from '../../components/AuthLayout';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -67,118 +66,90 @@ const ResetPassword = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FAFAFA',
-        px: 2,
-      }}
+    <AuthLayout
+      title="Create New Password"
+      subtitle="Enter your new password below."
     >
-      <Card sx={{ width: '100%', maxWidth: 460, borderRadius: 3, p: 1 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2 }}>
-                PASSWORD RESET
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                Create New Password
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Enter your new password below.
-              </Typography>
-            </Box>
+      <Stack spacing={2.5}>
+        {error && (
+          <Alert severity="error" variant="outlined">
+            {error}
+          </Alert>
+        )}
 
-            {error && (
-              <Alert severity="error" variant="outlined">
-                {error}
-              </Alert>
-            )}
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Stack spacing={2.5}>
+            <TextField
+              label="New Password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              onChange={handleChange}
+              autoComplete="new-password"
+              required
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        type="button"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        onMouseDown={(event) => event.preventDefault()}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
 
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <Stack spacing={2.5}>
-                <TextField
-                  label="New Password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                  required
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            type="button"
-                            aria-label={showPassword ? 'Hide password' : 'Show password'}
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            onMouseDown={(event) => event.preventDefault()}
-                            edge="end"
-                            size="small"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
+            <TextField
+              label="Confirm New Password"
+              name="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              value={form.confirmPassword}
+              onChange={handleChange}
+              autoComplete="new-password"
+              required
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        type="button"
+                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        onMouseDown={(event) => event.preventDefault()}
+                        edge="end"
+                        size="small"
+                      >
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
 
-                <TextField
-                  label="Confirm New Password"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                  required
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            type="button"
-                            aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                            onClick={() => setShowConfirmPassword((prev) => !prev)}
-                            onMouseDown={(event) => event.preventDefault()}
-                            edge="end"
-                            size="small"
-                          >
-                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  disabled={loading}
-                  sx={{ py: 1.4 }}
-                >
-                  {loading ? <CircularProgress size={22} color="inherit" /> : 'Reset Password'}
-                </Button>
-              </Stack>
-            </Box>
-
-            <Divider />
-
-            <Typography variant="body2" color="text.secondary" align="center">
-              Remembered your password?{' '}
-              <Link to="/login" style={{ color: '#000', fontWeight: 600 }}>
-                Login
-              </Link>
-            </Typography>
+            <Button type="submit" variant="contained" size="large" disabled={loading}>
+              {loading ? <CircularProgress size={22} color="inherit" /> : 'Reset Password'}
+            </Button>
           </Stack>
-        </CardContent>
-      </Card>
+        </Box>
+
+        <Divider />
+
+        <Typography variant="body2" color="text.secondary" align="center">
+          Remembered your password?{' '}
+          <Link to="/login" style={{ color: '#0A0A0A', fontWeight: 700 }}>
+            Login
+          </Link>
+        </Typography>
+      </Stack>
 
       <Snackbar
         open={successOpen}
@@ -190,7 +161,7 @@ const ResetPassword = () => {
           Password reset successfully. Redirecting to login.
         </Alert>
       </Snackbar>
-    </Box>
+    </AuthLayout>
   );
 };
 

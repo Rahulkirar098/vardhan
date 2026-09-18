@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
+import { Alert, Box, Stack } from '@mui/material';
 import auth from '../../services/auth';
-import GlassCard from '../../components/GlassCard';
 import AppLayout from '../../components/AppLayout';
+import PageHeader from '../../components/PageHeader';
+import SectionCard from '../../components/SectionCard';
+import InitialsAvatar from '../../components/InitialsAvatar';
+import InfoRow from '../../components/InfoRow';
+import StatusBadge from '../../components/StatusBadge';
+import { getRoleDisplayName } from '../../components/Sidebar/sidebar.config';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -16,6 +21,7 @@ const Profile = () => {
       try {
         const response = await auth.me();
         setProfile(response?.data?.data || null);
+        setError('');
       } catch (err) {
         setProfile({
           name: localStorage.getItem('userName') || 'User',
@@ -51,54 +57,40 @@ const Profile = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Stack spacing={3}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            My Profile
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 0.75 }}>
-            View your account details.
-          </Typography>
-        </Box>
+      <Stack spacing={4} sx={{ maxWidth: 760 }}>
+        <PageHeader title="My Profile" subtitle="View your account details." />
 
         {error && !profile && <Alert severity="error">{error}</Alert>}
 
-        <GlassCard sx={{ p: { xs: 2.5, md: 3 }, maxWidth: 720 }}>
+        <SectionCard>
           {loading ? (
-            <Typography color="text.secondary">Loading profile...</Typography>
+            <Alert severity="info">Loading profile…</Alert>
           ) : (
             <Stack spacing={2.5}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  {profile?.name || 'User'}
-                </Typography>
-                <Chip
-                  label={profile?.role || 'admin'}
-                  size="small"
-                  sx={{ backgroundColor: '#000000', color: '#FFFFFF', borderRadius: 2 }}
-                />
+              <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+                <InitialsAvatar name={profile?.name} size={48} />
+                <Box sx={{ minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                    <Box component="span" sx={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                      {profile?.name || 'User'}
+                    </Box>
+                    <StatusBadge status={profile?.status} />
+                  </Box>
+                  <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
+                    {getRoleDisplayName(profile?.role)} · {profile?.email}
+                  </Box>
+                </Box>
               </Stack>
 
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '160px 1fr' },
-                  rowGap: 1.5,
-                  columnGap: 2,
-                }}
-              >
-                <Typography color="text.secondary">Email</Typography>
-                <Typography sx={{ fontWeight: 600 }}>{profile?.email || 'Not provided'}</Typography>
-                <Typography color="text.secondary">Phone</Typography>
-                <Typography sx={{ fontWeight: 600 }}>{profile?.phone || 'Not provided'}</Typography>
-                <Typography color="text.secondary">Role</Typography>
-                <Typography sx={{ fontWeight: 600 }}>{profile?.role || 'admin'}</Typography>
-                <Typography color="text.secondary">Status</Typography>
-                <Typography sx={{ fontWeight: 600 }}>{profile?.status || 'active'}</Typography>
+              <Box>
+                <InfoRow label="Email" value={profile?.email} />
+                <InfoRow label="Phone" value={profile?.phone} />
+                <InfoRow label="Role" value={getRoleDisplayName(profile?.role)} />
+                <InfoRow label="Status" value={profile?.status ? profile.status.charAt(0).toUpperCase() + profile.status.slice(1) : 'Active'} />
               </Box>
             </Stack>
           )}
-        </GlassCard>
+        </SectionCard>
       </Stack>
     </AppLayout>
   );

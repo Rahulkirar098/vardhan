@@ -4,12 +4,15 @@ import {
   Alert,
   Box,
   Button,
-  Card,
+  CircularProgress,
+  Divider,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import hr from '../../services/hr';
+import AuthLayout from '../../components/AuthLayout';
+import StatusBadge from '../../components/StatusBadge';
 
 const AcceptHRInvitation = () => {
   const navigate = useNavigate();
@@ -74,72 +77,88 @@ const AcceptHRInvitation = () => {
 
   if (loading) {
     return (
-      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-        <Typography>Loading invitation...</Typography>
-      </Box>
+      <AuthLayout title="Complete Your HR Account" subtitle="We are verifying your invitation…">
+        <Box sx={{ py: 4 }}>
+          <CircularProgress size={28} />
+        </Box>
+      </AuthLayout>
     );
   }
 
   if (error && !invitation) {
     return (
-      <Box sx={{ p: 4 }}>
-        <Card sx={{ maxWidth: 560, mx: 'auto', p: 3 }}>
-          <Alert severity="error">{error}</Alert>
-        </Card>
-      </Box>
+      <AuthLayout title="Invitation Unavailable" subtitle="Your invitation could not be verified.">
+        <Alert severity="error">{error}</Alert>
+      </AuthLayout>
     );
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Card sx={{ width: '100%', maxWidth: 620, p: { xs: 2, md: 3 }, borderRadius: 3 }}>
-        <Stack spacing={3}>
-          <Box>
-            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2 }}>HR INVITATION</Typography>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>Complete Your HR Account</Typography>
-          </Box>
-
-          <Box>
-            <Typography variant="body2" color="text.secondary">Hospital</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>{invitation?.hospitalName || 'Hospital'}</Typography>
-            <Typography variant="body2" color="text.secondary">Department: {invitation?.departmentName || 'Not provided'}</Typography>
-          </Box>
-
-          <Stack spacing={1}>
-            <TextField label="Name" value={invitation?.name || ''} InputProps={{ readOnly: true }} />
-            <TextField label="Email" value={invitation?.email || ''} InputProps={{ readOnly: true }} />
-            <TextField label="Phone" value={invitation?.phone || ''} InputProps={{ readOnly: true }} />
-          </Stack>
-
-          <Box component="form" onSubmit={handleSubmit} noValidate>
-            <Stack spacing={2.5}>
-              <TextField
-                type="password"
-                label="Password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
-              <TextField
-                type="password"
-                label="Confirm Password"
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-              />
-
-              {error && <Alert severity="error">{error}</Alert>}
-
-              <Button type="submit" variant="contained" disabled={submitting} sx={{ alignSelf: 'flex-start' }}>
-                {submitting ? 'Creating Account...' : 'Create HR Account'}
-              </Button>
+    <AuthLayout
+      title="Complete Your HR Account"
+      subtitle="Set a password to activate your HR profile."
+    >
+      <Stack spacing={2.5}>
+        <Box
+          sx={{
+            border: '1px solid #E5E5E5',
+            borderRadius: '12px',
+            backgroundColor: '#FFFFFF',
+            p: 2.5,
+          }}
+        >
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {invitation?.name || 'HR Member'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {invitation?.email || ''}
+                </Typography>
+              </Box>
+              <StatusBadge status="pending" label="Invited" />
             </Stack>
-          </Box>
-        </Stack>
-      </Card>
-    </Box>
+
+            <Divider sx={{ borderColor: '#F0F0F0' }} />
+
+            <Typography variant="body2" color="text.secondary">
+              <strong style={{ color: '#0A0A0A' }}>Hospital:</strong> {invitation?.hospitalName || 'Hospital'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <strong style={{ color: '#0A0A0A' }}>Department:</strong> {invitation?.departmentName || 'Not provided'}
+            </Typography>
+          </Stack>
+        </Box>
+
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Stack spacing={2.5}>
+            <TextField
+              label="Password"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              required
+            />
+            <TextField
+              label="Confirm Password"
+              name="confirmPassword"
+              type="password"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              required
+            />
+
+            {error && <Alert severity="error">{error}</Alert>}
+
+            <Button type="submit" variant="contained" size="large" disabled={submitting}>
+              {submitting ? <CircularProgress size={22} color="inherit" /> : 'Create HR Account'}
+            </Button>
+          </Stack>
+        </Box>
+      </Stack>
+    </AuthLayout>
   );
 };
 

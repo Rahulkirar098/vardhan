@@ -1,19 +1,25 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Chip,
-  Divider,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Stack } from '@mui/material';
+import { ArrowBackRounded } from '@mui/icons-material';
 import hrService from '../../services/hr';
 import auth from '../../services/auth';
 import { useEffect, useState } from 'react';
-import HRProfileSkeleton from '../../components/loading/HRProfileSkeleton';
+import PageHeader from '../../components/PageHeader';
+import SectionCard from '../../components/SectionCard';
+import InfoRow from '../../components/InfoRow';
+import StatusBadge from '../../components/StatusBadge';
+import Loading from '../../components/Loading';
 import AppLayout from '../../components/AppLayout';
+
+const formatStatus = (status) => {
+  if (!status) return 'Active';
+  return String(status).charAt(0).toUpperCase() + String(status).slice(1);
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'Today';
+  return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 
 const HRProfile = () => {
   const navigate = useNavigate();
@@ -65,7 +71,9 @@ const HRProfile = () => {
   if (loading) {
     return (
       <AppLayout onLogout={handleLogout}>
-        <HRProfileSkeleton />
+        <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
+          <Loading label="Loading profile…" height="auto" />
+        </Box>
       </AppLayout>
     );
   }
@@ -88,55 +96,49 @@ const HRProfile = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Card sx={{ maxWidth: 760, p: { xs: 2, md: 3 } }}>
-        <Stack spacing={3}>
-          <Box>
-            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2 }}>
-              HR PROFILE
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              {hr.name}
-            </Typography>
-          </Box>
-
-          <Chip label={hr.role || 'HR'} color="default" sx={{ width: 'fit-content', backgroundColor: '#000000', color: '#FFFFFF' }} />
-
-          <Divider />
-
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">Email</Typography>
-              <Typography variant="body1">{hr.email}</Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="caption" color="text.secondary">Phone</Typography>
-              <Typography variant="body1">{hr.phone || 'Not provided'}</Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="caption" color="text.secondary">Hospital</Typography>
-              <Typography variant="body1">{hr.hospitalId?.name || hr.hospitalName || 'Hospital'}</Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="caption" color="text.secondary">Status</Typography>
-              <Typography variant="body1">{hr.status || 'Active'}</Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="caption" color="text.secondary">Created</Typography>
-              <Typography variant="body1">
-                {hr.createdAt ? new Date(hr.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today'}
-              </Typography>
-            </Box>
-          </Stack>
-
-          <Button variant="contained" onClick={handleBackToDashboard} sx={{ alignSelf: 'flex-start' }}>
-            Back to Dashboard
+      <Stack spacing={4} sx={{ maxWidth: 1024 }}>
+        <Box>
+          <Button
+            variant="text"
+            size="small"
+            startIcon={<ArrowBackRounded fontSize="small" />}
+            onClick={handleBackToDashboard}
+            sx={{ px: 0, mb: 1.5, color: 'text.secondary' }}
+          >
+            Back to {localStorage.getItem('role') === 'hr' ? 'Dashboard' : 'Departments'}
           </Button>
-        </Stack>
-      </Card>
+          <PageHeader
+            title={hr.name}
+            subtitle={`${hr.role || 'HR'} · ${hr.email}`}
+            actions={<StatusBadge status={hr.status || 'active'} />}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+            gap: 2.5,
+          }}
+        >
+          <SectionCard title="Personal Information">
+            <InfoRow label="Name" value={hr.name} />
+            <InfoRow label="Email" value={hr.email} />
+            <InfoRow label="Phone" value={hr.phone} />
+          </SectionCard>
+
+          <SectionCard title="Organization">
+            <InfoRow label="Hospital" value={hr.hospitalId?.name || hr.hospitalName} />
+            <InfoRow label="Department" value={hr.departmentId?.name || hr.departmentName} />
+          </SectionCard>
+
+          <SectionCard title="Account" sx={{ gridColumn: { md: '1 / -1' } }}>
+            <InfoRow label="Role" value={formatStatus(hr.role)} />
+            <InfoRow label="Status" value={formatStatus(hr.status)} />
+            <InfoRow label="Created" value={formatDate(hr.createdAt)} />
+          </SectionCard>
+        </Box>
+      </Stack>
     </AppLayout>
   );
 };

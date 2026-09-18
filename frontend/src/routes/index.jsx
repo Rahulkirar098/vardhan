@@ -6,7 +6,6 @@ import ForgotPassword from '../pages/Auth/ForgotPassword';
 import ResetPassword from '../pages/Auth/ResetPassword';
 import Dashboard from '../pages/Dashboard/Dashboard';
 import Hospital from '../pages/Hospital/Hospital';
-import CreateHospital from '../pages/Hospital/CreateHospital';
 import Profile from '../pages/Profile/Profile';
 import AcceptHRInvitation from '../pages/HR/AcceptHRInvitation';
 import HRProfile from '../pages/HR/HRProfile';
@@ -26,7 +25,7 @@ const getUserRole = () => {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(atob(base64));
     return payload.role || null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -86,7 +85,7 @@ const AppRoutes = () => {
       <Route
         path="/profile"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <Profile />
           </ProtectedRoute>
         }
@@ -128,22 +127,6 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['hr']}>
             <MyHospital />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/hospital/create"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <CreateHospital />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/hospital/edit"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <CreateHospital />
           </ProtectedRoute>
         }
       />

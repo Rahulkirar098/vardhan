@@ -12,7 +12,7 @@ const getCurrentRole = () => {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(atob(base64));
     return payload.role || null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -23,8 +23,6 @@ const AppLayout = ({ children, onLogout }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const role = getCurrentRole();
   const userName = localStorage.getItem('userName') || 'User';
-  const userEmail = localStorage.getItem('userEmail') || '';
-  const navbarTitle = role === 'super_admin' ? 'Vardhan Super Admin' : 'Vardhan';
 
   return (
     <Box
@@ -33,13 +31,12 @@ const AppLayout = ({ children, onLogout }) => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        background: 'linear-gradient(180deg, #F7F7F7 0%, #F2F2F2 100%)',
+        backgroundColor: '#FAFAFA',
       }}
     >
       <AppNavbar
-        title={navbarTitle}
         userName={userName}
-        userEmail={userEmail}
+        userRole={role}
         showMenu={isMobile}
         onMenuClick={() => setMobileOpen(true)}
       />
@@ -65,14 +62,11 @@ const AppLayout = ({ children, onLogout }) => {
             minWidth: 0,
             height: '100%',
             overflowY: 'auto',
-            p: { xs: 2.5, md: 4 },
-            ml: { md: 0 },
+            p: { xs: 2, md: 4 },
             width: { md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
           }}
         >
-          <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto' }}>
-            {children}
-          </Box>
+          <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>{children}</Box>
         </Box>
       </Box>
     </Box>

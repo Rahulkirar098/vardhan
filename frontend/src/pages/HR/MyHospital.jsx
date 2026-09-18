@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
+import { Alert, Stack, Typography } from '@mui/material';
 import hr from '../../services/hr';
 import auth from '../../services/auth';
-import GlassCard from '../../components/GlassCard';
 import AppLayout from '../../components/AppLayout';
+import PageHeader from '../../components/PageHeader';
+import SectionCard from '../../components/SectionCard';
+import InfoRow from '../../components/InfoRow';
+import StatusBadge from '../../components/StatusBadge';
 import Loading from '../../components/Loading';
 
 const formatStatus = (status) => {
@@ -54,70 +57,38 @@ const MyHospital = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Stack spacing={3}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            My Hospital
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 0.75 }}>
-            Your assigned hospital details.
-          </Typography>
-        </Box>
+      <Stack spacing={4}>
+        <PageHeader title="My Hospital" subtitle="Your assigned hospital details." />
 
         {error && <Alert severity="error">{error}</Alert>}
 
         {loading ? (
-          <GlassCard sx={{ p: 3 }}>
-            <Loading label="Loading hospital..." height="auto" />
-          </GlassCard>
+          <Stack sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
+            <Loading label="Loading hospital…" height="auto" />
+          </Stack>
         ) : !hospital ? (
-          <GlassCard sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              No hospital found
-            </Typography>
-            <Typography color="text.secondary">
-              You are not assigned to a hospital yet. Contact your administrator.
-            </Typography>
-          </GlassCard>
-        ) : (
-          <GlassCard sx={{ p: { xs: 2.5, md: 3 }, maxWidth: 760 }}>
-            <Stack spacing={2.5}>
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-                justifyContent="space-between"
-                sx={{ flexWrap: 'wrap' }}
-              >
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  {hospital.name}
-                </Typography>
-                <Chip
-                  label={formatStatus(hospital.status)}
-                  size="small"
-                  sx={{ backgroundColor: '#000000', color: '#FFFFFF', borderRadius: 2 }}
-                />
-              </Stack>
-
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '160px 1fr' },
-                  rowGap: 1.5,
-                  columnGap: 2,
-                }}
-              >
-                <Typography color="text.secondary">Hospital Code</Typography>
-                <Typography sx={{ fontWeight: 600 }}>{hospital.code || 'N/A'}</Typography>
-                <Typography color="text.secondary">Location</Typography>
-                <Typography sx={{ fontWeight: 600 }}>{location}</Typography>
-                <Typography color="text.secondary">Registration Number</Typography>
-                <Typography sx={{ fontWeight: 600 }}>{hospital.registrationNumber || 'N/A'}</Typography>
-                <Typography color="text.secondary">Status</Typography>
-                <Typography sx={{ fontWeight: 600 }}>{formatStatus(hospital.status)}</Typography>
-              </Box>
+          <Stack sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF', p: 3 }}>
+            <Stack spacing={1} sx={{ maxWidth: 760 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                No hospital found
+              </Typography>
+              <Typography color="text.secondary">
+                You are not assigned to a hospital yet. Contact your administrator.
+              </Typography>
             </Stack>
-          </GlassCard>
+          </Stack>
+        ) : (
+          <SectionCard
+            title={hospital.name}
+            action={<StatusBadge status={hospital.status} />}
+            sx={{ maxWidth: 760 }}
+          >
+            <InfoRow label="Hospital Code" value={hospital.code} />
+            <InfoRow label="Location" value={location} />
+            <InfoRow label="Registration Number" value={hospital.registrationNumber} />
+            <InfoRow label="Full Address" value={[hospital.address?.addressLine1, hospital.address?.addressLine2, hospital.address?.city, hospital.address?.state, hospital.address?.country, hospital.address?.pincode].filter(Boolean).join(', ')} />
+            <InfoRow label="Status" value={formatStatus(hospital.status)} />
+          </SectionCard>
         )}
       </Stack>
     </AppLayout>

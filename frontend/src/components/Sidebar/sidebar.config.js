@@ -1,7 +1,6 @@
 import {
   AccountCircleRounded,
   ApartmentRounded,
-  DashboardRounded,
   LocalHospitalRounded,
 } from '@mui/icons-material';
 
@@ -9,9 +8,10 @@ const sidebarConfig = {
   super_admin: {
     sections: [
       {
-        title: 'MAIN',
+        title: '',
         items: [
           { label: 'Hospitals', path: '/super-admin/dashboard', icon: LocalHospitalRounded },
+          { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
       },
     ],
@@ -19,15 +19,10 @@ const sidebarConfig = {
   admin: {
     sections: [
       {
-        title: 'MAIN',
+        title: '',
         items: [
           { label: 'Hospital', path: '/hospital', icon: LocalHospitalRounded },
           { label: 'Departments', path: '/departments', icon: ApartmentRounded },
-        ],
-      },
-      {
-        title: 'ACCOUNT',
-        items: [
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
       },
@@ -36,13 +31,7 @@ const sidebarConfig = {
   hr: {
     sections: [
       {
-        title: 'MAIN',
-        items: [
-          { label: 'Dashboard', path: '/hr/dashboard', icon: DashboardRounded },
-        ],
-      },
-      {
-        title: 'MY WORKSPACE',
+        title: '',
         items: [
           { label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded },
           { label: 'My Hospital', path: '/hr/hospital', icon: LocalHospitalRounded },

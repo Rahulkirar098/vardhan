@@ -1,24 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { ArrowBackRounded, EditRounded, GroupAddRounded, SwapVertRounded } from '@mui/icons-material';
 import departmentService from '../../services/department';
 import hrService from '../../services/hr';
 import auth from '../../services/auth';
-import GlassCard from '../../components/GlassCard';
+import PageHeader from '../../components/PageHeader';
+import SectionCard from '../../components/SectionCard';
+import StatCard from '../../components/StatCard';
+import StatusBadge from '../../components/StatusBadge';
+import InfoRow from '../../components/InfoRow';
+import InitialsAvatar from '../../components/InitialsAvatar';
+import DataTable from '../../components/DataTable';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import ErrorState from '../../components/ErrorState';
 import AppLayout from '../../components/AppLayout';
+import EditDepartmentModal from './components/EditDepartmentModal';
+import InviteHRModal from './components/InviteHRModal';
 
 const formatStatus = (status) => {
   if (!status) return 'Active';
   return String(status).charAt(0).toUpperCase() + String(status).slice(1);
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const DepartmentDetails = () => {
@@ -28,13 +35,16 @@ const DepartmentDetails = () => {
   const [hrs, setHrs] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [stats, setStats] = useState({ totalHRs: 0, pendingInvitations: 0 });
-  const [form, setForm] = useState({ name: '', email: '', phone: '' });
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [cancelInvitation, setCancelInvitation] = useState(null);
 
-  const fetchDetails = async () => {
+  const fetchDetails = useCallback(async () => {
     try {
       setLoading(true);
       const response = await departmentService.getDetails(departmentId);
@@ -43,16 +53,17 @@ const DepartmentDetails = () => {
       setHrs(Array.isArray(data.hrs) ? data.hrs : []);
       setInvitations(Array.isArray(data.pendingInvitationRecords) ? data.pendingInvitationRecords : []);
       setStats(data.stats || { totalHRs: 0, pendingInvitations: 0 });
+      setError('');
     } catch (err) {
       setError(err?.response?.data?.message || 'Unable to load department details.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [departmentId]);
 
   useEffect(() => {
     fetchDetails();
-  }, [departmentId]);
+  }, [fetchDetails]);
 
   const handleLogout = async () => {
     try {
@@ -71,33 +82,18 @@ const DepartmentDetails = () => {
     }
   };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleChangeStatus = async () => {
+    if (!department) return;
 
-  const handleInvite = async (event) => {
-    event.preventDefault();
-    setError('');
-    setMessage('');
-
-    if (!form.name || !form.email) {
-      setError('HR name and email are required.');
-      return;
-    }
+    const nextStatus = department.status === 'active' ? 'inactive' : 'active';
 
     try {
       setSubmitting(true);
-      const response = await departmentService.inviteHr(departmentId, {
-        name: form.name.trim(),
-        email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim(),
-      });
-      setMessage(response?.data?.message || 'Invitation sent successfully.');
-      setForm({ name: '', email: '', phone: '' });
+      await departmentService.updateStatus(department._id, nextStatus);
+      setMessage(`Department ${nextStatus === 'active' ? 'activated' : 'deactivated'} successfully.`);
       await fetchDetails();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to send invitation.');
+      setError(err?.response?.data?.message || 'Unable to update department status.');
     } finally {
       setSubmitting(false);
     }
@@ -119,13 +115,16 @@ const DepartmentDetails = () => {
     }
   };
 
-  const handleCancel = async (invitationId) => {
+  const handleCancel = async () => {
+    if (!cancelInvitation) return;
+
     setError('');
     setMessage('');
 
     try {
       setSubmitting(true);
-      const response = await hrService.cancelInvitation(invitationId);
+      const response = await hrService.cancelInvitation(cancelInvitation._id);
+      setCancelInvitation(null);
       setMessage(response?.data?.message || 'Invitation cancelled successfully.');
       await fetchDetails();
     } catch (err) {
@@ -135,158 +134,250 @@ const DepartmentDetails = () => {
     }
   };
 
+  const activeHrs = hrs.filter((hr) => (hr.status || 'active') === 'active').length;
+
+  const hrColumns = [
+    {
+      key: 'name',
+      label: 'HR Team Member',
+      renderCell: (row) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+          <InitialsAvatar name={row.name} size={34} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 700 }}>{row.name}</Typography>
+            <Typography variant="body2" color="text.secondary" noWrap>
+              {row.email}
+            </Typography>
+          </Box>
+        </Box>
+      ),
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      renderCell: (row) => <Typography variant="body2">{row.phone || '—'}</Typography>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      renderCell: (row) => <StatusBadge status={row.status} />,
+    },
+  ];
+
   return (
     <AppLayout onLogout={handleLogout}>
-      <Stack spacing={3.5}>
+      <Stack spacing={4}>
         <Box>
-          <Button variant="text" onClick={() => navigate('/departments')} sx={{ px: 0, mb: 1 }}>
+          <Button
+            variant="text"
+            size="small"
+            startIcon={<ArrowBackRounded fontSize="small" />}
+            onClick={() => navigate('/departments')}
+            sx={{ px: 0, mb: 1.5, color: 'text.secondary' }}
+          >
             Back to Departments
           </Button>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            {department?.name || 'Department Details'}
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 0.75 }}>
-            Manage this department and its HR team.
-          </Typography>
+          <PageHeader
+            title={department?.name || 'Department Details'}
+            subtitle={department ? `Manage this department and its HR team · Code ${department.code}` : 'Loading department…'}
+            actions={
+              loading || !department ? null : (
+                <>
+                  <Button variant="outlined" startIcon={<SwapVertRounded />} onClick={handleChangeStatus} disabled={submitting}>
+                    {department.status === 'active' ? 'Deactivate' : 'Activate'}
+                  </Button>
+                  <Button variant="outlined" startIcon={<EditRounded />} onClick={() => setEditOpen(true)} disabled={submitting}>
+                    Edit Department
+                  </Button>
+                  <Button variant="contained" startIcon={<GroupAddRounded />} onClick={() => setInviteOpen(true)} disabled={submitting}>
+                    Invite HR
+                  </Button>
+                </>
+              )
+            }
+          />
         </Box>
 
         {message && <Alert severity="success">{message}</Alert>}
         {error && <Alert severity="error">{error}</Alert>}
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
+          <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF', p: 3 }}>
+            <Typography color="text.secondary">Loading department…</Typography>
           </Box>
         ) : !department ? (
-          <Alert severity="warning">Department not found.</Alert>
+          <ErrorState message="Department not found." />
         ) : (
           <>
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' },
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
                 gap: 2.5,
               }}
             >
-              {[
-                { label: 'HRs', value: stats.totalHRs ?? hrs.length },
-                { label: 'Pending Invites', value: stats.pendingInvitations ?? 0 },
-                { label: 'Status', value: formatStatus(department.status) },
-              ].map((card) => (
-                <GlassCard key={card.label} sx={{ p: 2.5, height: '100%' }}>
-                  <Stack spacing={1}>
-                    <Typography variant="caption" color="text.secondary">{card.label}</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>{card.value}</Typography>
-                  </Stack>
-                </GlassCard>
-              ))}
+              <StatCard label="Total HR" value={stats.totalHRs ?? hrs.length} footer={<StatusBadge status={hrs.length ? 'active' : 'inactive'} label={hrs.length ? 'Assigned' : 'Empty'} />} />
+              <StatCard label="Active HR" value={activeHrs} footer={<StatusBadge status="active" label="Working" />} />
+              <StatCard
+                label="Pending Invitations"
+                value={stats.pendingInvitations ?? invitations.length}
+                footer={<StatusBadge status={invitations.length ? 'pending' : 'inactive'} label={invitations.length ? 'Awaiting response' : 'None'} />}
+              />
             </Box>
 
-            <GlassCard sx={{ p: { xs: 2.5, md: 3 } }}>
-              <Stack spacing={1.5}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>Department Information</Typography>
-                <Typography variant="body2" color="text.secondary">Code: {department.code}</Typography>
-                <Typography>{department.description || 'No description provided.'}</Typography>
-                <Chip
-                  label={formatStatus(department.status)}
-                  size="small"
-                  sx={{ width: 'fit-content', backgroundColor: '#000000', color: '#FFFFFF', borderRadius: 2 }}
-                />
-              </Stack>
-            </GlassCard>
+            <SectionCard
+              title="Department Information"
+              action={<StatusBadge status={department.status} />}
+            >
+              <InfoRow label="Department Name" value={department.name} />
+              <InfoRow label="Department Code" value={department.code} />
+              <InfoRow label="Description" value={department.description} />
+              <InfoRow label="Status" value={formatStatus(department.status)} />
+            </SectionCard>
 
-            <GlassCard sx={{ p: { xs: 2.5, md: 3 } }}>
-              <Stack spacing={2.5}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>HR Team</Typography>
-                {hrs.length === 0 ? (
-                  <Alert severity="info">No HR assigned to this department yet.</Alert>
-                ) : (
-                  <Stack spacing={1.5}>
-                    {hrs.map((hr) => (
-                      <Box
-                        key={hr._id}
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: 2,
-                          flexWrap: 'wrap',
-                          border: '1px solid rgba(0,0,0,0.08)',
-                          borderRadius: 2,
-                          p: 1.5,
-                        }}
-                      >
-                        <Box>
-                          <Typography sx={{ fontWeight: 700 }}>{hr.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">{hr.email}</Typography>
-                        </Box>
-                        <Button variant="outlined" size="small" onClick={() => navigate(`/hr/${hr._id}`)}>
-                          View Profile
-                        </Button>
-                      </Box>
-                    ))}
-                  </Stack>
-                )}
+            <Stack spacing={2.5}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1.5}
+                sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }}
+              >
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
+                    HR Team
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {hrs.length} member{hrs.length === 1 ? '' : 's'} assigned to this department
+                  </Typography>
+                </Box>
+                <Button variant="contained" startIcon={<GroupAddRounded />} onClick={() => setInviteOpen(true)}>
+                  Invite HR Member
+                </Button>
               </Stack>
-            </GlassCard>
+
+              <DataTable
+                columns={hrColumns}
+                rows={hrs}
+                getRowKey={(row) => row._id}
+                loading={loading}
+                emptyTitle="No HR assigned yet"
+                emptyDescription="Invite HR members to join this department."
+                renderActions={(row) => (
+                  <Button size="small" variant="outlined" onClick={() => navigate(`/hr/${row._id}`)}>
+                    View Profile
+                  </Button>
+                )}
+              />
+            </Stack>
 
             {invitations.length > 0 && (
-              <GlassCard sx={{ p: { xs: 2.5, md: 3 } }}>
-                <Stack spacing={2.5}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Pending Invitations</Typography>
-                  <Stack spacing={1.5}>
-                    {invitations.map((invitation) => (
-                      <Box
-                        key={invitation._id}
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: 2,
-                          flexWrap: 'wrap',
-                          border: '1px solid rgba(0,0,0,0.08)',
-                          borderRadius: 2,
-                          p: 1.5,
-                        }}
-                      >
-                        <Box>
-                          <Typography sx={{ fontWeight: 700 }}>{invitation.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">{invitation.email}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Expires {new Date(invitation.expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </Typography>
-                        </Box>
-                        <Stack direction="row" spacing={1}>
-                          <Button variant="outlined" size="small" disabled={submitting} onClick={() => handleResend(invitation._id)}>
-                            Resend
-                          </Button>
-                          <Button variant="outlined" size="small" color="error" disabled={submitting} onClick={() => handleCancel(invitation._id)}>
-                            Cancel
-                          </Button>
-                        </Stack>
-                      </Box>
-                    ))}
-                  </Stack>
+              <Stack spacing={2.5}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1.5}
+                  sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }}
+                >
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
+                      Pending Invitations
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Invitations waiting for HR members to accept
+                    </Typography>
+                  </Box>
                 </Stack>
-              </GlassCard>
-            )}
 
-            <GlassCard sx={{ p: { xs: 2.5, md: 3 } }}>
-              <Box component="form" onSubmit={handleInvite} noValidate>
-                <Stack spacing={2.5}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Invite HR</Typography>
-                  <TextField label="HR Name" name="name" value={form.name} onChange={handleChange} required />
-                  <TextField label="Email" type="email" name="email" value={form.email} onChange={handleChange} required />
-                  <TextField label="Phone" name="phone" value={form.phone} onChange={handleChange} />
-                  <Button type="submit" variant="contained" disabled={submitting} sx={{ alignSelf: 'flex-start' }}>
-                    {submitting ? 'Sending Invitation...' : 'Send Invitation'}
-                  </Button>
+                <Stack spacing={1.5}>
+                  {invitations.map((invitation) => (
+                    <Box
+                      key={invitation._id}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 2,
+                        flexWrap: 'wrap',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '12px',
+                        backgroundColor: '#FFFFFF',
+                        p: 1.5,
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                        <InitialsAvatar name={invitation.name} size={36} />
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 700 }}>{invitation.name}</Typography>
+                          <Typography variant="body2" color="text.secondary" noWrap>
+                            {invitation.email}
+                          </Typography>
+                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.25 }}>
+                            <StatusBadge status="pending" />
+                            <Typography variant="caption" color="text.secondary">
+                              Expires {formatDate(invitation.expiresAt)}
+                            </Typography>
+                          </Stack>
+                        </Box>
+                      </Box>
+
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          disabled={submitting}
+                          onClick={() => handleResend(invitation._id)}
+                        >
+                          Resend
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          sx={{ color: '#B42318', borderColor: '#F5D0D0', '&:hover': { borderColor: '#F5D0D0', backgroundColor: '#FDECEC' } }}
+                          disabled={submitting}
+                          onClick={() => setCancelInvitation(invitation)}
+                        >
+                          Cancel
+                        </Button>
+                      </Stack>
+                    </Box>
+                  ))}
                 </Stack>
-              </Box>
-            </GlassCard>
+              </Stack>
+            )}
           </>
         )}
       </Stack>
+
+      <EditDepartmentModal
+        open={editOpen}
+        department={department}
+        onClose={() => setEditOpen(false)}
+        onSuccess={() => {
+          setEditOpen(false);
+          setResetKey((k) => k + 1);
+          void fetchDetails();
+        }}
+        resetKey={resetKey}
+      />
+      <InviteHRModal
+        open={inviteOpen}
+        department={department}
+        onClose={() => setInviteOpen(false)}
+        onSuccess={() => {
+          setInviteOpen(false);
+          setResetKey((k) => k + 1);
+          void fetchDetails();
+        }}
+        resetKey={resetKey}
+      />
+      <ConfirmDialog
+        open={Boolean(cancelInvitation)}
+        title="Cancel this invitation?"
+        message={`Cancel the invitation sent to ${cancelInvitation?.name || 'this HR member'}? They will no longer be able to accept it.`}
+        confirmLabel="Cancel Invitation"
+        onClose={() => setCancelInvitation(null)}
+        onConfirm={handleCancel}
+        submitting={submitting}
+        danger
+      />
     </AppLayout>
   );
 };

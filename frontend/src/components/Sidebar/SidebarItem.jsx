@@ -36,26 +36,29 @@ const SidebarItem = ({ item, currentPath, onClick }) => {
     <ListItemButton
       onClick={onClick}
       sx={{
-        borderRadius: 2,
-        minHeight: 42,
+        minHeight: 40,
         px: 1.5,
         py: 0.75,
-        backgroundColor: active ? 'rgba(0, 0, 0, 0.92)' : 'transparent',
-        color: active ? '#FFFFFF' : '#111827',
-        transition: 'all 180ms ease',
+        borderRadius: '9px',
+        backgroundColor: active ? '#0A0A0A' : 'transparent',
+        color: active ? '#FFFFFF' : '#3F3F3F',
+        transition: 'background-color 150ms ease, color 150ms ease',
         '&:hover': {
-          backgroundColor: active ? 'rgba(0, 0, 0, 0.96)' : 'rgba(17, 24, 39, 0.04)',
+          backgroundColor: active ? '#0A0A0A' : '#F5F5F5',
+          color: active ? '#FFFFFF' : '#0A0A0A',
         },
       }}
     >
-      <ListItemIcon sx={{ minWidth: 32, color: active ? '#FFFFFF' : '#111827' }}>
+      <ListItemIcon sx={{ minWidth: 30, color: 'inherit' }}>
         <Icon fontSize="small" />
       </ListItemIcon>
       <ListItemText
         primary={item.label}
-        primaryTypographyProps={{
-          fontSize: 14,
-          fontWeight: active ? 700 : 500,
+        slotProps={{
+          primary: {
+            fontSize: 14,
+            fontWeight: active ? 700 : 500,
+          },
         }}
       />
     </ListItemButton>

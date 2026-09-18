@@ -4,16 +4,16 @@ const SidebarSection = ({ title, children }) => {
   if (!title && !children) return null;
 
   return (
-    <Box sx={{ mb: 2.5 }}>
+    <Box sx={{ mb: 2 }}>
       {title && (
         <Typography
           variant="caption"
           sx={{
             display: 'block',
             px: 1.5,
-            pb: 1,
+            pb: 0.75,
             color: '#6B7280',
-            letterSpacing: 1.2,
+            letterSpacing: 1.1,
             fontWeight: 700,
           }}
         >

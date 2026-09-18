@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Grid,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Stack } from '@mui/material';
+import { ArrowBackRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin';
 import auth from '../../services/auth';
 import AppLayout from '../../components/AppLayout';
-import HospitalDetailsSkeleton from '../../components/loading/HospitalDetailsSkeleton';
+import PageHeader from '../../components/PageHeader';
+import SectionCard from '../../components/SectionCard';
+import InfoRow from '../../components/InfoRow';
+import StatusBadge from '../../components/StatusBadge';
+import Loading from '../../components/Loading';
+
+const formatStatus = (status) => {
+  if (!status) return 'Active';
+  return String(status).charAt(0).toUpperCase() + String(status).slice(1);
+};
 
 const HospitalDetails = () => {
   const navigate = useNavigate();
@@ -36,34 +38,6 @@ const HospitalDetails = () => {
     fetchHospital();
   }, [hospitalId]);
 
-  if (loading) {
-    return (
-      <Box sx={{ p: { xs: 2, md: 4 }, minHeight: '100vh' }}>
-        <HospitalDetailsSkeleton />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ p: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
-
-  if (!hospital) {
-    return (
-      <Box sx={{ p: 4 }}>
-        <Alert severity="warning">Hospital not found.</Alert>
-      </Box>
-    );
-  }
-
-  const admin = hospital.createdBy || {};
-  const contact = hospital.contact || {};
-  const address = hospital.address || {};
-
   const handleLogout = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -75,129 +49,81 @@ const HospitalDetails = () => {
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('role');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
       navigate('/login');
     }
   };
 
+  const admin = hospital?.createdBy || {};
+  const contact = hospital?.contact || {};
+  const address = hospital?.address || {};
+
   return (
     <AppLayout onLogout={handleLogout}>
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
-        <Stack spacing={3}>
+      {loading ? (
+        <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
+          <Loading label="Loading hospital…" height="auto" />
+        </Box>
+      ) : error ? (
+        <Alert severity="error">{error}</Alert>
+      ) : !hospital ? (
+        <Alert severity="warning">Hospital not found.</Alert>
+      ) : (
+        <Stack spacing={4} sx={{ maxWidth: 1100 }}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-              Hospital Details
-            </Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              {hospital.name}
-            </Typography>
+            <Button
+              variant="text"
+              size="small"
+              startIcon={<ArrowBackRounded fontSize="small" />}
+              onClick={() => navigate('/super-admin/dashboard')}
+              sx={{ px: 0, mb: 1.5, color: 'text.secondary' }}
+            >
+              Back to Hospitals
+            </Button>
+            <PageHeader
+              title={hospital.name}
+              subtitle={`Hospital Code · ${hospital.code || 'N/A'}`}
+              actions={<StatusBadge status={hospital.status} />}
+            />
           </Box>
 
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Card sx={{ p: 3, borderRadius: 3, border: '1px solid #E5E5E5' }}>
-                <Stack spacing={2}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Hospital Details
-                  </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' },
+              gap: 2.5,
+            }}
+          >
+            <SectionCard title="Hospital Details">
+              <InfoRow label="Hospital Name" value={hospital.name} />
+              <InfoRow label="Code" value={hospital.code} />
+              <InfoRow label="Registration Number" value={hospital.registrationNumber} />
+              <InfoRow label="Status" value={formatStatus(hospital.status)} />
+            </SectionCard>
 
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Code</Typography>
-                    <Typography variant="body1">{hospital.code}</Typography>
-                  </Box>
+            <SectionCard title="Contact">
+              <InfoRow label="Phone" value={contact.phone} />
+              <InfoRow label="Email" value={contact.email} />
+              <InfoRow label="Website" value={contact.website} />
+            </SectionCard>
 
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Registration Number</Typography>
-                    <Typography variant="body1">{hospital.registrationNumber || 'N/A'}</Typography>
-                  </Box>
+            <SectionCard title="Address">
+              <InfoRow label="Address Line 1" value={address.addressLine1} />
+              <InfoRow label="Address Line 2" value={address.addressLine2} />
+              <InfoRow label="City / State" value={[address.city, address.state].filter(Boolean).join(', ')} />
+              <InfoRow label="Country / Pincode" value={[address.country || 'India', address.pincode].filter(Boolean).join(', ')} />
+            </SectionCard>
 
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Status</Typography>
-                    <Typography variant="body1">{hospital.status || 'Active'}</Typography>
-                  </Box>
-                </Stack>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Card sx={{ p: 3, borderRadius: 3, border: '1px solid #E5E5E5' }}>
-                <Stack spacing={2}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Contact
-                  </Typography>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Phone</Typography>
-                    <Typography variant="body1">{contact.phone || 'N/A'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Email</Typography>
-                    <Typography variant="body1">{contact.email || 'N/A'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Website</Typography>
-                    <Typography variant="body1">{contact.website || 'N/A'}</Typography>
-                  </Box>
-                </Stack>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Card sx={{ p: 3, borderRadius: 3, border: '1px solid #E5E5E5' }}>
-                <Stack spacing={2}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Address
-                  </Typography>
-
-                  <Typography variant="body1">{address.addressLine1 || 'N/A'}</Typography>
-                  <Typography variant="body1">{address.addressLine2 || ''}</Typography>
-                  <Typography variant="body1">
-                    {address.city || ''}{address.city && address.state ? ', ' : ''}{address.state || ''}
-                  </Typography>
-                  <Typography variant="body1">
-                    {address.country || 'India'}{address.pincode ? `, ${address.pincode}` : ''}
-                  </Typography>
-                </Stack>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Card sx={{ p: 3, borderRadius: 3, border: '1px solid #E5E5E5' }}>
-                <Stack spacing={2}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Hospital Admin
-                  </Typography>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Name</Typography>
-                    <Typography variant="body1">{admin.name || 'N/A'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Email</Typography>
-                    <Typography variant="body1">{admin.email || 'N/A'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Phone</Typography>
-                    <Typography variant="body1">{admin.phone || 'N/A'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Status</Typography>
-                    <Typography variant="body1">{admin.status || 'Active'}</Typography>
-                  </Box>
-                </Stack>
-              </Card>
-            </Grid>
-          </Grid>
-
-          <Button variant="contained" onClick={() => navigate('/super-admin/dashboard')} sx={{ alignSelf: 'flex-start' }}>
-            Back to Dashboard
-          </Button>
+            <SectionCard title="Hospital Admin">
+              <InfoRow label="Name" value={admin.name} />
+              <InfoRow label="Email" value={admin.email} />
+              <InfoRow label="Phone" value={admin.phone} />
+              <InfoRow label="Status" value={formatStatus(admin.status)} />
+            </SectionCard>
+          </Box>
         </Stack>
-      </Box>
+      )}
     </AppLayout>
   );
 };

@@ -1,21 +1,20 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
+  Alert,
   Box,
   Button,
-  Card,
-  CardContent,
+  CircularProgress,
   Divider,
+  IconButton,
+  InputAdornment,
   Stack,
   TextField,
   Typography,
-  Alert,
-  CircularProgress,
-  InputAdornment,
-  IconButton,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth';
+import AuthLayout from '../../components/AuthLayout';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -88,108 +87,86 @@ const Login = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FAFAFA',
-        px: 2,
-      }}
+    <AuthLayout
+      title="Welcome Back"
+      subtitle="Sign in to manage your hospital workforce."
     >
-      <Card sx={{ width: '100%', maxWidth: 460, borderRadius: 3, p: 1 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Stack spacing={2}>
+      <Stack spacing={2.5}>
+        {error && (
+          <Alert severity="error" variant="outlined">
+            {error}
+          </Alert>
+        )}
+
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Stack spacing={2.5}>
+            <TextField
+              label="Email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              autoComplete="email"
+              required
+            />
+
             <Box>
-              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2 }}>
-                HOSPITAL HR MANAGEMENT
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                Welcome Back
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Sign in to manage your hospital workforce.
-              </Typography>
-            </Box>
-
-            {error && (
-              <Alert severity="error" variant="outlined">
-                {error}
-              </Alert>
-            )}
-
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <Stack spacing={2.5}>
-                <TextField
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  autoComplete="email"
-                  required
-                />
- 
-                <TextField
-                  label="Password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={handleChange}
-                  autoComplete="current-password"
-                  required
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            type="button"
-                            aria-label={showPassword ? 'Hide password' : 'Show password'}
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            onMouseDown={(event) => event.preventDefault()}
-                            edge="end"
-                            size="small"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-
-                <Box sx={{ textAlign: 'right', mt: -1 }}>
-                  <Link to="/forgot-password" style={{ fontSize: '0.875rem', color: '#000', fontWeight: 500 }}>
-                    Forgot password?
-                  </Link>
-                </Box>
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  disabled={loading}
-                  sx={{ py: 1.4 }}
+              <TextField
+                label="Password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+                required
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          type="button"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          onMouseDown={(event) => event.preventDefault()}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              <Box sx={{ textAlign: 'right', mt: 1.25 }}>
+                <Link
+                  to="/forgot-password"
+                  style={{ fontSize: '0.875rem', color: '#6B6B6B', fontWeight: 600 }}
                 >
-                  {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign In'}
-                </Button>
-              </Stack>
+                  Forgot password?
+                </Link>
+              </Box>
             </Box>
 
-            <Divider />
-
-            <Typography variant="body2" color="text.secondary" align="center">
-              Don&apos;t have an account?{' '}
-              <Link to="/register" style={{ color: '#000', fontWeight: 600 }}>
-                Register
-              </Link>
-            </Typography>
+            <Button type="submit" variant="contained" size="large" disabled={loading}>
+              {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign In'}
+            </Button>
           </Stack>
-        </CardContent>
-      </Card>
-    </Box>
+        </Box>
+
+        <Divider />
+
+        <Typography variant="body2" color="text.secondary" align="center">
+          Don&apos;t have an account?{' '}
+          <Link
+            to="/register"
+            style={{ color: '#0A0A0A', fontWeight: 700 }}
+          >
+            Register
+          </Link>
+        </Typography>
+      </Stack>
+    </AuthLayout>
   );
 };
 

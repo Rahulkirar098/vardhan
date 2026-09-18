@@ -1,20 +1,18 @@
 import { Box } from '@mui/material';
 
-const glassStyle = {
-  background: 'rgba(255, 255, 255, 0.65)',
-  backdropFilter: 'blur(16px)',
-  WebkitBackdropFilter: 'blur(16px)',
-  border: '1px solid rgba(0, 0, 0, 0.08)',
-  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.06)',
-  borderRadius: 3,
-  transition: 'all 150ms ease',
+const cardStyle = {
+  backgroundColor: '#FFFFFF',
+  border: '1px solid #E5E5E5',
+  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  borderRadius: '12px',
+  transition: 'box-shadow 180ms ease',
 };
 
 const GlassCard = ({ children, sx = {}, ...props }) => {
   return (
     <Box
       sx={{
-        ...glassStyle,
+        ...cardStyle,
         ...sx,
       }}
       {...props}

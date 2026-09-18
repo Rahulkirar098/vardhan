@@ -1,23 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Card,
-  Chip,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import { LocalHospitalRounded, SearchRounded, VisibilityRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin';
 import auth from '../../services/auth';
-import GlassCard from '../../components/GlassCard';
-import HospitalCard from '../../components/HospitalCard';
-import HospitalCardSkeleton from '../../components/loading/HospitalCardSkeleton';
 import AppLayout from '../../components/AppLayout';
-import { getGreeting, getRoleSubtitle } from '../../utils/greeting';
+import PageHeader from '../../components/PageHeader';
+import StatCard from '../../components/StatCard';
+import StatusBadge from '../../components/StatusBadge';
+import DataTable from '../../components/DataTable';
 
-const getCurrentUserName = () => localStorage.getItem('userName') || 'User';
+const formatDate = (dateString) => {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 
 const Hospitals = () => {
   const navigate = useNavigate();
@@ -25,13 +21,13 @@ const Hospitals = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
-  const userName = getCurrentUserName();
 
   useEffect(() => {
     const fetchHospitals = async () => {
       try {
         const response = await superAdmin.getHospitals();
         setHospitals(response?.data?.data || []);
+        setError('');
       } catch (err) {
         setError(err?.response?.data?.message || 'Unable to load hospitals.');
       } finally {
@@ -42,33 +38,29 @@ const Hospitals = () => {
     fetchHospitals();
   }, []);
 
-  const summaryCards = useMemo(() => {
-    const activeHospitals = hospitals.filter((hospital) => (hospital?.status || 'active') === 'active').length;
-    const uniqueAdmins = new Set(hospitals.map((hospital) => hospital?.createdBy?.email).filter(Boolean)).size;
+  const activeCount = useMemo(
+    () => hospitals.filter((hospital) => (hospital?.status || 'active') === 'active').length,
+    [hospitals],
+  );
 
-    return [
-      { label: 'Total Hospitals', value: hospitals.length },
-      { label: 'Active Hospitals', value: activeHospitals },
-      { label: 'Total Admins', value: uniqueAdmins },
-      { label: 'Platform Coverage', value: `${hospitals.length ? 'Live' : 'None'}` },
-    ];
-  }, [hospitals]);
-
-  const filteredHospitals = hospitals.filter((hospital) => {
-    const admin = hospital?.createdBy || {};
+  const filteredHospitals = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    if (!query) return true;
+    if (!query) return hospitals;
 
-    return [
-      hospital?.name,
-      hospital?.code,
-      admin?.name,
-      admin?.email,
-    ]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(query));
-  });
+    return hospitals.filter((hospital) => {
+      const admin = hospital?.createdBy || {};
+
+      return [
+        hospital?.name,
+        hospital?.code,
+        admin?.name,
+        admin?.email,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    });
+  }, [hospitals, search]);
 
   const handleLogout = async () => {
     try {
@@ -87,92 +79,141 @@ const Hospitals = () => {
     }
   };
 
-  const formattedDate = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const columns = [
+    {
+      key: 'name',
+      label: 'Hospital',
+      renderCell: (row) => (
+        <Typography sx={{ fontWeight: 700 }}>{row?.name || '—'}</Typography>
+      ),
+    },
+    {
+      key: 'code',
+      label: 'Code',
+      renderCell: (row) => (
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {row?.code || '—'}
+        </Typography>
+      ),
+    },
+    {
+      key: 'admin',
+      label: 'Admin',
+      renderCell: (row) => {
+        const admin = row?.createdBy || {};
+
+        if (!admin?.name && !admin?.email) return null;
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {admin?.name || 'Unknown Admin'}
+            </Typography>
+            {admin?.email && (
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                {admin.email}
+              </Typography>
+            )}
+          </Box>
+        );
+      },
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      renderCell: (row) => <StatusBadge status={row?.status} />,
+    },
+    {
+      key: 'createdAt',
+      label: 'Created',
+      renderCell: (row) => (
+        <Typography variant="body2" color="text.secondary">
+          {formatDate(row?.createdAt)}
+        </Typography>
+      ),
+    },
+  ];
 
   return (
-    <AppLayout role="super_admin" onLogout={handleLogout}>
-      <Stack spacing={3}>
-          <GlassCard sx={{ p: { xs: 2.5, md: 4 } }}>
-            <Stack spacing={1}>
-              <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: 28, md: 34 } }}>
-                {getGreeting(userName)}
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                {getRoleSubtitle('super_admin')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {formattedDate}
-              </Typography>
-            </Stack>
-          </GlassCard>
+    <AppLayout onLogout={handleLogout}>
+      <Stack spacing={4}>
+        <PageHeader
+          title="Hospitals"
+          subtitle="Monitor hospitals across the platform."
+        />
 
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
-              gap: 2.5,
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+            gap: 2.5,
+          }}
+        >
+          <StatCard label="Total Hospitals" value={hospitals.length} footer={<StatusBadge status="active" label="Registered" />} />
+          <StatCard label="Active Hospitals" value={activeCount} footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />} />
+          <StatCard
+            label="Pending Setup"
+            value={Math.max(hospitals.length - activeCount, 0)}
+            footer={<StatusBadge status={hospitals.length - activeCount ? 'pending' : 'inactive'} label={hospitals.length - activeCount ? 'Needs attention' : 'None'} />}
+          />
+        </Box>
+
+        <Box sx={{ maxWidth: 420 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search hospitals, codes or admin"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchRounded fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+              },
             }}
-          >
-            {summaryCards.map((card) => (
-              <GlassCard key={card.label} sx={{ p: 2.5, height: '100%', transition: 'all 180ms ease', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 12px 30px rgba(0,0,0,0.08)' } }}>
-                <Stack spacing={1}>
-                  <Typography variant="caption" color="text.secondary">{card.label}</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>{card.value}</Typography>
-                  <Chip label="Live" size="small" sx={{ width: 'fit-content', backgroundColor: '#000000', color: '#FFFFFF', borderRadius: 2 }} />
-                </Stack>
-              </GlassCard>
-            ))}
-          </Box>
+          />
+        </Box>
 
-          <Card sx={{ p: 2, borderRadius: 3, border: '1px solid rgba(0,0,0,0.08)', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)' }}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Search hospitals, codes or admin"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </Card>
+        {error && <Alert severity="error">{error}</Alert>}
 
-          {error && <Alert severity="error">{error}</Alert>}
+        <Stack spacing={2}>
+          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
+              All Hospitals
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+              {loading ? '…' : `${filteredHospitals.length} of ${hospitals.length}`}
+            </Typography>
+          </Stack>
 
-          {loading ? (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
-                gap: 2.5,
-              }}
-            >
-              {[1, 2, 3, 4, 5, 6].map((item) => (
-                <HospitalCardSkeleton key={item} />
-              ))}
-            </Box>
-          ) : filteredHospitals.length === 0 ? (
-            <GlassCard sx={{ p: 4 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>No hospitals found.</Typography>
-              <Typography color="text.secondary">Hospitals created by Admins will appear here.</Typography>
-            </GlassCard>
-          ) : (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
-                gap: 3,
-              }}
-            >
-              {filteredHospitals.map((hospital) => (
-                <HospitalCard
-                  key={hospital?.id || hospital?._id}
-                  hospital={hospital}
-                  onView={(selectedHospital) => {
-                    navigate(`/super-admin/hospitals/${selectedHospital?.id || selectedHospital?._id}`);
-                  }}
-                />
-              ))}
-            </Box>
-          )}
+          <DataTable
+            columns={columns}
+            rows={filteredHospitals}
+            getRowKey={(row) => row?.id || row?._id}
+            loading={loading}
+            emptyIcon={LocalHospitalRounded}
+            emptyTitle={search ? 'No matching hospitals' : 'No hospitals found'}
+            emptyDescription={
+              search
+                ? 'Try a different hospital name, code or admin.'
+                : 'Hospitals created by Admins will appear here.'
+            }
+            renderActions={(row) => (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<VisibilityRounded fontSize="small" />}
+                onClick={() => navigate(`/super-admin/hospitals/${row?.id || row?._id}`)}
+              >
+                View
+              </Button>
+            )}
+          />
         </Stack>
+      </Stack>
     </AppLayout>
   );
 };

@@ -4,8 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   CircularProgress,
   Divider,
   Stack,
@@ -13,6 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import auth from '../../services/auth';
+import AuthLayout from '../../components/AuthLayout';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -47,79 +46,51 @@ const ForgotPassword = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FAFAFA',
-        px: 2,
-      }}
+    <AuthLayout
+      title="Forgot Password"
+      subtitle="Enter your email and we will send you a password reset link."
     >
-      <Card sx={{ width: '100%', maxWidth: 460, borderRadius: 3, p: 1 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2 }}>
-                PASSWORD RESET
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                Forgot Password
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Enter your email and we will send you a password reset link.
-              </Typography>
-            </Box>
+      <Stack spacing={2.5}>
+        {error && (
+          <Alert severity="error" variant="outlined">
+            {error}
+          </Alert>
+        )}
 
-            {error && (
-              <Alert severity="error" variant="outlined">
-                {error}
-              </Alert>
-            )}
+        {success && (
+          <Alert severity="success" variant="outlined">
+            {success}
+          </Alert>
+        )}
 
-            {success && (
-              <Alert severity="success" variant="outlined">
-                {success}
-              </Alert>
-            )}
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Stack spacing={2.5}>
+            <TextField
+              label="Email"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              required
+            />
 
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <Stack spacing={2.5}>
-                <TextField
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
-                  required
-                />
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  disabled={loading}
-                  sx={{ py: 1.4 }}
-                >
-                  {loading ? <CircularProgress size={22} color="inherit" /> : 'Send Reset Link'}
-                </Button>
-              </Stack>
-            </Box>
-
-            <Divider />
-
-            <Typography variant="body2" color="text.secondary" align="center">
-              Remembered your password?{' '}
-              <Link to="/login" style={{ color: '#000', fontWeight: 600 }}>
-                Login
-              </Link>
-            </Typography>
+            <Button type="submit" variant="contained" size="large" disabled={loading}>
+              {loading ? <CircularProgress size={22} color="inherit" /> : 'Send Reset Link'}
+            </Button>
           </Stack>
-        </CardContent>
-      </Card>
-    </Box>
+        </Box>
+
+        <Divider />
+
+        <Typography variant="body2" color="text.secondary" align="center">
+          Remembered your password?{' '}
+          <Link to="/login" style={{ color: '#0A0A0A', fontWeight: 700 }}>
+            Login
+          </Link>
+        </Typography>
+      </Stack>
+    </AuthLayout>
   );
 };
 
