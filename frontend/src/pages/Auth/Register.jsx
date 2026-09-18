@@ -1,0 +1,231 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Divider,
+  Stack,
+  TextField,
+  Typography,
+  CircularProgress,
+  Snackbar,
+  InputAdornment,
+  IconButton,
+} from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import auth from '../../services/auth';
+
+const Register = () => {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successOpen, setSuccessOpen] = useState(false);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+
+    if (!form.name || !form.email || !form.password) {
+      setError('Full name, email, and password are required.');
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await auth.signup({
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
+        password: form.password,
+      });
+
+      setSuccessOpen(true);
+      setTimeout(() => {
+        navigate('/login');
+      }, 1000);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || 'Unable to create account. Please try again.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FAFAFA',
+        px: 2,
+      }}
+    >
+      <Card sx={{ width: '100%', maxWidth: 520, borderRadius: 3, p: 1 }}>
+        <CardContent sx={{ p: 4 }}>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2 }}>
+                NEW ACCOUNT
+              </Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+                Create Your Account
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Start managing your hospital workforce from one place.
+              </Typography>
+            </Box>
+
+            {error && (
+              <Alert severity="error" variant="outlined">
+                {error}
+              </Alert>
+            )}
+
+            <Box component="form" onSubmit={handleSubmit} noValidate>
+              <Stack spacing={2.25}>
+                <TextField
+                  label="Full Name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  required
+                />
+
+                <TextField
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  required
+                />
+
+                <TextField
+                  label="Phone"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  autoComplete="tel"
+                />
+
+                <TextField
+                  label="Password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  required
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            type="button"
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            edge="end"
+                            size="small"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+
+                <TextField
+                  label="Confirm Password"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  required
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            type="button"
+                            aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                            onClick={() => setShowConfirmPassword((prev) => !prev)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            edge="end"
+                            size="small"
+                          >
+                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={loading}
+                  sx={{ py: 1.4 }}
+                >
+                  {loading ? <CircularProgress size={22} color="inherit" /> : 'Create Account'}
+                </Button>
+              </Stack>
+            </Box>
+
+            <Divider />
+
+            <Typography variant="body2" color="text.secondary" align="center">
+              Already have an account?{' '}
+              <Link to="/login" style={{ color: '#000', fontWeight: 600 }}>
+                Login
+              </Link>
+            </Typography>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Snackbar
+        open={successOpen}
+        autoHideDuration={2000}
+        onClose={() => setSuccessOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled">
+          Account created successfully. Please login.
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+};
+
+export default Register;
