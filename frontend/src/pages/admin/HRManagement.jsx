@@ -3,8 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Checkbox,
   Chip,
   Divider,
@@ -31,6 +29,7 @@ import {
 } from '@mui/material';
 import {
   AddRounded,
+  AppsRounded,
   CheckCircleOutlineRounded,
   CloseRounded,
   EmailRounded,
@@ -38,10 +37,8 @@ import {
   MarkEmailReadRounded,
   PeopleRounded,
   PersonAddAlt1Rounded,
-  RefreshRounded,
   SecurityRounded,
   SendRounded,
-  ShieldRounded,
 } from '@mui/icons-material';
 import hrService from '../../services/hr.service';
 import AppLayout from '../../components/AppLayout';
@@ -78,14 +75,27 @@ const PERMISSION_OPTIONS = [
   },
 ];
 
+const MODULE_OPTIONS = [
+  {
+    key: 'hrms',
+    label: 'HRMS Module',
+    description: 'Employee management, Roster, Attendance, and Leave tracking',
+  },
+];
+
+// ─── Invite HR Modal ────────────────────────────────────────────────────────
 const InviteHRModal = ({ open, onClose, onSuccess }) => {
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
+  const [selectedModules, setSelectedModules] = useState([]);
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
       setForm({ name: '', email: '', phone: '' });
+      setSelectedModules([]);
+      setSelectedPermissions([]);
       setError('');
       setSubmitting(false);
     }
@@ -94,6 +104,18 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const toggleModule = (key) => {
+    setSelectedModules((prev) =>
+      prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key],
+    );
+  };
+
+  const togglePermission = (key) => {
+    setSelectedPermissions((prev) =>
+      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key],
+    );
   };
 
   const handleSubmit = async () => {
@@ -113,6 +135,8 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         phone: form.phone.trim() || undefined,
+        modules: selectedModules,
+        permissions: selectedPermissions,
       });
       onSuccess('Invitation sent successfully.');
       onClose();
@@ -164,11 +188,136 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
           placeholder="e.g. +91 98765 43210 (optional)"
           fullWidth
         />
+
+        <Divider />
+
+        {/* Module Access */}
+        <Box>
+          <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+            Module Access
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+            Grant this HR access to additional business modules.
+          </Typography>
+          <Stack spacing={1}>
+            {MODULE_OPTIONS.map((mod) => {
+              const isChecked = selectedModules.includes(mod.key);
+              return (
+                <Paper
+                  key={mod.key}
+                  variant="outlined"
+                  onClick={() => toggleModule(mod.key)}
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    borderColor: isChecked ? 'primary.main' : 'divider',
+                    bgcolor: isChecked
+                      ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff')
+                      : 'transparent',
+                    transition: 'all 0.15s ease-in-out',
+                  }}
+                >
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={isChecked}
+                        onChange={() => toggleModule(mod.key)}
+                        onClick={(e) => e.stopPropagation()}
+                        color="primary"
+                      />
+                    }
+                    label={
+                      <Box sx={{ ml: 0.5 }}>
+                        <Typography variant="body2" fontWeight={600} color="text.primary">
+                          {mod.label}
+                        </Typography>
+                        <FormHelperText sx={{ m: 0 }}>{mod.description}</FormHelperText>
+                      </Box>
+                    }
+                    sx={{ width: '100%', m: 0 }}
+                  />
+                </Paper>
+              );
+            })}
+          </Stack>
+        </Box>
+
+        {/* Structure Permissions */}
+        <Box>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+            <Typography variant="subtitle2" fontWeight={700}>
+              Hospital Structure Permissions
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setSelectedPermissions(PERMISSION_OPTIONS.map((p) => p.key))}
+              >
+                Select All
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                color="inherit"
+                onClick={() => setSelectedPermissions([])}
+              >
+                Clear
+              </Button>
+            </Stack>
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+            Control which Hospital Structure actions this HR can perform.
+          </Typography>
+          <FormGroup sx={{ gap: 1 }}>
+            {PERMISSION_OPTIONS.map((option) => {
+              const isChecked = selectedPermissions.includes(option.key);
+              return (
+                <Paper
+                  key={option.key}
+                  variant="outlined"
+                  onClick={() => togglePermission(option.key)}
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    borderColor: isChecked ? 'primary.main' : 'divider',
+                    bgcolor: isChecked
+                      ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff')
+                      : 'transparent',
+                    transition: 'all 0.15s ease-in-out',
+                  }}
+                >
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={isChecked}
+                        onChange={() => togglePermission(option.key)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    }
+                    label={
+                      <Box sx={{ ml: 0.5 }}>
+                        <Typography variant="body2" fontWeight={600} color="text.primary">
+                          {option.label}
+                        </Typography>
+                        <FormHelperText sx={{ m: 0 }}>{option.description}</FormHelperText>
+                      </Box>
+                    }
+                    sx={{ width: '100%', m: 0 }}
+                  />
+                </Paper>
+              );
+            })}
+          </FormGroup>
+        </Box>
       </Stack>
     </Modal>
   );
 };
 
+// ─── Manage Permissions Modal ────────────────────────────────────────────────
 const ManagePermissionsModal = ({ open, hrUser, onClose, onSuccess }) => {
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -312,6 +461,160 @@ const ManagePermissionsModal = ({ open, hrUser, onClose, onSuccess }) => {
   );
 };
 
+// ─── Manage Modules Modal ────────────────────────────────────────────────────
+const ManageModulesModal = ({ open, hrUser, onClose, onSuccess }) => {
+  const [selectedModules, setSelectedModules] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open && hrUser) {
+      const grantedNonCore = (hrUser.modules || []).filter((m) => m !== 'core');
+      setSelectedModules(grantedNonCore);
+      setError('');
+      setSubmitting(false);
+    }
+  }, [open, hrUser]);
+
+  const handleToggle = (key) => {
+    setSelectedModules((prev) =>
+      prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key],
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!hrUser) return;
+    setError('');
+    try {
+      setSubmitting(true);
+      const modules = ['core', ...selectedModules];
+      await hrService.updateModules(hrUser._id, modules);
+      onSuccess(`Module access updated for ${hrUser.name}.`, hrUser._id, modules);
+      onClose();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Unable to update module access.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!hrUser) return null;
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Manage Module Access"
+      description={`Grant or revoke business module access for ${hrUser.name}.`}
+      submitLabel="Save Module Access"
+      submittingLabel="Saving..."
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      error={error}
+      startIcon={AppsRounded}
+    >
+      <Stack spacing={2.5}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2,
+            borderRadius: 2,
+            bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8fafc'),
+            borderColor: 'divider',
+          }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center">
+            <InitialsAvatar name={hrUser.name} sx={{ width: 44, height: 44 }} />
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700}>
+                {hrUser.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {hrUser.email}
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
+
+        {/* Core — always granted, not editable */}
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 1.5,
+            borderRadius: 2,
+            borderColor: 'divider',
+            bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : '#f8fafc'),
+          }}
+        >
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Checkbox checked disabled />
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" fontWeight={600} color="text.primary">
+                Core Platform
+              </Typography>
+              <FormHelperText sx={{ m: 0 }}>
+                Always granted — Authentication, Hospital, Users, Roles, Permissions
+              </FormHelperText>
+            </Box>
+            <Chip label="Default" size="small" color="default" />
+          </Stack>
+        </Paper>
+
+        <Typography variant="subtitle2" fontWeight={700} color="text.primary">
+          Business Modules
+        </Typography>
+
+        <FormGroup sx={{ gap: 1.5 }}>
+          {MODULE_OPTIONS.map((mod) => {
+            const isChecked = selectedModules.includes(mod.key);
+            return (
+              <Paper
+                key={mod.key}
+                variant="outlined"
+                onClick={() => handleToggle(mod.key)}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  borderColor: isChecked ? 'primary.main' : 'divider',
+                  bgcolor: isChecked
+                    ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff')
+                    : 'transparent',
+                  transition: 'all 0.15s ease-in-out',
+                  '&:hover': {
+                    borderColor: 'primary.light',
+                  },
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={isChecked}
+                      onChange={() => handleToggle(mod.key)}
+                      onClick={(e) => e.stopPropagation()}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Box sx={{ ml: 0.5 }}>
+                      <Typography variant="body2" fontWeight={600} color="text.primary">
+                        {mod.label}
+                      </Typography>
+                      <FormHelperText sx={{ m: 0 }}>{mod.description}</FormHelperText>
+                    </Box>
+                  }
+                  sx={{ width: '100%', m: 0 }}
+                />
+              </Paper>
+            );
+          })}
+        </FormGroup>
+      </Stack>
+    </Modal>
+  );
+};
+
+// ─── Main HRManagement Page ──────────────────────────────────────────────────
 const HRManagement = () => {
   const [hrList, setHrList] = useState([]);
   const [invitations, setInvitations] = useState([]);
@@ -319,18 +622,13 @@ const HRManagement = () => {
   const [error, setError] = useState('');
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Modals state
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [permissionModalHr, setPermissionModalHr] = useState(null);
+  const [moduleModalHr, setModuleModalHr] = useState(null);
   const [cancelInviteTarget, setCancelInviteTarget] = useState(null);
   const [cancelling, setCancelling] = useState(false);
 
-  // Snackbar state
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const loadData = async () => {
     try {
@@ -363,11 +661,7 @@ const HRManagement = () => {
   const handleResendInvitation = async (invitationId) => {
     try {
       await hrService.resendInvitation(invitationId);
-      setSnackbar({
-        open: true,
-        message: 'Invitation resent successfully.',
-        severity: 'success',
-      });
+      setSnackbar({ open: true, message: 'Invitation resent successfully.', severity: 'success' });
       loadData();
     } catch (err) {
       setSnackbar({
@@ -383,11 +677,7 @@ const HRManagement = () => {
     try {
       setCancelling(true);
       await hrService.cancelInvitation(cancelInviteTarget._id);
-      setSnackbar({
-        open: true,
-        message: 'Invitation cancelled successfully.',
-        severity: 'success',
-      });
+      setSnackbar({ open: true, message: 'Invitation cancelled successfully.', severity: 'success' });
       setCancelInviteTarget(null);
       loadData();
     } catch (err) {
@@ -404,9 +694,14 @@ const HRManagement = () => {
   const handlePermissionsUpdated = (msg, hrId, updatedPermissions) => {
     setSnackbar({ open: true, message: msg, severity: 'success' });
     setHrList((prev) =>
-      prev.map((item) =>
-        item._id === hrId ? { ...item, permissions: updatedPermissions } : item,
-      ),
+      prev.map((item) => (item._id === hrId ? { ...item, permissions: updatedPermissions } : item)),
+    );
+  };
+
+  const handleModulesUpdated = (msg, hrId, updatedModules) => {
+    setSnackbar({ open: true, message: msg, severity: 'success' });
+    setHrList((prev) =>
+      prev.map((item) => (item._id === hrId ? { ...item, modules: updatedModules } : item)),
     );
   };
 
@@ -415,12 +710,18 @@ const HRManagement = () => {
     return match ? match.label.replace(' Floors & Rooms', '') : permKey;
   };
 
+  const formatModuleLabel = (moduleKey) => {
+    if (moduleKey === 'core') return null;
+    const match = MODULE_OPTIONS.find((m) => m.key === moduleKey);
+    return match ? match.label : moduleKey;
+  };
+
   return (
     <AppLayout>
       <Stack spacing={3}>
         <PageHeader
           title="HR Management"
-          subtitle="Invite HR members and manage their hospital permissions."
+          subtitle="Invite HR members and manage their hospital permissions and module access."
           action={
             <Button
               variant="contained"
@@ -433,7 +734,7 @@ const HRManagement = () => {
           }
         />
 
-        {/* Stats Row */}
+        {/* Stats */}
         <Grid container spacing={2.5}>
           <Grid item xs={12} sm={4}>
             <StatCard
@@ -461,7 +762,7 @@ const HRManagement = () => {
           </Grid>
         </Grid>
 
-        {/* Navigation Tabs */}
+        {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs
             value={tabIndex}
@@ -511,7 +812,8 @@ const HRManagement = () => {
                       <TableCell sx={{ fontWeight: 700 }}>HR Member</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Contact</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Assigned Permissions</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Modules</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Structure Permissions</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>
                         Actions
                       </TableCell>
@@ -520,6 +822,9 @@ const HRManagement = () => {
                   <TableBody>
                     {hrList.map((hr) => {
                       const perms = Array.isArray(hr.permissions) ? hr.permissions : [];
+                      const mods = (Array.isArray(hr.modules) ? hr.modules : ['core']).filter(
+                        (m) => m !== 'core',
+                      );
                       return (
                         <TableRow key={hr._id} hover>
                           <TableCell>
@@ -547,9 +852,31 @@ const HRManagement = () => {
                             <StatusBadge status={hr.status || 'active'} />
                           </TableCell>
                           <TableCell>
+                            {mods.length === 0 ? (
+                              <Typography variant="caption" color="text.secondary" fontStyle="italic">
+                                Core only
+                              </Typography>
+                            ) : (
+                              <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+                                {mods.map((m) => {
+                                  const label = formatModuleLabel(m);
+                                  return label ? (
+                                    <Chip
+                                      key={m}
+                                      label={label}
+                                      size="small"
+                                      color="primary"
+                                      sx={{ fontWeight: 500, fontSize: '0.72rem' }}
+                                    />
+                                  ) : null;
+                                })}
+                              </Stack>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             {perms.length === 0 ? (
                               <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                                No structure permissions granted
+                                No structure permissions
                               </Typography>
                             ) : (
                               <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
@@ -567,15 +894,28 @@ const HRManagement = () => {
                             )}
                           </TableCell>
                           <TableCell align="right">
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              startIcon={<LockPersonRounded />}
-                              onClick={() => setPermissionModalHr(hr)}
-                              sx={{ fontWeight: 600, textTransform: 'none' }}
-                            >
-                              Manage Permissions
-                            </Button>
+                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                              <Tooltip title="Manage module access">
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  startIcon={<AppsRounded />}
+                                  onClick={() => setModuleModalHr(hr)}
+                                  sx={{ fontWeight: 600, textTransform: 'none' }}
+                                >
+                                  Modules
+                                </Button>
+                              </Tooltip>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<LockPersonRounded />}
+                                onClick={() => setPermissionModalHr(hr)}
+                                sx={{ fontWeight: 600, textTransform: 'none' }}
+                              >
+                                Permissions
+                              </Button>
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       );
@@ -611,6 +951,7 @@ const HRManagement = () => {
                       <TableCell sx={{ fontWeight: 700 }}>Invited Person</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Modules Granted</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Expires At</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>
                         Actions
@@ -623,6 +964,7 @@ const HRManagement = () => {
                         inv.status === 'expired' ||
                         (inv.status === 'pending' && new Date(inv.expiresAt) < new Date());
                       const effectiveStatus = isExpired ? 'expired' : inv.status;
+                      const invMods = (inv.modules || []).filter((m) => m !== 'core');
 
                       return (
                         <TableRow key={inv._id} hover>
@@ -643,18 +985,34 @@ const HRManagement = () => {
                             <StatusBadge status={effectiveStatus} />
                           </TableCell>
                           <TableCell>
+                            {invMods.length === 0 ? (
+                              <Typography variant="caption" color="text.secondary" fontStyle="italic">
+                                Core only
+                              </Typography>
+                            ) : (
+                              <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+                                {invMods.map((m) => {
+                                  const label = formatModuleLabel(m);
+                                  return label ? (
+                                    <Chip
+                                      key={m}
+                                      label={label}
+                                      size="small"
+                                      color="primary"
+                                      sx={{ fontWeight: 500, fontSize: '0.72rem' }}
+                                    />
+                                  ) : null;
+                                })}
+                              </Stack>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <Typography variant="body2">
-                              {inv.expiresAt
-                                ? new Date(inv.expiresAt).toLocaleDateString()
-                                : '—'}
+                              {inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString() : '—'}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              justifyContent="flex-end"
-                            >
+                            <Stack direction="row" spacing={1} justifyContent="flex-end">
                               {(inv.status === 'pending' || isExpired) && (
                                 <Tooltip title="Resend invitation email">
                                   <IconButton
@@ -690,7 +1048,7 @@ const HRManagement = () => {
         )}
       </Stack>
 
-      {/* Invite HR Modal */}
+      {/* Modals */}
       <InviteHRModal
         open={inviteModalOpen}
         onClose={() => setInviteModalOpen(false)}
@@ -700,7 +1058,6 @@ const HRManagement = () => {
         }}
       />
 
-      {/* Manage Permissions Modal */}
       <ManagePermissionsModal
         open={Boolean(permissionModalHr)}
         hrUser={permissionModalHr}
@@ -708,7 +1065,13 @@ const HRManagement = () => {
         onSuccess={handlePermissionsUpdated}
       />
 
-      {/* Confirm Cancel Invitation Dialog */}
+      <ManageModulesModal
+        open={Boolean(moduleModalHr)}
+        hrUser={moduleModalHr}
+        onClose={() => setModuleModalHr(null)}
+        onSuccess={handleModulesUpdated}
+      />
+
       <ConfirmDialog
         open={Boolean(cancelInviteTarget)}
         title="Cancel Invitation"
@@ -720,7 +1083,6 @@ const HRManagement = () => {
         onClose={() => setCancelInviteTarget(null)}
       />
 
-      {/* Feedback Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}

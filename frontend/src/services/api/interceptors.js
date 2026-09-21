@@ -16,6 +16,8 @@ const handleApiError = (error) => {
     localStorage.removeItem('role');
     localStorage.removeItem('userName');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('permissions');
+    localStorage.removeItem('modules');
     window.location.href = '/login';
   }
 

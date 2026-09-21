@@ -204,6 +204,8 @@ const Sidebar = ({ role: forcedRole, onLogout, mobileOpen = false, onMobileClose
       localStorage.removeItem('role');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
+      localStorage.removeItem('permissions');
+      localStorage.removeItem('modules');
       navigate('/login');
     }
 

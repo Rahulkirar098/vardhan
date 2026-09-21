@@ -4,6 +4,7 @@ import {
   LayersRounded,
   LocalHospitalRounded,
   PeopleRounded,
+  BadgeRounded,
 } from '@mui/icons-material';
 
 const sidebarConfig = {
@@ -56,30 +57,53 @@ export const getRoleDisplayName = (role) => {
   return labels[role] || 'User';
 };
 
+/**
+ * Returns sidebar sections for the given role, dynamically adjusting
+ * based on stored user permissions and module access.
+ */
 export const getSidebarSectionsForRole = (role) => {
   if (role === 'hr') {
     let hasStructureView = false;
+    let hasHrmsModule = false;
+
     try {
-      const stored = localStorage.getItem('permissions');
-      const perms = stored ? JSON.parse(stored) : [];
+      const storedPerms = localStorage.getItem('permissions');
+      const perms = storedPerms ? JSON.parse(storedPerms) : [];
       hasStructureView = Array.isArray(perms) && perms.includes('structure.view');
     } catch {
       hasStructureView = false;
     }
 
-    if (hasStructureView) {
-      return [
-        {
-          title: '',
-          items: [
-            { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
-            { label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded },
-            { label: 'My Hospital', path: '/hr/hospital', icon: LocalHospitalRounded },
-          ],
-        },
-      ];
+    try {
+      const storedModules = localStorage.getItem('modules');
+      const mods = storedModules ? JSON.parse(storedModules) : [];
+      hasHrmsModule = Array.isArray(mods) && mods.includes('hrms');
+    } catch {
+      hasHrmsModule = false;
     }
-    return sidebarConfig.hr?.sections || [];
+
+    const coreItems = [
+      { label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded },
+      { label: 'My Hospital', path: '/hr/hospital', icon: LocalHospitalRounded },
+    ];
+
+    if (hasStructureView) {
+      coreItems.unshift({ label: 'Hospital Structure', path: '/structure', icon: LayersRounded });
+    }
+
+    const sections = [{ title: '', items: coreItems }];
+
+    if (hasHrmsModule) {
+      sections.push({
+        title: 'HRMS',
+        items: [
+          // Phase 2+ will add Employee Management, Roster, Attendance, Leave here
+          { label: 'Employees', path: '/hr/employees', icon: BadgeRounded },
+        ],
+      });
+    }
+
+    return sections;
   }
 
   return sidebarConfig[role]?.sections || [];
