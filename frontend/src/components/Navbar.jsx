@@ -19,7 +19,7 @@ const PAGE_META = [
 ];
 
 const getPageMeta = (pathname) =>
-  PAGE_META.find((meta) => meta.test(pathname)) || { title: 'Vardhan', breadcrumb: '' };
+  PAGE_META.find((meta) => meta.test(pathname)) || { title: 'CloudCherry', breadcrumb: '' };
 
 const Navbar = ({ userName = 'User', userRole, showMenu = false, onMenuClick }) => {
   const { pathname } = useLocation();

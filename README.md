@@ -1,4 +1,4 @@
-# Vardhan
+# CloudCherry
 
 A full-stack hospital management system built with Node.js, Express, MongoDB, React, Vite, and Material UI. The platform is designed for role-based hospital administration, covering registration, authentication, hospital setup, hospital structure (floors and rooms), HR onboarding, and secure invitation-based access.
 
@@ -15,7 +15,7 @@ A full-stack hospital management system built with Node.js, Express, MongoDB, Re
 
 ## Overview
 
-Vardhan enables a structured multi-role hospital workflow:
+CloudCherry enables a structured multi-role hospital workflow:
 
 1. Admin registers
 2. Admin logs in
@@ -130,7 +130,7 @@ The platform enforces controlled ownership and access rules:
 ## 📁 Project Structure
 
 ```text
-vardhan/
+cloudcherry/
 ├── backend/
 │   ├── .env
 │   ├── index.js
@@ -481,9 +481,9 @@ These backend endpoints and models are active and tested, but currently lack ded
 ---
 
 ### 3. Useless, Dead, or Deprecated Concepts in Codebase (4)
-These items are remnants from previous prototypes and are not part of the Vardhan HRMS architecture:
+These items are remnants from previous prototypes and are not part of the CloudCherry HRMS architecture:
 
-- **Unused User Roles in `user.model.js`**: `nurse`, `doctor`, `patient`, `user` are defined in the schema enum but have zero routes, logic, or screens (Vardhan is an HRMS, not an EHR).
+- **Unused User Roles in `user.model.js`**: `nurse`, `doctor`, `patient`, `user` are defined in the schema enum but have zero routes, logic, or screens (CloudCherry is an HRMS, not an EHR).
 - **Direct HR Creation (`POST /api/hr`)**: Bypasses the secure invitation workflow and has no frontend caller.
 - **Redundant `hr.getAll()` query in `Hospital.jsx`**: Overview statistics already calculate HR counts directly on the database.
 - **Legacy Department Module**: Removed from active application code (historical database data preserved).

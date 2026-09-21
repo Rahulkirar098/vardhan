@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Hospital HR and Nurse Management API",
+  "description": "CloudCherry Hospital HRMS API",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",

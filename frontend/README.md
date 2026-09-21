@@ -1,6 +1,6 @@
-# Vardhan — Frontend
+# CloudCherry — Frontend
 
-The React + Vite + Material UI dashboard for Vardhan's hospital management platform. See the [root README](../README.md) for the full project overview, setup, and role flows.
+The React + Vite + Material UI dashboard for CloudCherry's hospital management platform. See the [root README](../README.md) for the full project overview, setup, and role flows.
 
 ## Stack
 

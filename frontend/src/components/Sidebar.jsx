@@ -161,14 +161,14 @@ const Brand = () => (
         flexShrink: 0,
       }}
     >
-      V
+      C
     </Box>
     <Box sx={{ minWidth: 0 }}>
       <Typography
         sx={{ fontWeight: 800, fontSize: 17, lineHeight: 1.1, letterSpacing: '-0.01em' }}
         noWrap
       >
-        VARDHAN
+        CLOUDCHERRY
       </Typography>
       <Typography
         variant="caption"
