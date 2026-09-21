@@ -5,6 +5,13 @@ const VALID_STATUSES = ["NOT_STARTED", "IN_PROGRESS", "DONE", "BLOCKED"];
 
 const getCoreProgress = async (req, res) => {
     try {
+        if (!req.user || req.user.role !== "super_admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Only Super Admin can access Core Progress",
+            });
+        }
+
         const features = await CoreProgress.find({ isActive: true })
             .populate("updatedBy", "name email role")
             .sort({ sortOrder: 1, createdAt: 1 });
@@ -102,6 +109,13 @@ const getCoreProgress = async (req, res) => {
 
 const getCoreProgressFeatureById = async (req, res) => {
     try {
+        if (!req.user || req.user.role !== "super_admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Only Super Admin can access Core Progress",
+            });
+        }
+
         const { featureId } = req.params;
 
         if (!isValidObjectId(featureId)) {
@@ -138,11 +152,11 @@ const getCoreProgressFeatureById = async (req, res) => {
 
 const updateCoreProgressFeature = async (req, res) => {
     try {
-        // Only admin and super_admin are authorized to update Core Progress
-        if (!req.user || (req.user.role !== "admin" && req.user.role !== "super_admin")) {
+        // Only super_admin is authorized to update Core Progress
+        if (!req.user || req.user.role !== "super_admin") {
             return res.status(403).json({
                 success: false,
-                message: "You do not have permission to update Core Progress",
+                message: "Only Super Admin can update Core Progress",
             });
         }
 

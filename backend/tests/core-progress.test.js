@@ -16,6 +16,9 @@ const { generateToken } = require("../src/utils/jwt");
 let server;
 let baseUrl;
 
+let superAdminUser;
+let tokenSuperAdmin;
+
 let adminUser;
 let tokenAdmin;
 
@@ -35,6 +38,16 @@ const setupTestEnvironment = async () => {
     baseUrl = `http://127.0.0.1:${port}`;
 
     const passwordHash = await hashPassword("Test@1234");
+
+    // Super Admin user
+    superAdminUser = await User.create({
+        name: `Super Admin Core ${testTimestamp}`,
+        email: `super_cp_${testTimestamp}@example.com`,
+        password: passwordHash,
+        role: "super_admin",
+        status: "active",
+    });
+    tokenSuperAdmin = generateToken({ id: superAdminUser._id.toString(), role: "super_admin" });
 
     // Admin user
     adminUser = await User.create({
@@ -61,7 +74,7 @@ const cleanupTestEnvironment = async () => {
     try {
         await User.deleteMany({
             email: {
-                $in: [adminUser?.email, hrUser?.email],
+                $in: [superAdminUser?.email, adminUser?.email, hrUser?.email],
             },
         });
     } catch (e) {
@@ -133,10 +146,10 @@ const runTests = async () => {
             assert.strictEqual(count, 57, `Count after second seed must still be 57, found ${count}`);
         });
 
-        // 3. GET /api/v1/core-progress
-        await test("TEST 3: GET /api/v1/core-progress returns grouped modules and summary", async () => {
+        // 3. GET /api/v1/core-progress (Super Admin)
+        await test("TEST 3: Super Admin can access GET /api/v1/core-progress with summary", async () => {
             const res = await apiRequest("/api/v1/core-progress", {
-                headers: { Authorization: `Bearer ${tokenAdmin}` },
+                headers: { Authorization: `Bearer ${tokenSuperAdmin}` },
             });
             assert.strictEqual(res.status, 200);
             assert.strictEqual(res.data.success, true);
@@ -151,10 +164,30 @@ const runTests = async () => {
             assert(sampleFeatureId, "Sample feature must have an ID");
         });
 
-        // 4. GET /api/v1/core-progress/:featureId
-        await test("TEST 4: GET /api/v1/core-progress/:featureId returns single feature", async () => {
-            const res = await apiRequest(`/api/v1/core-progress/${sampleFeatureId}`, {
+        // 4. Admin role is rejected (403)
+        await test("TEST 4: Admin cannot access Core Progress (403 Forbidden)", async () => {
+            const res = await apiRequest("/api/v1/core-progress", {
                 headers: { Authorization: `Bearer ${tokenAdmin}` },
+            });
+            assert.strictEqual(res.status, 403);
+            assert.strictEqual(res.data.success, false);
+            assert(res.data.message.includes("Super Admin"));
+        });
+
+        // 5. HR role is rejected (403)
+        await test("TEST 5: HR cannot access Core Progress (403 Forbidden)", async () => {
+            const res = await apiRequest("/api/v1/core-progress", {
+                headers: { Authorization: `Bearer ${tokenHr}` },
+            });
+            assert.strictEqual(res.status, 403);
+            assert.strictEqual(res.data.success, false);
+            assert(res.data.message.includes("Super Admin"));
+        });
+
+        // 6. GET /api/v1/core-progress/:featureId (Super Admin)
+        await test("TEST 6: Super Admin can GET /api/v1/core-progress/:featureId", async () => {
+            const res = await apiRequest(`/api/v1/core-progress/${sampleFeatureId}`, {
+                headers: { Authorization: `Bearer ${tokenSuperAdmin}` },
             });
             assert.strictEqual(res.status, 200);
             assert.strictEqual(res.data.success, true);
@@ -163,11 +196,11 @@ const runTests = async () => {
             assert(res.data.data.featureKey);
         });
 
-        // 5. PATCH /api/v1/core-progress/:featureId updates status and notes
-        await test("TEST 5: Admin can update feature status and notes", async () => {
+        // 7. PATCH /api/v1/core-progress/:featureId updates status and notes (Super Admin)
+        await test("TEST 7: Super Admin can update feature status and notes", async () => {
             const res = await apiRequest(`/api/v1/core-progress/${sampleFeatureId}`, {
                 method: "PATCH",
-                headers: { Authorization: `Bearer ${tokenAdmin}` },
+                headers: { Authorization: `Bearer ${tokenSuperAdmin}` },
                 body: {
                     status: "BLOCKED",
                     notes: "Temporarily blocked pending verification",
@@ -179,30 +212,30 @@ const runTests = async () => {
             assert.strictEqual(res.data.data.notes, "Temporarily blocked pending verification");
         });
 
-        // 6. Persistence check: subsequent GET reflects changes
-        await test("TEST 6: Updated status and notes persist in MongoDB", async () => {
+        // 8. Persistence check: subsequent GET reflects changes
+        await test("TEST 8: Updated status and notes persist in MongoDB", async () => {
             const res = await apiRequest(`/api/v1/core-progress/${sampleFeatureId}`, {
-                headers: { Authorization: `Bearer ${tokenAdmin}` },
+                headers: { Authorization: `Bearer ${tokenSuperAdmin}` },
             });
             assert.strictEqual(res.status, 200);
             assert.strictEqual(res.data.data.status, "BLOCKED");
             assert.strictEqual(res.data.data.notes, "Temporarily blocked pending verification");
-            assert.strictEqual(res.data.data.updatedBy?._id, adminUser._id.toString());
+            assert.strictEqual(res.data.data.updatedBy?._id, superAdminUser._id.toString());
         });
 
-        // 7. Re-seeding preserves user-modified status and notes
-        await test("TEST 7: seedCoreProgress preserves user modifications (idempotent)", async () => {
+        // 9. Re-seeding preserves user-modified status and notes
+        await test("TEST 9: seedCoreProgress preserves user modifications (idempotent)", async () => {
             await seedCoreProgress();
             const feature = await CoreProgress.findById(sampleFeatureId);
             assert.strictEqual(feature.status, "BLOCKED", "Modified status must be preserved");
             assert.strictEqual(feature.notes, "Temporarily blocked pending verification", "Notes must be preserved");
         });
 
-        // 8. Revert sample feature to DONE
-        await test("TEST 8: Admin can update status back to DONE", async () => {
+        // 10. Revert sample feature to DONE
+        await test("TEST 10: Super Admin can update status back to DONE", async () => {
             const res = await apiRequest(`/api/v1/core-progress/${sampleFeatureId}`, {
                 method: "PATCH",
-                headers: { Authorization: `Bearer ${tokenAdmin}` },
+                headers: { Authorization: `Bearer ${tokenSuperAdmin}` },
                 body: {
                     status: "DONE",
                     notes: "Verified and functional",
@@ -212,8 +245,20 @@ const runTests = async () => {
             assert.strictEqual(res.data.data.status, "DONE");
         });
 
-        // 9. Unauthorized HR update is blocked (403)
-        await test("TEST 9: HR user cannot update Core Progress (403 Forbidden)", async () => {
+        // 11. Admin PATCH is rejected (403)
+        await test("TEST 11: Admin user cannot update Core Progress (403 Forbidden)", async () => {
+            const res = await apiRequest(`/api/v1/core-progress/${sampleFeatureId}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${tokenAdmin}` },
+                body: { status: "DONE" },
+            });
+            assert.strictEqual(res.status, 403);
+            assert.strictEqual(res.data.success, false);
+            assert(res.data.message.includes("Super Admin"));
+        });
+
+        // 12. HR PATCH is rejected (403)
+        await test("TEST 12: HR user cannot update Core Progress (403 Forbidden)", async () => {
             const res = await apiRequest(`/api/v1/core-progress/${sampleFeatureId}`, {
                 method: "PATCH",
                 headers: { Authorization: `Bearer ${tokenHr}` },
@@ -221,21 +266,21 @@ const runTests = async () => {
             });
             assert.strictEqual(res.status, 403);
             assert.strictEqual(res.data.success, false);
-            assert(res.data.message.includes("permission"));
+            assert(res.data.message.includes("Super Admin"));
         });
 
-        // 10. Unauthenticated request returns 401
-        await test("TEST 10: Unauthenticated request returns 401 Unauthorized", async () => {
+        // 13. Unauthenticated request returns 401
+        await test("TEST 13: Unauthenticated request returns 401 Unauthorized", async () => {
             const res = await apiRequest("/api/v1/core-progress");
             assert.strictEqual(res.status, 401);
             assert.strictEqual(res.data.success, false);
         });
 
-        // 11. Invalid status returns 400
-        await test("TEST 11: Invalid status value returns 400 Bad Request", async () => {
+        // 14. Invalid status returns 400
+        await test("TEST 14: Invalid status value returns 400 Bad Request", async () => {
             const res = await apiRequest(`/api/v1/core-progress/${sampleFeatureId}`, {
                 method: "PATCH",
-                headers: { Authorization: `Bearer ${tokenAdmin}` },
+                headers: { Authorization: `Bearer ${tokenSuperAdmin}` },
                 body: { status: "SUPER_DONE" },
             });
             assert.strictEqual(res.status, 400);
@@ -243,20 +288,20 @@ const runTests = async () => {
             assert(res.data.message.includes("Invalid status"));
         });
 
-        // 12. Invalid ObjectId returns 400
-        await test("TEST 12: Invalid ObjectId format returns 400 Bad Request", async () => {
+        // 15. Invalid ObjectId returns 400
+        await test("TEST 15: Invalid ObjectId format returns 400 Bad Request", async () => {
             const res = await apiRequest("/api/v1/core-progress/invalid-id-123", {
-                headers: { Authorization: `Bearer ${tokenAdmin}` },
+                headers: { Authorization: `Bearer ${tokenSuperAdmin}` },
             });
             assert.strictEqual(res.status, 400);
             assert.strictEqual(res.data.success, false);
         });
 
-        // 13. Non-existent feature returns 404
-        await test("TEST 13: Non-existent feature ID returns 404 Not Found", async () => {
+        // 16. Non-existent feature returns 404
+        await test("TEST 16: Non-existent feature ID returns 404 Not Found", async () => {
             const dummyId = new mongoose.Types.ObjectId().toString();
             const res = await apiRequest(`/api/v1/core-progress/${dummyId}`, {
-                headers: { Authorization: `Bearer ${tokenAdmin}` },
+                headers: { Authorization: `Bearer ${tokenSuperAdmin}` },
             });
             assert.strictEqual(res.status, 404);
             assert.strictEqual(res.data.success, false);

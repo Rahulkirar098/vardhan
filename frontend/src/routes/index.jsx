@@ -208,7 +208,7 @@ const AppRoutes = () => {
       <Route
         path="/core-progress"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+          <ProtectedRoute allowedRoles={['super_admin']}>
             <CoreProgressPage />
           </ProtectedRoute>
         }
