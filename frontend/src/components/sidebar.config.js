@@ -1,5 +1,6 @@
 import {
   AccountCircleRounded,
+  AssignmentTurnedInRounded,
   DashboardRounded,
   LayersRounded,
   LocalHospitalRounded,
@@ -14,6 +15,7 @@ const sidebarConfig = {
         items: [
           { label: 'Dashboard', path: '/super-admin/dashboard', icon: DashboardRounded },
           { label: 'Hospitals', path: '/super-admin/hospitals', icon: LocalHospitalRounded },
+          { label: 'Core Progress', path: '/core-progress', icon: AssignmentTurnedInRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
       },
@@ -28,6 +30,7 @@ const sidebarConfig = {
           { label: 'Hospital', path: '/hospital', icon: LocalHospitalRounded },
           { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
           { label: 'HR Management', path: '/hr-management', icon: PeopleRounded },
+          { label: 'Core Progress', path: '/core-progress', icon: AssignmentTurnedInRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
       },
