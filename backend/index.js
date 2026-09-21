@@ -10,6 +10,7 @@ const { hospitalRoute } = require("./src/routes/hospital.route");
 const { departmentRoute } = require("./src/routes/department.route");
 const { hrRoute } = require("./src/routes/hr.route");
 const { superAdminRoute } = require("./src/routes/superAdmin.route");
+const { structureRoute } = require("./src/routes/structure.route");
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/hospitals", hospitalRoute);
 app.use("/api/departments", departmentRoute);
 app.use("/api/hr", hrRoute);
 app.use("/api/super-admin", superAdminRoute);
+app.use("/api/v1/hospitals/:hospitalId", structureRoute);
 
 mongoose
     .connect(process.env.MONGODB_URI)

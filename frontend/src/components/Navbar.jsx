@@ -10,6 +10,8 @@ const PAGE_META = [
   { test: (path) => path === '/hospital', title: 'Hospital', breadcrumb: 'Workspace' },
   { test: (path) => path === '/departments', title: 'Departments', breadcrumb: 'Workspace' },
   { test: (path) => path.startsWith('/departments/'), title: 'Department Details', breadcrumb: 'Workspace / Departments' },
+  { test: (path) => path === '/structure', title: 'Hospital Structure', breadcrumb: 'Workspace' },
+  { test: (path) => path.startsWith('/structure/'), title: 'Floor Details', breadcrumb: 'Workspace / Hospital Structure' },
   { test: (path) => path === '/profile', title: 'My Profile', breadcrumb: 'Account' },
   { test: (path) => path === '/super-admin/dashboard', title: 'Hospitals', breadcrumb: 'Platform' },
   { test: (path) => path.startsWith('/super-admin/hospitals/'), title: 'Hospital Details', breadcrumb: 'Platform / Hospitals' },

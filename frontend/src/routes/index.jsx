@@ -12,6 +12,8 @@ import Hospital from '../pages/admin/Hospital';
 import Profile from '../pages/shared/Profile';
 import Departments from '../pages/admin/Departments';
 import DepartmentDetails from '../pages/admin/DepartmentDetails';
+import StructurePage from '../pages/admin/StructurePage';
+import FloorDetails from '../pages/admin/FloorDetails';
 import HRProfile from '../pages/hr/HRProfile';
 import MyHospital from '../pages/hr/MyHospital';
 import MyDepartment from '../pages/hr/MyDepartment';
@@ -26,10 +28,35 @@ const getUserRole = () => {
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(atob(base64));
+
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
+      return null;
+    }
+
     return payload.role || null;
   } catch {
     return null;
   }
+};
+
+const getDefaultRedirectForRole = (role) => {
+  if (role === 'super_admin') {
+    return '/super-admin/dashboard';
+  }
+
+  if (role === 'hr') {
+    return '/hr/dashboard';
+  }
+
+  if (role === 'admin') {
+    return '/hospital';
+  }
+
+  return '/dashboard';
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -46,15 +73,18 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    if (role === 'super_admin') {
-      return <Navigate to="/super-admin/dashboard" replace />;
-    }
+    return <Navigate to={getDefaultRedirectForRole(role)} replace />;
+  }
 
-    if (role === 'hr') {
-      return <Navigate to="/hr/dashboard" replace />;
-    }
+  return children;
+};
 
-    return <Navigate to="/dashboard" replace />;
+const PublicOnlyRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  const role = getUserRole();
+
+  if (token && role) {
+    return <Navigate to={getDefaultRedirectForRole(role)} replace />;
   }
 
   return children;
@@ -64,10 +94,38 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route
+        path="/login"
+        element={
+          <PublicOnlyRoute>
+            <Login />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicOnlyRoute>
+            <Register />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicOnlyRoute>
+            <ForgotPassword />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path="/reset-password/:token"
+        element={
+          <PublicOnlyRoute>
+            <ResetPassword />
+          </PublicOnlyRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={
@@ -153,6 +211,22 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <DepartmentDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/structure"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <StructurePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/structure/:floorId"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <FloorDetails />
           </ProtectedRoute>
         }
       />

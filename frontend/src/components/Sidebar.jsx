@@ -39,6 +39,10 @@ const isActivePath = (currentPath, targetPath) => {
     return currentPath.startsWith('/departments');
   }
 
+  if (targetPath === '/structure') {
+    return currentPath.startsWith('/structure');
+  }
+
   if (targetPath === '/super-admin/hospitals') {
     return currentPath.startsWith('/super-admin/hospitals');
   }

@@ -2,6 +2,7 @@ import {
   AccountCircleRounded,
   ApartmentRounded,
   DashboardRounded,
+  LayersRounded,
   LocalHospitalRounded,
 } from '@mui/icons-material';
 
@@ -26,6 +27,7 @@ const sidebarConfig = {
           { label: 'Dashboard', path: '/dashboard', icon: DashboardRounded },
           { label: 'Hospital', path: '/hospital', icon: LocalHospitalRounded },
           { label: 'Departments', path: '/departments', icon: ApartmentRounded },
+          { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
       },
