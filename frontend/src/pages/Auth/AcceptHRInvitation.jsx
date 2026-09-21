@@ -125,9 +125,6 @@ const AcceptHRInvitation = () => {
             <Typography variant="body2" color="text.secondary">
               <strong style={{ color: '#0A0A0A' }}>Hospital:</strong> {invitation?.hospitalName || 'Hospital'}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              <strong style={{ color: '#0A0A0A' }}>Department:</strong> {invitation?.departmentName || 'Not provided'}
-            </Typography>
           </Stack>
         </Box>
 

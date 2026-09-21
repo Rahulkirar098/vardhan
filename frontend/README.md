@@ -23,7 +23,8 @@ npm run preview  # preview the production build
 ## Structure
 
 - `src/components/` — app shell (`AppLayout`, `Navbar`, `Sidebar`) and shared UI primitives (`DataTable`, `StatCard`, `SectionCard`, `InfoRow`, `StatusBadge`, `Modal`, `ConfirmDialog`, `Loading`, etc.)
-- `src/pages/` — grouped by role: `auth/` (login, register, password flows, landing, HR invite), `admin/` (`AdminDashboard`, `Hospital`, `Departments`, `DepartmentDetails`), `hr/` (`HRDashboard`, `HRProfile`, `MyHospital`, `MyDepartment`), `super-admin/` (dashboard + hospitals views), `shared/` (`Profile`); page-scoped create/edit/invite modals are inlined in their pages
+- `src/pages/` — grouped by role: `auth/` (login, register, password flows, landing, HR invite), `admin/` (`AdminDashboard`, `Hospital`, `StructurePage`, `FloorDetails`), `hr/` (`HRDashboard`, `HRProfile`, `MyHospital`), `super-admin/` (dashboard + hospitals views), `shared/` (`Profile`); page-scoped create/edit/invite modals are inlined in their pages
+*(Note: The legacy Department module has been retired from the active application)*
 - `src/routes/index.jsx` — data-driven route array with role guards and role-aware redirects
 - `src/services/` — feature API wrappers over the shared axios client in `api/client.js` (token injection + 401 handling in `api/interceptors.js`)
 - `src/theme/theme.js` — the monochrome design system (radii, spacing, typography, component overrides)

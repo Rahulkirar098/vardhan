@@ -1,6 +1,5 @@
 const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
-const Department = require("../models/department.model");
 const HrInvitation = require("../models/hrInvitation.model");
 const { isValidObjectId } = require("../utils/validate");
 
@@ -190,30 +189,10 @@ const getHospitalOverview = async (req, res) => {
             });
         }
 
-        const [departmentCount, hrCount, pendingInvitationCount] = await Promise.all([
-            Department.countDocuments({ hospitalId: hospital._id }),
+        const [hrCount, pendingInvitationCount] = await Promise.all([
             User.countDocuments({ hospitalId: hospital._id, role: "hr" }),
             HrInvitation.countDocuments({ hospitalId: hospital._id, status: "pending" }),
         ]);
-
-        const departments = await Department.find({ hospitalId: hospital._id })
-            .sort({ createdAt: -1 })
-            .lean();
-
-        const departmentSummaries = await Promise.all(
-            departments.map(async (department) => {
-                const hrTotal = await User.countDocuments({
-                    hospitalId: hospital._id,
-                    departmentId: department._id,
-                    role: "hr",
-                });
-
-                return {
-                    ...department,
-                    hrCount: hrTotal,
-                };
-            })
-        );
 
         return res.status(200).json({
             success: true,
@@ -221,11 +200,9 @@ const getHospitalOverview = async (req, res) => {
             data: {
                 hospital,
                 stats: {
-                    departmentCount,
                     hrCount,
                     pendingInvitationCount,
                 },
-                departments: departmentSummaries,
             },
         });
     } catch (error) {

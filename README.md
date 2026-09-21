@@ -1,6 +1,8 @@
 # Vardhan
 
-A full-stack hospital management system built with Node.js, Express, MongoDB, React, Vite, and Material UI. The platform is designed for role-based hospital administration, covering registration, authentication, hospital setup, department management, HR onboarding, and secure invitation-based access.
+A full-stack hospital management system built with Node.js, Express, MongoDB, React, Vite, and Material UI. The platform is designed for role-based hospital administration, covering registration, authentication, hospital setup, hospital structure (floors and rooms), HR onboarding, and secure invitation-based access.
+
+*(Note: The Department feature has been retired and removed from the active application workflow in favor of Hospital Structure and direct hospital-scoped staffing).*
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white" alt="Node.js 18+" />
@@ -18,7 +20,7 @@ Vardhan enables a structured multi-role hospital workflow:
 1. Admin registers
 2. Admin logs in
 3. Admin creates the hospital
-4. Admin creates departments
+4. Admin configures Hospital Structure (Floors and Rooms)
 5. Admin invites HR users to the hospital
 6. HR accepts the invitation and completes setup
 7. The system routes users to role-specific dashboards and screens
@@ -26,10 +28,10 @@ Vardhan enables a structured multi-role hospital workflow:
 The platform enforces controlled ownership and access rules:
 
 - one admin owns one hospital
-- departments are created under the hospital
-- HR records are linked to the hospital and department
+- hospital structure consists of Floors and generic Rooms
+- HR records are linked directly to the hospital
 - super admin can monitor all hospitals
-- HR access remains restricted to the connected hospital and department
+- HR access remains restricted to the connected hospital
 
 ---
 
@@ -56,24 +58,23 @@ The platform enforces controlled ownership and access rules:
 
 - Create hospital profile
 - Enforce one-hospital-per-admin rule
-- Manage departments
+- Manage Hospital Structure (Floors and Rooms)
 - Invite HR personnel
 - Resend and cancel pending invitations
 - View and manage hospital HR records
-- Activate or deactivate departments
 - Navigate a role-aware dashboard shell
 
 ### HR management
 
 - Accept secure invitation links
 - Create and update HR profile
-- View hospital and department context
+- View hospital context
 - Access dedicated HR dashboard and profile details
 - Restrict access to relevant hospital data only
 
 ### Invitation workflow
 
-- Create invite with hospital and department context
+- Create invite with hospital context
 - Store hashed invite tokens with expiry timestamps
 - Confirm invited email and hospital identity
 - Accept invitation through secure front-end flow
@@ -137,25 +138,28 @@ vardhan/
 │   └── src/
 │       ├── controllers/
 │       │   ├── auth.controller.js
-│       │   ├── department.controller.js
 │       │   ├── hospital.controller.js
 │       │   ├── hr.controller.js
+│       │   ├── structure.controller.js
 │       │   ├── superAdmin.controller.js
 │       ├── middleware/
 │       │   ├── auth.middleware.js
 │       │   └── role.middleware.js
 │       ├── models/
-│       │   ├── department.model.js
+│       │   ├── floor.model.js
 │       │   ├── hospital.model.js
 │       │   ├── hrInvitation.model.js
 │       │   ├── revokedToken.model.js
+│       │   ├── room.model.js
 │       │   └── user.model.js
 │       ├── routes/
 │       │   ├── auth.route.js
-│       │   ├── department.route.js
 │       │   ├── hospital.route.js
 │       │   ├── hr.route.js
+│       │   ├── structure.route.js
 │       │   └── superAdmin.route.js
+│       ├── services/
+│       │   └── structure.service.js
 │       └── utils/
 │           ├── jwt.js
 │           ├── mail.js
@@ -201,13 +205,12 @@ vardhan/
 │       │   │   └── ResetPassword.jsx
 │       │   ├── admin/
 │       │   │   ├── AdminDashboard.jsx
-│       │   │   ├── DepartmentDetails.jsx
-│       │   │   ├── Departments.jsx
-│       │   │   └── Hospital.jsx
+│       │   │   ├── FloorDetails.jsx
+│       │   │   ├── Hospital.jsx
+│       │   │   └── StructurePage.jsx
 │       │   ├── hr/
 │       │   │   ├── HRDashboard.jsx
 │       │   │   ├── HRProfile.jsx
-│       │   │   ├── MyDepartment.jsx
 │       │   │   └── MyHospital.jsx
 │       │   ├── shared/
 │       │   │   └── Profile.jsx
@@ -222,9 +225,9 @@ vardhan/
 │       │   │   ├── client.js
 │       │   │   └── interceptors.js
 │       │   ├── auth.service.js
-│       │   ├── department.service.js
 │       │   ├── hospital.service.js
 │       │   ├── hr.service.js
+│       │   ├── structure.service.js
 │       │   └── superAdmin.service.js
 │       └── theme/
 │           └── theme.js
@@ -269,16 +272,19 @@ FRONTEND_URL=http://localhost:5173
 
 - User
 - Hospital
-- Department
+- Floor
+- Room
 - HR Invitation
 - Revoked Token
+
+*(Department is legacy and removed from active models)*
 
 ### Key business rules
 
 - one hospital per admin
-- unique department names and codes per hospital
+- hospital structure hierarchy: Hospital → Floor → Room
 - unique invite checks per hospital and email
-- JWT payload contains role and hospital/department identifiers
+- JWT payload contains role and hospital identifiers
 - protected routes and controllers enforce role-based access
 
 ---
@@ -393,7 +399,7 @@ npm run lint    # oxlint
 
 - registers and logs in
 - creates a hospital profile
-- creates departments
+- manages hospital structure (floors and rooms)
 - invites HR staff
 - manages HR and hospital-related sections
 
@@ -413,7 +419,7 @@ npm run lint    # oxlint
 - protected routes enforce authorization rules
 - invitation tokens are hashed and expire after a set window
 - revoked tokens are tracked server-side for logout
-- hospital and department access remain scoped to the user's ownership chain
+- hospital access remains scoped to the user's ownership chain
 - logout revokes the current token
 
 ---
@@ -438,12 +444,14 @@ This project is a functioning hospital management platform with:
 - auth flow
 - role-based dashboards
 - hospital creation and ownership checks
-- department management (create, edit, activate/deactivate)
+- hospital structure management (Floor → Room hierarchy)
 - HR invitation flow (invite, resend, cancel)
 - invitation acceptance flow
 - protected routing and UI layout
 - role-driven shared sidebar navigation
 - polished monochrome SaaS UI
+
+*(Department feature is legacy / removed from active product architecture)*
 
 It is ready for local development and can be extended with modules like appointments, staff records, billing, patient modules, and analytics.
 

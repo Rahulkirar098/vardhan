@@ -35,10 +35,6 @@ const isActivePath = (currentPath, targetPath) => {
 
   if (currentPath === targetPath) return true;
 
-  if (targetPath === '/departments') {
-    return currentPath.startsWith('/departments');
-  }
-
   if (targetPath === '/structure') {
     return currentPath.startsWith('/structure');
   }
@@ -53,10 +49,6 @@ const isActivePath = (currentPath, targetPath) => {
 
   if (targetPath === '/hr/hospital') {
     return currentPath.startsWith('/hr/hospital');
-  }
-
-  if (targetPath === '/hr/department') {
-    return currentPath.startsWith('/hr/department');
   }
 
   return false;

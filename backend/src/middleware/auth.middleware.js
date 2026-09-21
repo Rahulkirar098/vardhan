@@ -59,7 +59,6 @@ const authMiddleware = async (req, res, next) => {
             id: user._id,
             role: user.role,
             hospitalId: user.hospitalId,
-            departmentId: user.departmentId,
         };
 
         return next();

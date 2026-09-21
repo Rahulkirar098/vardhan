@@ -1,7 +1,6 @@
 const crypto = require("crypto");
 const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
-const Department = require("../models/department.model");
 const HrInvitation = require("../models/hrInvitation.model");
 const { hashPassword } = require("../utils/password");
 const { sendEmail } = require("../utils/mail");
@@ -55,8 +54,7 @@ const getMyHR = async (req, res) => {
         if (req.user.role === "hr") {
             const hr = await User.findById(req.user.id)
                 .select("-password")
-                .populate("hospitalId", "name code address status createdBy")
-                .populate("departmentId", "name code description status");
+                .populate("hospitalId", "name code address status createdBy");
 
             if (!hr) {
                 return res.status(404).json({
@@ -88,32 +86,14 @@ const getMyHR = async (req, res) => {
             });
         }
 
-        const { departmentId } = req.query;
         const filters = {
             hospitalId: hospital._id,
             role: "hr",
         };
 
-        if (departmentId) {
-            const department = await Department.findOne({
-                _id: departmentId,
-                hospitalId: hospital._id,
-            });
-
-            if (!department) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Department does not belong to your hospital",
-                });
-            }
-
-            filters.departmentId = department._id;
-        }
-
         const hr = await User.find(filters)
             .select("-password")
             .populate("hospitalId", "name code address status createdBy")
-            .populate("departmentId", "name code description status")
             .sort({ createdAt: -1 });
 
         return res.status(200).json({
@@ -191,12 +171,12 @@ const createHR = async (req, res) => {
             });
         }
 
-        const { name, email, phone, password, departmentId } = req.body;
+        const { name, email, phone, password } = req.body;
 
-        if (!name || !email || !password || !departmentId) {
+        if (!name || !email || !password) {
             return res.status(400).json({
                 success: false,
-                message: "Name, email, department and password are required",
+                message: "Name, email and password are required",
             });
         }
 
@@ -225,18 +205,6 @@ const createHR = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Please create your hospital first",
-            });
-        }
-
-        const department = await Department.findOne({
-            _id: departmentId,
-            hospitalId: hospital._id,
-        });
-
-        if (!department) {
-            return res.status(404).json({
-                success: false,
-                message: "Department not found for your hospital",
             });
         }
 
@@ -273,7 +241,6 @@ const createHR = async (req, res) => {
             status: "active",
             createdBy: req.user.id,
             hospitalId: hospital._id,
-            departmentId: department._id,
         });
 
         return res.status(201).json({
@@ -287,7 +254,6 @@ const createHR = async (req, res) => {
                 role: hrUser.role,
                 status: hrUser.status,
                 hospitalId: hrUser.hospitalId,
-                departmentId: hrUser.departmentId,
             },
         });
     } catch (error) {
@@ -316,12 +282,12 @@ const createInvitation = async (req, res) => {
             });
         }
 
-        const { name, email, phone, departmentId } = req.body;
+        const { name, email, phone } = req.body;
 
-        if (!name || !email || !departmentId) {
+        if (!name || !email) {
             return res.status(400).json({
                 success: false,
-                message: "HR name, email, and department are required",
+                message: "HR name and email are required",
             });
         }
 
@@ -344,18 +310,6 @@ const createInvitation = async (req, res) => {
             });
         }
 
-        const department = await Department.findOne({
-            _id: departmentId,
-            hospitalId: hospital._id,
-        });
-
-        if (!department) {
-            return res.status(403).json({
-                success: false,
-                message: "Department not found for your hospital",
-            });
-        }
-
         const activeHR = await User.findOne({
             email: normalizedEmail,
             hospitalId: hospital._id,
@@ -372,7 +326,6 @@ const createInvitation = async (req, res) => {
 
         const existingInvitation = await HrInvitation.findOne({
             hospitalId: hospital._id,
-            departmentId: department._id,
             email: normalizedEmail,
             status: "pending",
         });
@@ -393,7 +346,6 @@ const createInvitation = async (req, res) => {
             email: normalizedEmail,
             phone: phone ? String(phone).trim() : null,
             hospitalId: hospital._id,
-            departmentId: department._id,
             invitedBy: req.user.id,
             tokenHash,
             expiresAt,
@@ -407,13 +359,12 @@ const createInvitation = async (req, res) => {
             await sendEmail({
                 to: normalizedEmail,
                 subject: `You're invited to join ${hospital.name}`,
-                text: `Hello ${normalizedName},\n\nYou have been invited by ${req.user.name || "your admin"} to join ${hospital.name}.\n\nDepartment: ${department.name}\nRole: HR\n\nClick here to accept the invitation and create your account: ${invitationUrl}\n\nThis invitation expires in 48 hours.`,
+                text: `Hello ${normalizedName},\n\nYou have been invited by ${req.user.name || "your admin"} to join ${hospital.name}.\n\nRole: HR\n\nClick here to accept the invitation and create your account: ${invitationUrl}\n\nThis invitation expires in 48 hours.`,
                 html: `
                     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
                         <h2>You're invited to join ${hospital.name}</h2>
                         <p>Hello ${normalizedName},</p>
                         <p>You have been invited by ${req.user.name || "your admin"} to join <strong>${hospital.name}</strong>.</p>
-                        <p><strong>Department:</strong> ${department.name}</p>
                         <p><strong>Role:</strong> HR</p>
                         <p>Click the button below to accept the invitation and create your account.</p>
                         <p>
@@ -434,7 +385,6 @@ const createInvitation = async (req, res) => {
                     name: invitation.name,
                     email: invitation.email,
                     phone: invitation.phone,
-                    departmentId: invitation.departmentId,
                     status: invitation.status,
                     expiresAt: invitation.expiresAt,
                 },
@@ -488,7 +438,7 @@ const getInvitationByToken = async (req, res) => {
         const invitation = await HrInvitation.findOne({
             tokenHash,
             status: "pending",
-        }).populate("hospitalId", "name").populate("departmentId", "name code");
+        }).populate("hospitalId", "name");
 
         if (!invitation) {
             return res.status(400).json({
@@ -515,7 +465,6 @@ const getInvitationByToken = async (req, res) => {
                 email: invitation.email,
                 phone: invitation.phone,
                 hospitalName: invitation.hospitalId?.name || "Hospital",
-                departmentName: invitation.departmentId?.name || "Department",
                 expiresAt: invitation.expiresAt,
             },
         });
@@ -545,7 +494,7 @@ const acceptInvitation = async (req, res) => {
         const invitation = await HrInvitation.findOne({
             tokenHash,
             status: "pending",
-        }).populate("hospitalId", "name").populate("departmentId", "name code");
+        }).populate("hospitalId", "name");
 
         if (!invitation) {
             return res.status(400).json({
@@ -582,7 +531,6 @@ const acceptInvitation = async (req, res) => {
             password: hashedPassword,
             role: "hr",
             hospitalId: invitation.hospitalId,
-            departmentId: invitation.departmentId,
             createdBy: invitation.invitedBy,
             status: "active",
         });
@@ -601,7 +549,6 @@ const acceptInvitation = async (req, res) => {
                 phone: hrUser.phone,
                 role: hrUser.role,
                 hospitalId: hrUser.hospitalId,
-                departmentId: hrUser.departmentId,
                 status: hrUser.status,
             },
         });

@@ -10,13 +10,10 @@ import HRDashboard from '../pages/hr/HRDashboard';
 import SuperAdminDashboard from '../pages/super-admin/SuperAdminDashboard';
 import Hospital from '../pages/admin/Hospital';
 import Profile from '../pages/shared/Profile';
-import Departments from '../pages/admin/Departments';
-import DepartmentDetails from '../pages/admin/DepartmentDetails';
 import StructurePage from '../pages/admin/StructurePage';
 import FloorDetails from '../pages/admin/FloorDetails';
 import HRProfile from '../pages/hr/HRProfile';
 import MyHospital from '../pages/hr/MyHospital';
-import MyDepartment from '../pages/hr/MyDepartment';
 import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 
@@ -199,22 +196,6 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/departments"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <Departments />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/departments/:departmentId"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <DepartmentDetails />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/structure"
         element={
           <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
@@ -239,14 +220,6 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <HRProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/hr/department"
-        element={
-          <ProtectedRoute allowedRoles={['hr']}>
-            <MyDepartment />
           </ProtectedRoute>
         }
       />

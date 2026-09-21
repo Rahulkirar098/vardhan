@@ -48,7 +48,7 @@ const HRProfile = () => {
 
   const handleBackToDashboard = () => {
     const role = localStorage.getItem('role');
-    navigate(role === 'hr' ? '/hr/dashboard' : '/departments');
+    navigate(role === 'hr' ? '/hr/dashboard' : '/hospital');
   };
 
   const handleLogout = async () => {
@@ -105,7 +105,7 @@ const HRProfile = () => {
             onClick={handleBackToDashboard}
             sx={{ px: 0, mb: 1.5, color: 'text.secondary' }}
           >
-            Back to {localStorage.getItem('role') === 'hr' ? 'Dashboard' : 'Departments'}
+            Back to {localStorage.getItem('role') === 'hr' ? 'Dashboard' : 'Hospital'}
           </Button>
           <PageHeader
             title={hr.name}
@@ -129,7 +129,6 @@ const HRProfile = () => {
 
           <SectionCard title="Organization">
             <InfoRow label="Hospital" value={hr.hospitalId?.name || hr.hospitalName} />
-            <InfoRow label="Department" value={hr.departmentId?.name || hr.departmentName} />
           </SectionCard>
 
           <SectionCard title="Account" sx={{ gridColumn: { md: '1 / -1' } }}>

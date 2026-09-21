@@ -1,6 +1,5 @@
 import {
   AccountCircleRounded,
-  ApartmentRounded,
   DashboardRounded,
   LayersRounded,
   LocalHospitalRounded,
@@ -26,7 +25,6 @@ const sidebarConfig = {
         items: [
           { label: 'Dashboard', path: '/dashboard', icon: DashboardRounded },
           { label: 'Hospital', path: '/hospital', icon: LocalHospitalRounded },
-          { label: 'Departments', path: '/departments', icon: ApartmentRounded },
           { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
@@ -40,7 +38,6 @@ const sidebarConfig = {
         items: [
           { label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded },
           { label: 'My Hospital', path: '/hr/hospital', icon: LocalHospitalRounded },
-          { label: 'My Department', path: '/hr/department', icon: ApartmentRounded },
         ],
       },
     ],

@@ -8,8 +8,6 @@ export const NAVBAR_HEIGHT = 64;
 
 const PAGE_META = [
   { test: (path) => path === '/hospital', title: 'Hospital', breadcrumb: 'Workspace' },
-  { test: (path) => path === '/departments', title: 'Departments', breadcrumb: 'Workspace' },
-  { test: (path) => path.startsWith('/departments/'), title: 'Department Details', breadcrumb: 'Workspace / Departments' },
   { test: (path) => path === '/structure', title: 'Hospital Structure', breadcrumb: 'Workspace' },
   { test: (path) => path.startsWith('/structure/'), title: 'Floor Details', breadcrumb: 'Workspace / Hospital Structure' },
   { test: (path) => path === '/profile', title: 'My Profile', breadcrumb: 'Account' },
@@ -18,7 +16,6 @@ const PAGE_META = [
   { test: (path) => path === '/hr/dashboard', title: 'Dashboard', breadcrumb: 'My Workspace' },
   { test: (path) => path === '/hr/profile', title: 'My Profile', breadcrumb: 'My Workspace' },
   { test: (path) => path === '/hr/hospital', title: 'My Hospital', breadcrumb: 'My Workspace' },
-  { test: (path) => path === '/hr/department', title: 'My Department', breadcrumb: 'My Workspace' },
 ];
 
 const getPageMeta = (pathname) =>

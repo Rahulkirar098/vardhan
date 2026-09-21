@@ -2,7 +2,7 @@ import { Box, Stack, Typography } from '@mui/material';
 import { CheckRounded } from '@mui/icons-material';
 
 const highlights = [
-  'Manage hospitals, departments and HR teams',
+  'Manage hospitals, structure and HR teams',
   'Invite and onboard HR staff in minutes',
   'One clean workspace for your entire workforce',
 ];

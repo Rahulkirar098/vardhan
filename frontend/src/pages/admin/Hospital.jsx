@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Stack, TextField, Typography } from '@mui/material';
-import { AddBusinessRounded, ArrowForwardRounded, EditRounded, LocalHospitalRounded } from '@mui/icons-material';
+import { AddBusinessRounded, EditRounded, LocalHospitalRounded } from '@mui/icons-material';
 import hospitalService from '../../services/hospital.service';
-import department from '../../services/department.service';
 import hr from '../../services/hr.service';
 import auth from '../../services/auth.service';
 import GlassCard from '../../components/GlassCard';
@@ -248,8 +247,7 @@ const Hospital = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [hospital, setHospital] = useState(null);
-  const [stats, setStats] = useState({ departmentCount: 0, hrCount: 0 });
-  const [departments, setDepartments] = useState([]);
+  const [stats, setStats] = useState({ hrCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -261,27 +259,22 @@ const Hospital = () => {
 
       if (overviewData?.hospital) {
         setHospital(overviewData.hospital);
-        setStats(overviewData.stats || { departmentCount: 0, hrCount: 0 });
-        setDepartments(Array.isArray(overviewData.departments) ? overviewData.departments : []);
+        setStats(overviewData.stats || { hrCount: 0 });
         setError('');
         return;
       }
 
-      const [hospitalResponse, departmentsResponse, hrResponse] = await Promise.all([
+      const [hospitalResponse, hrResponse] = await Promise.all([
         hospitalService.getMyHospital().catch(() => ({ data: { data: null } })),
-        department.getAll().catch(() => ({ data: { data: [] } })),
         hr.getAll().catch(() => ({ data: { data: [] } })),
       ]);
 
       const hospitalData = hospitalResponse?.data?.data || null;
-      const departmentList = Array.isArray(departmentsResponse?.data?.data) ? departmentsResponse.data.data : [];
       const hrData = hrResponse?.data?.data;
       const hrCount = Array.isArray(hrData) ? hrData.length : hrData ? 1 : 0;
 
       setHospital(hospitalData);
-      setDepartments(departmentList);
       setStats({
-        departmentCount: departmentList.length,
         hrCount,
       });
       setError('');
@@ -325,7 +318,7 @@ const Hospital = () => {
         <Stack spacing={4}>
           <PageHeader
             title="Hospital"
-            subtitle="Manage your hospital information and departments."
+            subtitle="Manage your hospital profile and information."
             actions={
               hospital && (
                 <Button variant="outlined" startIcon={<EditRounded />} onClick={() => setEditOpen(true)}>
@@ -342,7 +335,7 @@ const Hospital = () => {
               <EmptyState
                 icon={LocalHospitalRounded}
                 title="Set up your hospital"
-                description="Create your hospital profile to start managing departments and HR teams."
+                description="Create your hospital profile to start managing your facility."
                 actionLabel="Create Hospital"
                 onAction={() => setCreateOpen(true)}
               />
@@ -352,15 +345,10 @@ const Hospital = () => {
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
                   gap: 2.5,
                 }}
               >
-                <StatCard
-                  label="Departments"
-                  value={stats.departmentCount ?? departments.length}
-                  footer={<StatusBadge status="active" label="Live" />}
-                />
                 <StatCard
                   label="HR Count"
                   value={stats.hrCount ?? 0}
@@ -387,70 +375,6 @@ const Hospital = () => {
                   <InfoRow label="Location" value={location} />
                 </Box>
               </SectionCard>
-
-              <Stack spacing={2.5}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={1.5}
-                  sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }}
-                >
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
-                      Departments
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {departments.length} department{departments.length === 1 ? '' : 's'} in your hospital
-                    </Typography>
-                  </Box>
-                  <Button variant="contained" onClick={() => navigate('/departments')}>
-                    Create Department
-                  </Button>
-                </Stack>
-
-                {departments.length === 0 ? (
-                  <GlassCard sx={{ p: 3 }}>
-                    <EmptyState
-                      title="No departments yet"
-                      description="Create your first department to start building your HR team."
-                      actionLabel="Create Department"
-                      onAction={() => navigate('/departments')}
-                    />
-                  </GlassCard>
-                ) : (
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
-                      gap: 2.5,
-                    }}
-                  >
-                    {departments.map((departmentItem) => (
-                      <GlassCard key={departmentItem._id} sx={{ p: 2.5, height: '100%', display: 'flex' }}>
-                        <Stack spacing={1.25} sx={{ width: '100%' }}>
-                          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {departmentItem.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {departmentItem.code}
-                          </Typography>
-                          <Box>
-                            <StatusBadge status={departmentItem.status} />
-                          </Box>
-                          <Button
-                            variant="text"
-                            size="small"
-                            endIcon={<ArrowForwardRounded fontSize="small" />}
-                            onClick={() => navigate(`/departments/${departmentItem._id}`)}
-                            sx={{ alignSelf: 'flex-start', px: 0, mt: 'auto' }}
-                          >
-                            View Department
-                          </Button>
-                        </Stack>
-                      </GlassCard>
-                    ))}
-                  </Box>
-                )}
-              </Stack>
             </>
           )}
         </Stack>

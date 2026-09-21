@@ -70,11 +70,6 @@ const Dashboard = () => {
         value: hospital?.name || hr?.hospitalId?.name || 'Not Assigned',
         footer: <StatusBadge status={hospital || hr?.hospitalId ? 'active' : 'pending'} label={hospital || hr?.hospitalId ? 'Assigned' : 'Not Set'} />,
       },
-      {
-        label: 'Department',
-        value: hr?.departmentId?.name || 'Not Set',
-        footer: <StatusBadge status={hr?.departmentId ? 'active' : 'pending'} label={hr?.departmentId ? 'Assigned' : 'Not Set'} />,
-      },
     ],
     [hr, hospital],
   );
@@ -100,7 +95,7 @@ const Dashboard = () => {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
             gap: 2.5,
           }}
         >

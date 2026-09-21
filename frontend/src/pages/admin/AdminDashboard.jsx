@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Stack, Typography } from '@mui/material';
-import { ApartmentRounded, ArrowForwardRounded, GroupRounded, LocalHospitalRounded } from '@mui/icons-material';
+import { ArrowForwardRounded, GroupRounded, LayersRounded, LocalHospitalRounded } from '@mui/icons-material';
 import hospitalService from '../../services/hospital.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
@@ -15,7 +15,7 @@ import Loading from '../../components/Loading';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [hospital, setHospital] = useState(null);
-  const [stats, setStats] = useState({ departmentCount: 0, hrCount: 0 });
+  const [stats, setStats] = useState({ hrCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -25,7 +25,7 @@ const AdminDashboard = () => {
         const response = await hospitalService.getOverview();
         const data = response?.data?.data || {};
         setHospital(data.hospital || null);
-        setStats(data.stats || { departmentCount: 0, hrCount: 0 });
+        setStats(data.stats || { hrCount: 0 });
         setError('');
       } catch (err) {
         setError(err?.response?.data?.message || 'Unable to load dashboard.');
@@ -59,7 +59,7 @@ const AdminDashboard = () => {
       <Stack spacing={4}>
         <PageHeader
           title="Dashboard"
-          subtitle="Overview of your hospital's departments and HR team."
+          subtitle="Overview of your hospital and team."
         />
 
         {error && <ErrorState message={error} />}
@@ -73,24 +73,19 @@ const AdminDashboard = () => {
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
                 gap: 2.5,
               }}
             >
               <StatCard
-                label="Departments"
-                value={stats.departmentCount ?? 0}
-                footer={<StatusBadge status="active" label="Live" />}
+                label="Hospital"
+                value={hospital?.name || 'Not set up'}
+                footer={<StatusBadge status={hospital?.status || 'inactive'} />}
               />
               <StatCard
                 label="HR Count"
                 value={stats.hrCount ?? 0}
                 footer={<StatusBadge status="active" label="Active" />}
-              />
-              <StatCard
-                label="Hospital"
-                value={hospital?.name || 'Not set up'}
-                footer={<StatusBadge status={hospital?.status || 'inactive'} />}
               />
             </Box>
 
@@ -115,10 +110,10 @@ const AdminDashboard = () => {
                   </Button>
                   <Button
                     variant="outlined"
-                    startIcon={<ApartmentRounded />}
-                    onClick={() => navigate('/departments')}
+                    startIcon={<LayersRounded />}
+                    onClick={() => navigate('/structure')}
                   >
-                    Manage Departments
+                    Hospital Structure
                   </Button>
                   <Button
                     variant="outlined"

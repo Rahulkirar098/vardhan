@@ -27,12 +27,6 @@ const hrInvitationSchema = new mongoose.Schema(
             required: true,
         },
 
-        departmentId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Department",
-            required: true,
-        },
-
         invitedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",

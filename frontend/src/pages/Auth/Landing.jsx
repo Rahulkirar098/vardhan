@@ -10,18 +10,18 @@ import {
   Typography,
 } from '@mui/material';
 import {
-  ApartmentRounded,
   ArrowForwardRounded,
   GroupRounded,
+  LayersRounded,
   LocalHospitalRounded,
   ShieldRounded,
 } from '@mui/icons-material';
 
 const features = [
   {
-    icon: ApartmentRounded,
-    title: 'Departments',
-    text: 'Structure your hospital into clear departments with codes and statuses that keep teams organized.',
+    icon: LayersRounded,
+    title: 'Hospital Structure',
+    text: 'Organize your hospital layout into floors and rooms with seamless administrative control.',
   },
   {
     icon: GroupRounded,
@@ -40,7 +40,7 @@ const features = [
   },
 ];
 
-const heroPanelItems = ['Hospital Information', 'Departments', 'HR Team', 'Invitations'];
+const heroPanelItems = ['Hospital Information', 'Hospital Structure', 'HR Team', 'Invitations'];
 
 const Brand = () => (
   <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
@@ -130,7 +130,7 @@ const Landing = () => {
               </Typography>
 
               <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400, lineHeight: 1.65, maxWidth: 540 }}>
-                Manage hospitals, departments and HR teams from one clean, secure workspace.
+                Manage hospitals, structure and HR teams from one clean, secure workspace.
               </Typography>
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
