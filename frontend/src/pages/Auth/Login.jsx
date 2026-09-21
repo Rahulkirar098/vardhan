@@ -59,6 +59,7 @@ const Login = () => {
           localStorage.setItem('userName', response?.data?.data?.user?.name || 'User');
           localStorage.setItem('userEmail', response?.data?.data?.user?.email || '');
           localStorage.setItem('permissions', JSON.stringify(response?.data?.data?.user?.permissions || []));
+          localStorage.setItem('modules', JSON.stringify(response?.data?.data?.user?.modules || ['core']));
 
           if (payload.role === 'super_admin') {
             navigate('/super-admin/dashboard');

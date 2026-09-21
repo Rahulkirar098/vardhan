@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Divider,
   Stack,
@@ -125,6 +126,29 @@ const AcceptHRInvitation = () => {
             <Typography variant="body2" color="text.secondary">
               <strong style={{ color: '#0A0A0A' }}>Hospital:</strong> {invitation?.hospitalName || 'Hospital'}
             </Typography>
+
+            {/* Module Access */}
+            {Array.isArray(invitation?.modules) &&
+              invitation.modules.filter((m) => m !== 'core').length > 0 && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong style={{ color: '#0A0A0A' }}>Module Access Granted:</strong>
+                  </Typography>
+                  <Stack direction="row" spacing={0.75} flexWrap="wrap" sx={{ gap: 0.75 }}>
+                    {invitation.modules
+                      .filter((m) => m !== 'core')
+                      .map((m) => (
+                        <Chip
+                          key={m}
+                          label={m === 'hrms' ? 'HRMS Module' : m}
+                          size="small"
+                          color="primary"
+                          sx={{ fontWeight: 600, fontSize: '0.72rem' }}
+                        />
+                      ))}
+                  </Stack>
+                </Box>
+              )}
           </Stack>
         </Box>
 

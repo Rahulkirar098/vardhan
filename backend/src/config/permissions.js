@@ -15,11 +15,12 @@ const PERMISSIONS = Object.freeze({
     HR_UPDATE: "hr.update",
     HR_INVITATION_MANAGE: "hr.invitation.manage",
 
-    // Future Phase Placeholders (Employee Management)
+    // Employee Management (HRMS Phase 2)
     EMPLOYEE_VIEW: "employee.view",
     EMPLOYEE_CREATE: "employee.create",
     EMPLOYEE_UPDATE: "employee.update",
-    EMPLOYEE_DELETE: "employee.delete",
+    EMPLOYEE_DELETE: "employee.delete",       // used for deactivate/activate action
+    EMPLOYEE_DEACTIVATE: "employee.delete",   // alias — same permission value
 
     // Future Phase Placeholders (Roster & Shifts)
     ROSTER_VIEW: "roster.view",

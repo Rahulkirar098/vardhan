@@ -94,13 +94,25 @@ export const getSidebarSectionsForRole = (role) => {
     const sections = [{ title: '', items: coreItems }];
 
     if (hasHrmsModule) {
-      sections.push({
-        title: 'HRMS',
-        items: [
-          // Phase 2+ will add Employee Management, Roster, Attendance, Leave here
-          { label: 'Employees', path: '/hr/employees', icon: BadgeRounded },
-        ],
-      });
+      const hrmsItems = [];
+
+      // Only add Employees if HR has employee.view
+      let hasEmployeeView = false;
+      try {
+        const storedPerms = localStorage.getItem('permissions');
+        const perms = storedPerms ? JSON.parse(storedPerms) : [];
+        hasEmployeeView = Array.isArray(perms) && perms.includes('employee.view');
+      } catch {
+        hasEmployeeView = false;
+      }
+
+      if (hasEmployeeView) {
+        hrmsItems.push({ label: 'Employees', path: '/hr/employees', icon: BadgeRounded });
+      }
+
+      if (hrmsItems.length > 0) {
+        sections.push({ title: 'HRMS', items: hrmsItems });
+      }
     }
 
     return sections;

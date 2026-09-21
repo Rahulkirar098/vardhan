@@ -57,6 +57,11 @@ const userSchema = new mongoose.Schema(
             default: [],
         },
 
+        modules: {
+            type: [String],
+            default: ["core"],
+        },
+
         resetPasswordToken: {
             type: String,
             default: null,

@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Stack } from '@mui/material';
-import { ArrowForwardRounded } from '@mui/icons-material';
+import { Box, Button, Grid, Stack } from '@mui/material';
+import { ArrowForwardRounded, BadgeRounded, CheckCircleOutlineRounded, GroupsRounded, PersonOffRounded } from '@mui/icons-material';
 import { useEffect, useMemo, useState } from 'react';
 import hrService from '../../services/hr.service';
+import employeeService from '../../services/employee.service';
 import auth from '../../services/auth.service';
 import SectionCard from '../../components/SectionCard';
 import StatCard from '../../components/StatCard';
@@ -23,6 +24,16 @@ const Dashboard = () => {
   const [hospital, setHospital] = useState(null);
   const [hr, setHr] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [employeeStats, setEmployeeStats] = useState(null);
+
+  const hasHrmsModule = () => {
+    try {
+      const mods = JSON.parse(localStorage.getItem('modules') || '[]');
+      return Array.isArray(mods) && mods.includes('hrms');
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -30,6 +41,16 @@ const Dashboard = () => {
         const response = await hrService.getMyProfile().catch(() => ({ data: { data: null } }));
         setHr(response?.data?.data || null);
         setHospital(response?.data?.data?.hospitalId || null);
+
+        // Fetch employee stats only if HR has hrms module
+        if (hasHrmsModule()) {
+          try {
+            const statRes = await employeeService.getEmployeeStats();
+            setEmployeeStats(statRes?.data?.data || null);
+          } catch {
+            // employee stats are best-effort
+          }
+        }
       } catch (error) {
         console.error('Dashboard fetch error:', error);
       } finally {
@@ -103,6 +124,38 @@ const Dashboard = () => {
             <StatCard key={card.label} label={card.label} value={card.value} footer={card.footer} />
           ))}
         </Box>
+
+        {/* Employee Stats — only visible if HRMS module is enabled */}
+        {employeeStats && (
+          <Box>
+            <Grid container spacing={2.5}>
+              <Grid item xs={6} sm={4}>
+                <StatCard
+                  title="Total Employees"
+                  value={employeeStats.total}
+                  icon={GroupsRounded}
+                  color="primary"
+                />
+              </Grid>
+              <Grid item xs={6} sm={4}>
+                <StatCard
+                  title="Active Employees"
+                  value={employeeStats.active}
+                  icon={CheckCircleOutlineRounded}
+                  color="success"
+                />
+              </Grid>
+              <Grid item xs={6} sm={4}>
+                <StatCard
+                  title="Inactive Employees"
+                  value={employeeStats.inactive}
+                  icon={PersonOffRounded}
+                  color="error"
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        )}
 
         {!activeHr ? (
           <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>

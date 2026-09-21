@@ -60,6 +60,7 @@ const authMiddleware = async (req, res, next) => {
             role: user.role,
             hospitalId: user.hospitalId,
             permissions: user.permissions || [],
+            modules: user.modules || ["core"],
         };
 
         return next();

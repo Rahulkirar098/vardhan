@@ -1,6 +1,6 @@
 const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
-const HrInvitation = require("../models/hrInvitation.model");
+const Invitation = require("../models/invitation.model");
 const { isValidObjectId } = require("../utils/validate");
 
 const getMyHospital = async (req, res) => {
@@ -191,7 +191,7 @@ const getHospitalOverview = async (req, res) => {
 
         const [hrCount, pendingInvitationCount] = await Promise.all([
             User.countDocuments({ hospitalId: hospital._id, role: "hr" }),
-            HrInvitation.countDocuments({ hospitalId: hospital._id, status: "pending" }),
+            Invitation.countDocuments({ hospitalId: hospital._id, type: "HR", status: "pending" }),
         ]);
 
         return res.status(200).json({

@@ -15,6 +15,8 @@ const {
     getInvitations,
     getHRPermissions,
     updateHRPermissions,
+    getHRModules,
+    updateHRModules,
 } = require("../controllers/hr.controller");
 
 const hrRoute = express.Router();
@@ -32,6 +34,8 @@ hrRoute.get("/hospital", authorizePermission(PERMISSIONS.HOSPITAL_VIEW), getHRHo
 hrRoute.get("/", authorizePermission(PERMISSIONS.HR_VIEW), getMyHR);
 hrRoute.get("/:hrId/permissions", authorizePermission(PERMISSIONS.HR_UPDATE), getHRPermissions);
 hrRoute.patch("/:hrId/permissions", authorizePermission(PERMISSIONS.HR_UPDATE), updateHRPermissions);
+hrRoute.get("/:id/modules", authorizePermission(PERMISSIONS.HR_VIEW), getHRModules);
+hrRoute.patch("/:id/modules", authorizePermission(PERMISSIONS.HR_UPDATE), updateHRModules);
 hrRoute.get("/:id", authorizePermission(PERMISSIONS.HR_VIEW), getHRById);
 hrRoute.post("/", authorizePermission(PERMISSIONS.HR_INVITE), createHR);
 

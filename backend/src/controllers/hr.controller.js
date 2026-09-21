@@ -1,14 +1,14 @@
 const crypto = require("crypto");
 const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
-const HrInvitation = require("../models/hrInvitation.model");
+const Invitation = require("../models/invitation.model");
+const { hashTokenValue } = require("../services/invitation.service");
 const { hashPassword } = require("../utils/password");
 const { sendEmail } = require("../utils/mail");
 const { isValidObjectId } = require("../utils/validate");
+const { VALID_MODULE_KEYS } = require("../config/modules.config");
 
-const hashTokenValue = (value) => {
-    return crypto.createHash("sha256").update(value).digest("hex");
-};
+// hashTokenValue moved to invitation.service.js
 
 const getAdminHospital = async (adminId) => {
     return Hospital.findOne({ createdBy: adminId });
@@ -282,7 +282,7 @@ const createInvitation = async (req, res) => {
             });
         }
 
-        const { name, email, phone } = req.body;
+        const { name, email, phone, modules, permissions } = req.body;
 
         if (!name || !email) {
             return res.status(400).json({
@@ -299,6 +299,42 @@ const createInvitation = async (req, res) => {
                 success: false,
                 message: "HR name and email are required",
             });
+        }
+
+        let validModules = ["core"];
+        if (modules !== undefined) {
+            if (!Array.isArray(modules)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "modules must be an array of module keys",
+                });
+            }
+            const invalidMods = modules.filter((m) => !VALID_MODULE_KEYS.includes(m));
+            if (invalidMods.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid modules: ${invalidMods.join(", ")}. Valid modules are: ${VALID_MODULE_KEYS.join(", ")}`,
+                });
+            }
+            validModules = [...new Set(["core", ...modules])];
+        }
+
+        let validPermissions = [];
+        if (permissions !== undefined) {
+            if (!Array.isArray(permissions)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "permissions must be an array",
+                });
+            }
+            const invalidPerms = permissions.filter((p) => !VALID_HR_PERMISSIONS.includes(p));
+            if (invalidPerms.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid permissions: ${invalidPerms.join(", ")}. Valid permissions are: ${VALID_HR_PERMISSIONS.join(", ")}`,
+                });
+            }
+            validPermissions = [...new Set(permissions)];
         }
 
         const hospital = await getAdminHospital(req.user.id);
@@ -324,9 +360,10 @@ const createInvitation = async (req, res) => {
             });
         }
 
-        const existingInvitation = await HrInvitation.findOne({
+        const existingInvitation = await Invitation.findOne({
             hospitalId: hospital._id,
             email: normalizedEmail,
+            type: "HR",
             status: "pending",
         });
 
@@ -341,8 +378,15 @@ const createInvitation = async (req, res) => {
         const tokenHash = hashTokenValue(rawToken);
         const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
-        const invitation = await HrInvitation.create({
-            name: normalizedName,
+        // For Generic Invitation, split name into firstName and lastName
+        const nameParts = normalizedName.split(" ");
+        const firstName = nameParts[0];
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null;
+
+        const invitation = await Invitation.create({
+            type: "HR",
+            firstName,
+            lastName,
             email: normalizedEmail,
             phone: phone ? String(phone).trim() : null,
             hospitalId: hospital._id,
@@ -350,6 +394,9 @@ const createInvitation = async (req, res) => {
             tokenHash,
             expiresAt,
             status: "pending",
+            role: "hr",
+            modules: validModules,
+            permissions: validPermissions,
         });
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -382,17 +429,19 @@ const createInvitation = async (req, res) => {
                 message: "Invitation sent successfully",
                 data: {
                     id: invitation._id,
-                    name: invitation.name,
+                    name: `${invitation.firstName} ${invitation.lastName || ""}`.trim(),
                     email: invitation.email,
                     phone: invitation.phone,
                     status: invitation.status,
+                    modules: invitation.modules,
+                    permissions: invitation.permissions,
                     expiresAt: invitation.expiresAt,
                 },
             });
         } catch (emailError) {
             console.error("Send HR Invitation Email Error:", emailError);
 
-            await HrInvitation.findByIdAndDelete(invitation._id);
+            await Invitation.findByIdAndDelete(invitation._id);
 
             const emailMessage = String(emailError?.message || "");
 
@@ -435,9 +484,10 @@ const getInvitationByToken = async (req, res) => {
         }
 
         const tokenHash = hashTokenValue(token);
-        const invitation = await HrInvitation.findOne({
+        const invitation = await Invitation.findOne({
             tokenHash,
             status: "pending",
+            type: "HR",
         }).populate("hospitalId", "name");
 
         if (!invitation) {
@@ -461,10 +511,12 @@ const getInvitationByToken = async (req, res) => {
             success: true,
             message: "Invitation retrieved successfully",
             data: {
-                name: invitation.name,
+                name: `${invitation.firstName} ${invitation.lastName || ""}`.trim(),
                 email: invitation.email,
                 phone: invitation.phone,
                 hospitalName: invitation.hospitalId?.name || "Hospital",
+                modules: invitation.modules || [],
+                permissions: invitation.permissions || [],
                 expiresAt: invitation.expiresAt,
             },
         });
@@ -491,9 +543,10 @@ const acceptInvitation = async (req, res) => {
         }
 
         const tokenHash = hashTokenValue(token);
-        const invitation = await HrInvitation.findOne({
+        const invitation = await Invitation.findOne({
             tokenHash,
             status: "pending",
+            type: "HR"
         }).populate("hospitalId", "name");
 
         if (!invitation) {
@@ -523,9 +576,12 @@ const acceptInvitation = async (req, res) => {
         }
 
         const hashedPassword = await hashPassword(password);
+        const assignedModules = Array.isArray(invitation.modules) && invitation.modules.length > 0
+            ? [...new Set(["core", ...invitation.modules])]
+            : ["core"];
 
         const hrUser = await User.create({
-            name: invitation.name,
+            name: `${invitation.firstName} ${invitation.lastName || ""}`.trim(),
             email: invitation.email,
             phone: invitation.phone,
             password: hashedPassword,
@@ -533,6 +589,8 @@ const acceptInvitation = async (req, res) => {
             hospitalId: invitation.hospitalId,
             createdBy: invitation.invitedBy,
             status: "active",
+            modules: assignedModules,
+            permissions: invitation.permissions || [],
         });
 
         invitation.status = "accepted";
@@ -550,6 +608,8 @@ const acceptInvitation = async (req, res) => {
                 role: hrUser.role,
                 hospitalId: hrUser.hospitalId,
                 status: hrUser.status,
+                modules: hrUser.modules,
+                permissions: hrUser.permissions,
             },
         });
     } catch (error) {
@@ -744,14 +804,19 @@ const getInvitations = async (req, res) => {
 
         // Automatically update expired invitations
         const now = new Date();
-        await HrInvitation.updateMany(
-            { hospitalId: hospital._id, status: "pending", expiresAt: { $lt: now } },
+        await Invitation.updateMany(
+            { hospitalId: hospital._id, type: "HR", status: "pending", expiresAt: { $lt: now } },
             { status: "expired" }
         );
 
-        const invitations = await HrInvitation.find({ hospitalId: hospital._id })
+        const invitations = await Invitation.find({
+            hospitalId: hospital._id,
+            type: "HR"
+        })
             .select("-tokenHash")
-            .sort({ createdAt: -1 });
+            .populate("invitedBy", "name email")
+            .sort({ createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -915,6 +980,139 @@ const updateHRPermissions = async (req, res) => {
     }
 };
 
+const getHRModules = async (req, res) => {
+    try {
+        if (!req.user || (req.user.role !== "admin" && req.user.role !== "super_admin")) {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can view HR modules",
+            });
+        }
+
+        const { id } = req.params;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid HR profile id",
+            });
+        }
+
+        const hrUser = await User.findById(id);
+
+        if (!hrUser || hrUser.role !== "hr") {
+            return res.status(404).json({
+                success: false,
+                message: "HR profile not found",
+            });
+        }
+
+        if (req.user.role === "admin") {
+            const hospital = await getAdminHospital(req.user.id);
+            if (!hospital || !hrUser.hospitalId || hrUser.hospitalId.toString() !== hospital._id.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You can only view modules for HR in your hospital",
+                });
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "HR modules retrieved successfully",
+            data: {
+                hrId: hrUser._id,
+                name: hrUser.name,
+                email: hrUser.email,
+                modules: hrUser.modules || ["core"],
+            },
+        });
+    } catch (error) {
+        console.error("Get HR Modules Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
+const updateHRModules = async (req, res) => {
+    try {
+        if (!req.user || (req.user.role !== "admin" && req.user.role !== "super_admin")) {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can modify HR modules",
+            });
+        }
+
+        const { id } = req.params;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid HR profile id",
+            });
+        }
+
+        const { modules } = req.body;
+
+        if (!Array.isArray(modules)) {
+            return res.status(400).json({
+                success: false,
+                message: "modules must be an array of module keys",
+            });
+        }
+
+        const invalidModules = modules.filter((m) => !VALID_MODULE_KEYS.includes(m));
+        if (invalidModules.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid modules: ${invalidModules.join(", ")}. Valid modules are: ${VALID_MODULE_KEYS.join(", ")}`,
+            });
+        }
+
+        const hrUser = await User.findById(id);
+
+        if (!hrUser || hrUser.role !== "hr") {
+            return res.status(404).json({
+                success: false,
+                message: "HR profile not found",
+            });
+        }
+
+        if (req.user.role === "admin") {
+            const hospital = await getAdminHospital(req.user.id);
+            if (!hospital || !hrUser.hospitalId || hrUser.hospitalId.toString() !== hospital._id.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You can only modify modules for HR in your hospital",
+                });
+            }
+        }
+
+        const uniqueModules = [...new Set(["core", ...modules])];
+        hrUser.modules = uniqueModules;
+        await hrUser.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "HR modules updated successfully",
+            data: {
+                hrId: hrUser._id,
+                name: hrUser.name,
+                email: hrUser.email,
+                modules: hrUser.modules,
+            },
+        });
+    } catch (error) {
+        console.error("Update HR Modules Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
 module.exports = {
     createHR,
     getMyHR,
@@ -928,4 +1126,6 @@ module.exports = {
     getInvitations,
     getHRPermissions,
     updateHRPermissions,
+    getHRModules,
+    updateHRModules,
 };

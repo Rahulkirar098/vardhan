@@ -38,8 +38,8 @@ const SYSTEM_MODULES = [
         name: "Human Resource Management (HRMS)",
         category: "BUSINESS_MODULE",
         isCore: false,
-        isEnabled: false,
-        description: "Planned business module for Employee records, Reporting Manager, Roster, Attendance, and Leave tracking.",
+        isEnabled: true,
+        description: "Business module for Employee records, Reporting Manager, Roster, Attendance, and Leave tracking.",
         allowedRoles: ["admin", "hr"],
         features: ["employees", "roster", "attendance", "leave", "reporting_manager"],
     },
@@ -55,19 +55,28 @@ const SYSTEM_MODULES = [
     },
 ];
 
+const VALID_MODULE_KEYS = SYSTEM_MODULES.map((m) => m.key);
+
 /**
- * Returns list of modules accessible to the provided user role and permissions.
+ * Returns list of modules accessible to the provided user role, permissions, and assigned modules.
  */
-const getAvailableModules = (userRole, userPermissions = []) => {
+const getAvailableModules = (userRole, userPermissions = [], userModules = ["core"]) => {
     return SYSTEM_MODULES.map((mod) => {
         const roleAllowed = mod.allowedRoles.includes(userRole);
+        let moduleGranted = true;
         let permissionAllowed = true;
 
-        if (mod.requiredPermission && userRole === "hr") {
-            permissionAllowed = Array.isArray(userPermissions) && userPermissions.includes(mod.requiredPermission);
+        if (userRole === "hr") {
+            // Non-core modules require explicit module access granted by Admin
+            if (!mod.isCore) {
+                moduleGranted = Array.isArray(userModules) && userModules.includes(mod.key);
+            }
+            if (mod.requiredPermission) {
+                permissionAllowed = Array.isArray(userPermissions) && userPermissions.includes(mod.requiredPermission);
+            }
         }
 
-        const isAccessible = mod.isEnabled && roleAllowed && permissionAllowed;
+        const isAccessible = mod.isEnabled && roleAllowed && moduleGranted && permissionAllowed;
 
         return {
             key: mod.key,
@@ -93,18 +102,25 @@ const isModuleEnabled = (moduleKey) => {
 /**
  * Checks if a user has access to a specific module.
  */
-const canUserAccessModule = (moduleKey, userRole, userPermissions = []) => {
+const canUserAccessModule = (moduleKey, userRole, userPermissions = [], userModules = ["core"]) => {
     const mod = SYSTEM_MODULES.find((m) => m.key === moduleKey);
     if (!mod || !mod.isEnabled) return false;
     if (!mod.allowedRoles.includes(userRole)) return false;
-    if (mod.requiredPermission && userRole === "hr") {
-        return Array.isArray(userPermissions) && userPermissions.includes(mod.requiredPermission);
+
+    if (userRole === "hr") {
+        if (!mod.isCore && (!Array.isArray(userModules) || !userModules.includes(moduleKey))) {
+            return false;
+        }
+        if (mod.requiredPermission) {
+            return Array.isArray(userPermissions) && userPermissions.includes(mod.requiredPermission);
+        }
     }
     return true;
 };
 
 module.exports = {
     SYSTEM_MODULES,
+    VALID_MODULE_KEYS,
     getAvailableModules,
     isModuleEnabled,
     canUserAccessModule,

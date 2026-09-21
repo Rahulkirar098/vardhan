@@ -9,7 +9,7 @@ require("dotenv").config({ path: path.join(__dirname, "../.env") });
 const app = require("../index");
 const User = require("../src/models/user.model");
 const Hospital = require("../src/models/hospital.model");
-const HrInvitation = require("../src/models/hrInvitation.model");
+const Invitation = require("../src/models/invitation.model");
 const Floor = require("../src/models/floor.model");
 const Room = require("../src/models/room.model");
 const { hashPassword } = require("../src/utils/password");
@@ -101,13 +101,13 @@ const cleanupTestEnvironment = async () => {
         if (hospitalA) {
             await Floor.deleteMany({ hospitalId: hospitalA._id });
             await Room.deleteMany({ hospitalId: hospitalA._id });
-            await HrInvitation.deleteMany({ hospitalId: hospitalA._id });
+            await Invitation.deleteMany({ hospitalId: hospitalA._id });
             await Hospital.deleteOne({ _id: hospitalA._id });
         }
         if (hospitalB) {
             await Floor.deleteMany({ hospitalId: hospitalB._id });
             await Room.deleteMany({ hospitalId: hospitalB._id });
-            await HrInvitation.deleteMany({ hospitalId: hospitalB._id });
+            await Invitation.deleteMany({ hospitalId: hospitalB._id });
             await Hospital.deleteOne({ _id: hospitalB._id });
         }
         await User.deleteMany({
@@ -181,8 +181,10 @@ const runTests = async () => {
             const tokenHash = crypto.createHash("sha256").update(rawInvitationToken).digest("hex");
             const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
-            const inv = await HrInvitation.create({
-                name: `HR User ${testTimestamp}`,
+            const inv = await Invitation.create({
+                type: "HR",
+                firstName: "HR User",
+                lastName: `${testTimestamp}`,
                 email: `hrA_${testTimestamp}@example.com`,
                 phone: "9876543210",
                 hospitalId: hospitalA._id,
@@ -190,6 +192,8 @@ const runTests = async () => {
                 tokenHash,
                 expiresAt,
                 status: "pending",
+                role: "hr",
+                modules: ["core"],
             });
             invitationId = inv._id.toString();
 

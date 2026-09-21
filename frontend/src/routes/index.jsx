@@ -5,6 +5,7 @@ import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
 import AcceptHRInvitation from '../pages/auth/AcceptHRInvitation';
+import AcceptEmployeeInvitation from '../pages/auth/AcceptEmployeeInvitation';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import HRDashboard from '../pages/hr/HRDashboard';
 import SuperAdminDashboard from '../pages/super-admin/SuperAdminDashboard';
@@ -14,6 +15,7 @@ import StructurePage from '../pages/admin/StructurePage';
 import FloorDetails from '../pages/admin/FloorDetails';
 import HRProfile from '../pages/hr/HRProfile';
 import MyHospital from '../pages/hr/MyHospital';
+import EmployeesPage from '../pages/hr/EmployeesPage';
 import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 import HRManagement from '../pages/admin/HRManagement';
@@ -221,8 +223,20 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/hr/employees"
+        element={
+          <ProtectedRoute allowedRoles={['hr']}>
+            <EmployeesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/hr/invite/:token"
         element={<AcceptHRInvitation />}
+      />
+      <Route
+        path="/employee/invite/:token"
+        element={<AcceptEmployeeInvitation />}
       />
       <Route
         path="/hr/:id"

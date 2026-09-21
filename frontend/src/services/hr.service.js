@@ -12,6 +12,8 @@ const hr = {
   getInvitations: () => client.get('/hr/invitations'),
   getPermissions: (hrId) => client.get(`/v1/hr/${hrId}/permissions`),
   updatePermissions: (hrId, permissions) => client.patch(`/v1/hr/${hrId}/permissions`, { permissions }),
+  getModules: (hrId) => client.get(`/v1/hr/${hrId}/modules`),
+  updateModules: (hrId, modules) => client.patch(`/v1/hr/${hrId}/modules`, { modules }),
 };
 
 export default hr;

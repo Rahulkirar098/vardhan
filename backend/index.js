@@ -11,6 +11,7 @@ const { hrRoute } = require("./src/routes/hr.route");
 const { superAdminRoute } = require("./src/routes/superAdmin.route");
 const { structureRoute } = require("./src/routes/structure.route");
 const { moduleRoute } = require("./src/routes/module.route");
+const { employeeRoute } = require("./src/routes/employee.route");
 
 const app = express();
 
@@ -30,9 +31,11 @@ app.use("/api/super-admin", superAdminRoute);
 app.use("/api/v1/hospitals/:hospitalId", structureRoute);
 app.use("/api/v1/modules", moduleRoute);
 app.use("/api/modules", moduleRoute);
+app.use("/api/v1/hrms", employeeRoute);
 
 const Floor = require("./src/models/floor.model");
 const Room = require("./src/models/room.model");
+const Invitation = require("./src/models/invitation.model");
 
 mongoose
     .connect(process.env.MONGODB_URI)
@@ -41,8 +44,9 @@ mongoose
         try {
             await Floor.syncIndexes();
             await Room.syncIndexes();
+            await Invitation.syncIndexes();
         } catch (indexErr) {
-            console.error("Error syncing structure indexes:", indexErr);
+            console.error("Error syncing indexes:", indexErr);
         }
 
         app.listen(process.env.PORT || 3000, () => {
