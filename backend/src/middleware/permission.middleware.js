@@ -1,4 +1,4 @@
-const { ROLE_PERMISSIONS } = require("../config/rolePermissions");
+const { hasPermission } = require("../config/rolePermissions");
 
 /**
  * Middleware to authorize requests based on user permissions.
@@ -22,38 +22,22 @@ const authorizePermission = (...requiredPermissions) => {
         const { role, permissions: userPermissions = [] } = req.user;
 
         // super_admin has platform access
-        if (role === "super_admin") {
+        if (req.user.role === "super_admin") {
             return next();
         }
 
-        // admin always has full access to hospital, structure, and HR
-        if (role === "admin") {
-            return next();
+        const isAuthorized = requiredPermissions.every((permission) =>
+            hasPermission(req.user, permission)
+        );
+
+        if (!isAuthorized) {
+            return res.status(403).json({
+                success: false,
+                message: "You do not have permission to perform this action",
+            });
         }
 
-        // hr checks base role permissions + individually assigned permissions
-        if (role === "hr") {
-            const hrBasePermissions = ROLE_PERMISSIONS.hr || [];
-            const isAuthorized = requiredPermissions.every(
-                (permission) =>
-                    hrBasePermissions.includes(permission) ||
-                    userPermissions.includes(permission)
-            );
-
-            if (!isAuthorized) {
-                return res.status(403).json({
-                    success: false,
-                    message: "You do not have permission to perform this action",
-                });
-            }
-
-            return next();
-        }
-
-        return res.status(403).json({
-            success: false,
-            message: "You do not have permission to perform this action",
-        });
+        return next();
     };
 };
 

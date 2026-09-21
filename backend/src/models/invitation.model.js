@@ -66,11 +66,15 @@ const invitationSchema = new mongoose.Schema(
             default: null,
         },
 
-        // HR Specific
+        // HR/Employee User Account specifics
         role: {
             type: String,
-            enum: ["hr"],
+            enum: ["hr", "employee"],
             default: null,
+        },
+        createLogin: {
+            type: Boolean,
+            default: false,
         },
         modules: {
             type: [String],
@@ -88,7 +92,7 @@ const invitationSchema = new mongoose.Schema(
             uppercase: true,
             default: null,
         },
-        designation: {
+        position: {
             type: String,
             trim: true,
             default: null,

@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
+const Employee = require("../models/employee.model");
 const Invitation = require("../models/invitation.model");
 const { hashTokenValue, generateInvitationToken, getStandardExpiry, buildInvitationEmailTemplate } = require("./invitation.service");
 const { hashPassword } = require("../utils/password");
@@ -73,6 +74,7 @@ const inviteHR = async ({
     name,
     email,
     phone,
+    position,
     modules,
     permissions,
     adminId,
@@ -138,12 +140,14 @@ const inviteHR = async ({
         lastName,
         email: normalizedEmail,
         phone: phone ? String(phone).trim() : null,
+        position: position ? String(position).trim() : "HR Manager",
         hospitalId: hospital._id,
         invitedBy: adminId,
         tokenHash,
         expiresAt,
         status: "pending",
         role: "hr",
+        createLogin: true,
         modules: validModules,
         permissions: validPermissions,
     });
@@ -231,7 +235,7 @@ const acceptInvitation = async (token, password) => {
         ? [...new Set(["core", ...invitation.modules])]
         : ["core"];
 
-    const hrUser = await User.create({
+    const hrUser = new User({
         name: `${invitation.firstName} ${invitation.lastName || ""}`.trim(),
         email: invitation.email,
         phone: invitation.phone,
@@ -243,6 +247,24 @@ const acceptInvitation = async (token, password) => {
         modules: assignedModules,
         permissions: invitation.permissions || [],
     });
+
+    const hrEmployee = new Employee({
+        employeeId: invitation.employeeId || await require("./employee.service").generateEmployeeId(invitation.hospitalId),
+        firstName: invitation.firstName,
+        lastName: invitation.lastName || "",
+        email: invitation.email,
+        phone: invitation.phone,
+        position: invitation.position || "HR",
+        employmentStatus: "ACTIVE",
+        hospitalId: invitation.hospitalId,
+        createdBy: invitation.invitedBy,
+        userId: hrUser._id,
+    });
+
+    hrUser.employeeId = hrEmployee._id;
+
+    await hrUser.save();
+    await hrEmployee.save();
 
     invitation.status = "accepted";
     invitation.acceptedAt = new Date();

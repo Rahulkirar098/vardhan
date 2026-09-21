@@ -80,7 +80,7 @@ const MODULE_OPTIONS = [
 
 // ─── Invite HR Modal ────────────────────────────────────────────────────────
 const InviteHRModal = ({ open, onClose, onSuccess }) => {
-  const [form, setForm] = useState({ name: '', email: '', phone: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', position: '' });
   const [selectedModules, setSelectedModules] = useState([]);
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -88,7 +88,7 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
 
   useEffect(() => {
     if (open) {
-      setForm({ name: '', email: '', phone: '' });
+      setForm({ name: '', email: '', phone: '', position: '' });
       setSelectedModules([]);
       setSelectedPermissions([]);
       setError('');
@@ -130,6 +130,7 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         phone: form.phone.trim() || undefined,
+        position: form.position.trim() || undefined,
         modules: selectedModules,
         permissions: selectedPermissions,
       });
@@ -181,6 +182,20 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
           value={form.phone}
           onChange={handleChange}
           placeholder="e.g. +91 98765 43210 (optional)"
+          fullWidth
+        />
+        <TextField
+          label="Hospital Position (optional)"
+          name="position"
+          value={form.position}
+          onChange={handleChange}
+          placeholder="e.g. HR Manager, Lead Recruiter"
+          fullWidth
+        />
+        <TextField
+          label="Vardhan Access Role"
+          value="HR"
+          disabled
           fullWidth
         />
 
@@ -616,6 +631,7 @@ const HRManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tabIndex, setTabIndex] = useState(0);
+  const [statusFilter, setStatusFilter] = useState('active');
 
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [permissionModalHr, setPermissionModalHr] = useState(null);
@@ -652,6 +668,11 @@ const HRManagement = () => {
     const pendingInv = invitations.filter((i) => i.status === 'pending').length;
     return { totalHR, activeHR, pendingInv };
   }, [hrList, invitations]);
+
+  const filteredHrList = useMemo(() => {
+    if (!statusFilter) return hrList;
+    return hrList.filter((hr) => hr.status === statusFilter);
+  }, [hrList, statusFilter]);
 
   const handleResendInvitation = async (invitationId) => {
     try {
@@ -790,14 +811,17 @@ const HRManagement = () => {
     }
   };
 
-  const renderHrActions = (hr) => (
-    <Stack direction="row" spacing={1} justifyContent="flex-end">
-      <Tooltip title="Manage module access">
-        <Button variant="outlined" size="small" startIcon={<AppsRounded />} onClick={() => setModuleModalHr(hr)} sx={{ fontWeight: 600, textTransform: 'none' }}>Modules</Button>
-      </Tooltip>
-      <Button variant="outlined" size="small" startIcon={<LockPersonRounded />} onClick={() => setPermissionModalHr(hr)} sx={{ fontWeight: 600, textTransform: 'none' }}>Permissions</Button>
-    </Stack>
-  );
+  const renderHrActions = (hr) => {
+    if (hr.status === 'inactive') return null;
+    return (
+      <Stack direction="row" spacing={1} justifyContent="flex-end">
+        <Tooltip title="Manage module access">
+          <Button variant="outlined" size="small" startIcon={<AppsRounded />} onClick={() => setModuleModalHr(hr)} sx={{ fontWeight: 600, textTransform: 'none' }}>Modules</Button>
+        </Tooltip>
+        <Button variant="outlined" size="small" startIcon={<LockPersonRounded />} onClick={() => setPermissionModalHr(hr)} sx={{ fontWeight: 600, textTransform: 'none' }}>Permissions</Button>
+      </Stack>
+    );
+  };
 
   const invitationColumns = [
     { key: 'name', label: 'Invited Person' },
@@ -930,6 +954,25 @@ const HRManagement = () => {
         {/* Active HR Tab */}
         {tabIndex === 0 && (
           <GlassCard sx={{ p: 0, overflow: 'hidden' }}>
+            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'flex-end' }}>
+              <Stack direction="row" spacing={1}>
+                {[
+                  { label: 'All', value: '' },
+                  { label: 'Active', value: 'active' },
+                  { label: 'Inactive', value: 'inactive' },
+                ].map(({ label, value }) => (
+                  <Button
+                    key={label}
+                    variant={statusFilter === value ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setStatusFilter(value)}
+                    sx={{ fontWeight: 600, minWidth: 80 }}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </Stack>
+            </Box>
             {loading ? (
               <Box sx={{ p: 3 }}>
                 <Skeleton height={50} />
@@ -947,8 +990,11 @@ const HRManagement = () => {
             ) : (
               <DataTable
                 columns={hrColumns}
-                rows={hrList}
+                rows={filteredHrList}
                 getRowKey={(row) => row._id}
+                emptyTitle="No HR members"
+                emptyDescription={statusFilter ? `No HR members with status "${statusFilter}" found.` : "No HR members found. Click 'Invite HR' to add one."}
+                emptyIcon={PeopleRounded}
                 renderCell={renderHrCell}
                 renderActions={renderHrActions}
               />

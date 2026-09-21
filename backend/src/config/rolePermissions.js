@@ -8,18 +8,7 @@ const ROLE_PERMISSIONS = Object.freeze({
         PERMISSIONS.HR_VIEW,
     ]),
 
-    admin: Object.freeze([
-        PERMISSIONS.HOSPITAL_VIEW,
-        PERMISSIONS.HOSPITAL_UPDATE,
-        PERMISSIONS.STRUCTURE_VIEW,
-        PERMISSIONS.STRUCTURE_CREATE,
-        PERMISSIONS.STRUCTURE_UPDATE,
-        PERMISSIONS.STRUCTURE_DELETE,
-        PERMISSIONS.HR_VIEW,
-        PERMISSIONS.HR_INVITE,
-        PERMISSIONS.HR_UPDATE,
-        PERMISSIONS.HR_INVITATION_MANAGE,
-    ]),
+    admin: Object.freeze(Object.values(PERMISSIONS)),
 
     hr: Object.freeze([
         PERMISSIONS.HOSPITAL_VIEW,
@@ -31,11 +20,17 @@ const ROLE_PERMISSIONS = Object.freeze({
     ]),
 });
 
-const hasPermission = (role, permission) => {
-    if (!role || !ROLE_PERMISSIONS[role]) {
-        return false;
+const hasPermission = (user, permission) => {
+    if (!user || !user.role) return false;
+
+    if (user.role === "admin") {
+        return true;
     }
-    return ROLE_PERMISSIONS[role].includes(permission);
+
+    const roleDefaults = ROLE_PERMISSIONS[user.role] || [];
+    const userSpecific = Array.isArray(user.permissions) ? user.permissions : [];
+
+    return roleDefaults.includes(permission) || userSpecific.includes(permission);
 };
 
 module.exports = {

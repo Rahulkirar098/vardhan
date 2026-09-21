@@ -232,7 +232,7 @@ const createInvitation = async (req, res) => {
             });
         }
 
-        const { name, email, phone, modules, permissions } = req.body;
+        const { name, email, phone, position, modules, permissions } = req.body;
 
         if (!name || !email || !String(name).trim() || !String(email).trim()) {
             return res.status(400).json({
@@ -278,6 +278,7 @@ const createInvitation = async (req, res) => {
                 name,
                 email,
                 phone,
+                position,
                 modules,
                 permissions,
                 adminId: req.user.id,

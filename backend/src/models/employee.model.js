@@ -46,7 +46,7 @@ const employeeSchema = new mongoose.Schema(
             default: null,
         },
 
-        designation: {
+        position: {
             type: String,
             trim: true,
             default: null,
@@ -56,6 +56,11 @@ const employeeSchema = new mongoose.Schema(
             type: String,
             enum: ["ACTIVE", "INACTIVE"],
             default: "ACTIVE",
+        },
+
+        leavingDate: {
+            type: Date,
+            default: null,
         },
 
         hospitalId: {

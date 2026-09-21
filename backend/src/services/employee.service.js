@@ -78,6 +78,7 @@ const listEmployees = async ({
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(take)
+            .populate("userId", "role status")
             .lean(),
         Employee.countDocuments(filter),
     ]);
@@ -98,6 +99,7 @@ const getEmployeeById = async ({ employeeMongoId, hospitalId }) => {
         hospitalId,
     })
         .select("-__v")
+        .populate("userId", "role status")
         .lean();
 
     return employee || null;
@@ -113,7 +115,7 @@ const createEmployee = async ({
     email,
     phone,
     dateOfJoining,
-    designation,
+    position,
     employeeId: providedEmployeeId,
 }) => {
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -152,7 +154,7 @@ const createEmployee = async ({
         email: normalizedEmail,
         phone: phone ? String(phone).trim() : null,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
-        designation: designation ? String(designation).trim() : null,
+        position: position ? String(position).trim() : null,
         employmentStatus: "ACTIVE",
         hospitalId,
         createdBy,
@@ -172,7 +174,9 @@ const inviteEmployee = async ({
     email,
     phone,
     dateOfJoining,
-    designation,
+    position,
+    role = "employee",
+    createLogin = false,
     employeeId: providedEmployeeId,
 }) => {
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -221,7 +225,9 @@ const inviteEmployee = async ({
         email: normalizedEmail,
         phone: phone ? String(phone).trim() : null,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
-        designation: designation ? String(designation).trim() : null,
+        position: position ? String(position).trim() : null,
+        role: createLogin ? role : null,
+        createLogin,
         tokenHash,
         expiresAt,
         status: "pending",
@@ -277,7 +283,7 @@ const getInvitationByToken = async (rawToken) => {
 
 // ─── Accept Invitation (public) ───────────────────────────────────────────────
 
-const acceptInvitation = async (rawToken) => {
+const acceptInvitation = async (rawToken, password) => {
     const tokenHash = hashTokenValue(rawToken);
 
     const invitation = await Invitation.findOne({
@@ -335,12 +341,30 @@ const acceptInvitation = async (rawToken) => {
         email: invitation.email,
         phone: invitation.phone,
         dateOfJoining: invitation.dateOfJoining,
-        designation: invitation.designation,
+        position: invitation.position,
         employmentStatus: "ACTIVE",
         hospitalId: invitation.hospitalId._id,
         createdBy: invitation.invitedBy,
         userId: null,
     });
+
+    if (invitation.createLogin && invitation.role && password) {
+        const hashedPassword = await hashPassword(password);
+        const user = await User.create({
+            name: `${employee.firstName} ${employee.lastName}`.trim(),
+            email: employee.email,
+            phone: employee.phone,
+            password: hashedPassword,
+            role: invitation.role,
+            hospitalId: employee.hospitalId,
+            employeeId: employee._id,
+            status: "active",
+            createdBy: invitation.invitedBy,
+        });
+
+        employee.userId = user._id;
+        await employee.save();
+    }
 
     invitation.status = "accepted";
     invitation.acceptedAt = new Date();
@@ -370,7 +394,7 @@ const updateEmployee = async ({
         "email",
         "phone",
         "dateOfJoining",
-        "designation",
+        "position",
     ];
 
     for (const field of allowedFields) {
@@ -409,8 +433,20 @@ const updateEmployeeStatus = async ({
     if (!employee) return null;
 
     employee.employmentStatus = status;
+    if (status === "INACTIVE") {
+        employee.leavingDate = new Date();
+    } else {
+        employee.leavingDate = null;
+    }
     employee.updatedBy = updatedBy;
     await employee.save();
+
+    if (employee.userId) {
+        await User.updateOne(
+            { _id: employee.userId },
+            { status: status === "INACTIVE" ? "inactive" : "active" }
+        );
+    }
 
     return employee;
 };

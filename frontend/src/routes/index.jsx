@@ -223,9 +223,9 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/hr/employees"
+        path="/employees"
         element={
-          <ProtectedRoute allowedRoles={['hr']}>
+          <ProtectedRoute allowedRoles={['admin', 'hr']}>
             <EmployeesPage />
           </ProtectedRoute>
         }

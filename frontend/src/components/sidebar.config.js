@@ -30,6 +30,7 @@ const sidebarConfig = {
           { label: 'Hospital', path: '/hospital', icon: LocalHospitalRounded },
           { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
           { label: 'HR Management', path: '/hr-management', icon: PeopleRounded },
+          { label: 'Employees', path: '/employees', icon: BadgeRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
       },
@@ -93,7 +94,7 @@ export const getSidebarSectionsForRole = (role) => {
       let hasEmployeeView = hasPermission(PERMISSIONS.EMPLOYEE_VIEW);
 
       if (hasEmployeeView) {
-        hrmsItems.push({ label: 'Employees', path: '/hr/employees', icon: BadgeRounded });
+        hrmsItems.push({ label: 'Employees', path: '/employees', icon: BadgeRounded });
       }
 
       if (hrmsItems.length > 0) {

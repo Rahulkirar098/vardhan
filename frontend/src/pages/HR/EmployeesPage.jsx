@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Alert,
   Box,
@@ -8,8 +8,6 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  Paper,
-  Skeleton,
   Snackbar,
   Stack,
   Tab,
@@ -20,7 +18,6 @@ import {
 } from '@mui/material';
 import {
   AddRounded,
-  BadgeRounded,
   CheckCircleOutlineRounded,
   CloseRounded,
   EditRounded,
@@ -30,7 +27,6 @@ import {
   PersonOffRounded,
   PersonRounded,
   SearchRounded,
-  SendRounded,
   ToggleOffRounded,
   ToggleOnRounded,
 } from '@mui/icons-material';
@@ -39,10 +35,8 @@ import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
-import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import DataTable from '../../components/DataTable';
@@ -70,7 +64,9 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
     lastName: '',
     email: '',
     phone: '',
-    designation: '',
+    position: '',
+    role: 'employee',
+    createLogin: false,
     dateOfJoining: '',
     employeeId: '',
   });
@@ -79,14 +75,15 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
 
   useEffect(() => {
     if (open) {
-      setForm({ firstName: '', lastName: '', email: '', phone: '', designation: '', dateOfJoining: '', employeeId: '' });
+      setForm({ firstName: '', lastName: '', email: '', phone: '', position: '', role: 'employee', createLogin: false, dateOfJoining: '', employeeId: '' });
       setError('');
       setSubmitting(false);
     }
   }, [open]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const name = e.target.name;
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -103,7 +100,9 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
-        designation: form.designation.trim() || undefined,
+        position: form.position.trim() || undefined,
+        role: form.createLogin ? form.role : undefined,
+        createLogin: form.createLogin,
         dateOfJoining: form.dateOfJoining || undefined,
         employeeId: form.employeeId.trim() || undefined,
       });
@@ -180,9 +179,9 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
         </Stack>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
-            label="Designation (optional)"
-            name="designation"
-            value={form.designation}
+            label="Hospital Position (optional)"
+            name="position"
+            value={form.position}
             onChange={handleChange}
             fullWidth
             placeholder="e.g. Nurse, Doctor"
@@ -197,6 +196,33 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
             slotProps={{ inputLabel: { shrink: true } }}
           />
         </Stack>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="createLogin"
+              checked={form.createLogin}
+              onChange={handleChange}
+              style={{ width: '16px', height: '16px' }}
+            />
+            <Typography variant="body2" color="text.secondary">Create Vardhan Login Account</Typography>
+          </label>
+          
+          {form.createLogin && (
+            <TextField
+              select
+              label="Vardhan Access Role"
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+              fullWidth
+              SelectProps={{ native: true }}
+            >
+              <option value="employee">Employee</option>
+              {/* Do not allow assigning HR from standard employee invite without explicit design */}
+            </TextField>
+          )}
+        </Stack>
       </Stack>
     </Modal>
   );
@@ -204,7 +230,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
 
 // ─── Edit Employee Modal ──────────────────────────────────────────────────────
 const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', designation: '', dateOfJoining: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', position: '', dateOfJoining: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -215,7 +241,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
         lastName: employee.lastName || '',
         email: employee.email || '',
         phone: employee.phone || '',
-        designation: employee.designation || '',
+        position: employee.position || '',
         dateOfJoining: employee.dateOfJoining ? new Date(employee.dateOfJoining).toISOString().split('T')[0] : '',
       });
       setError('');
@@ -241,7 +267,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
-        designation: form.designation.trim() || undefined,
+        position: form.position.trim() || undefined,
         dateOfJoining: form.dateOfJoining || undefined,
       });
       onSuccess('Employee updated successfully.');
@@ -303,9 +329,9 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
             fullWidth
           />
           <TextField
-            label="Designation"
-            name="designation"
-            value={form.designation}
+            label="Hospital Position"
+            name="position"
+            value={form.position}
             onChange={handleChange}
             fullWidth
           />
@@ -351,16 +377,18 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
           { label: 'Employee ID', value: employee.employeeId },
           { label: 'Email', value: employee.email },
           { label: 'Phone', value: employee.phone || '—' },
-          { label: 'Designation', value: employee.designation || '—' },
+          { label: 'Position', value: employee.position || '—' },
           { label: 'Date of Joining', value: formatDate(employee.dateOfJoining) },
           { label: 'Employment Status', value: employee.employmentStatus },
+          ...(employee.employmentStatus === 'INACTIVE' ? [{ label: 'Leaving Date', value: formatDate(employee.leavingDate) }] : []),
+          { label: 'Vardhan Account', value: employee.userId ? (employee.employmentStatus === 'INACTIVE' ? 'Disabled' : 'Active') : 'No Login' },
           { label: 'Created', value: formatDate(employee.createdAt) },
         ].map(({ label, value }) => (
           <Stack key={label} direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="body2" color="text.secondary" sx={{ minWidth: 140 }}>
               {label}
             </Typography>
-            <Typography variant="body2" fontWeight={500} textAlign="right">
+            <Typography variant="body2" fontWeight={500} textAlign="right" color={value === 'Disabled' ? 'error' : 'text.primary'}>
               {value}
             </Typography>
           </Stack>
@@ -381,7 +409,7 @@ const EmployeesPage = () => {
 
   // Search & filter
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
 
   // Modals
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -440,16 +468,12 @@ const EmployeesPage = () => {
     }
   };
 
-  const pendingInvitations = useMemo(
-    () => invitations.filter((i) => i.status === 'pending'),
-    [invitations]
-  );
-
   const employeeColumns = [
     { key: 'employee', label: 'Employee' },
     { key: 'employeeId', label: 'Employee ID' },
     { key: 'contact', label: 'Contact' },
-    { key: 'designation', label: 'Designation' },
+    { key: 'position', label: 'Position' },
+    { key: 'role', label: 'Vardhan Role' },
     { key: 'joined', label: 'Joined' },
     { key: 'status', label: 'Status' }
   ];
@@ -487,8 +511,17 @@ const EmployeesPage = () => {
             )}
           </>
         );
-      case 'designation':
-        return <Typography variant="body2">{emp.designation || '—'}</Typography>;
+      case 'position':
+        return <Typography variant="body2">{emp.position || '—'}</Typography>;
+      case 'role':
+        return (
+          <Chip
+            label={emp.userId ? (emp.userId.role === 'hr' ? 'HR' : 'Employee') : 'No Login'}
+            size="small"
+            color={emp.userId ? 'primary' : 'default'}
+            variant="outlined"
+          />
+        );
       case 'joined':
         return <Typography variant="body2">{formatDate(emp.dateOfJoining)}</Typography>;
       case 'status':
@@ -507,7 +540,7 @@ const EmployeesPage = () => {
             <PersonRounded fontSize="small" />
           </IconButton>
         </Tooltip>
-        {hasUpdate && (
+        {hasUpdate && isActive && (
           <Tooltip title="Edit employee">
             <IconButton size="small" color="primary" onClick={() => setEditEmployee(emp)}>
               <EditRounded fontSize="small" />
@@ -515,7 +548,7 @@ const EmployeesPage = () => {
           </Tooltip>
         )}
         {hasDeactivate && (
-          <Tooltip title={isActive ? 'Deactivate' : 'Activate'}>
+          <Tooltip title={isActive ? 'Deactivate' : 'Reactivate'}>
             <IconButton
               size="small"
               color={isActive ? 'error' : 'success'}
@@ -532,7 +565,7 @@ const EmployeesPage = () => {
   const invitationColumns = [
     { key: 'name', label: 'Name' },
     { key: 'email', label: 'Email' },
-    { key: 'designation', label: 'Designation' },
+    { key: 'position', label: 'Position' },
     { key: 'status', label: 'Status' },
     { key: 'expires', label: 'Expires' }
   ];
@@ -546,8 +579,8 @@ const EmployeesPage = () => {
         return <Typography variant="body2" fontWeight={600}>{inv.firstName} {inv.lastName}</Typography>;
       case 'email':
         return <Typography variant="body2">{inv.email}</Typography>;
-      case 'designation':
-        return <Typography variant="body2">{inv.designation || '—'}</Typography>;
+      case 'position':
+        return <Typography variant="body2">{inv.position || '—'}</Typography>;
       case 'status':
         return <StatusBadge status={effectiveStatus} />;
       case 'expires':
@@ -728,13 +761,13 @@ const EmployeesPage = () => {
 
       <ConfirmDialog
         open={Boolean(deactivateTarget)}
-        title={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate Employee' : 'Activate Employee'}
+        title={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate Employee' : 'Reactivate Employee'}
         description={
           deactivateTarget?.employmentStatus === 'ACTIVE'
-            ? `Are you sure you want to deactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}? They will no longer be counted as active.`
-            : `Are you sure you want to activate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}?`
+            ? `Are you sure you want to deactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}?\n\nThe employee will no longer be considered active.\nIf the employee has a Vardhan login, their login will also be disabled.\n\nHistorical records will be preserved.`
+            : `Are you sure you want to reactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}?\n\nThis will make the employee active again.\nIf they have an existing Vardhan account, their account may be re-enabled.`
         }
-        confirmLabel={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+        confirmLabel={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}
         confirmColor={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'error' : 'primary'}
         loading={deactivating}
         onConfirm={handleDeactivateConfirm}

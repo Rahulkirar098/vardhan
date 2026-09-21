@@ -33,18 +33,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.HR_VIEW,
   ]),
 
-  admin: Object.freeze([
-    PERMISSIONS.HOSPITAL_VIEW,
-    PERMISSIONS.HOSPITAL_UPDATE,
-    PERMISSIONS.STRUCTURE_VIEW,
-    PERMISSIONS.STRUCTURE_CREATE,
-    PERMISSIONS.STRUCTURE_UPDATE,
-    PERMISSIONS.STRUCTURE_DELETE,
-    PERMISSIONS.HR_VIEW,
-    PERMISSIONS.HR_INVITE,
-    PERMISSIONS.HR_UPDATE,
-    PERMISSIONS.HR_INVITATION_MANAGE,
-  ]),
+  admin: Object.freeze(Object.values(PERMISSIONS)),
 
   hr: Object.freeze([
     PERMISSIONS.HOSPITAL_VIEW,
@@ -75,32 +64,30 @@ export const hasPermission = (permission, role, userPermissions) => {
     return false;
   }
 
-  // Admin and Super Admin always have full structure & HR access
-  if (effectiveRole === 'admin' || effectiveRole === 'super_admin') {
+  if (effectiveRole === 'admin') {
     return true;
   }
 
-  // For HR, check base role permissions + individually assigned permissions
-  if (effectiveRole === 'hr') {
-    const basePermissions = ROLE_PERMISSIONS.hr || [];
-    if (basePermissions.includes(permission)) {
-      return true;
-    }
-
-    let assigned = userPermissions;
-    if (!assigned) {
-      try {
-        const stored = localStorage.getItem('permissions');
-        assigned = stored ? JSON.parse(stored) : [];
-      } catch {
-        assigned = [];
-      }
-    }
-
-    return Array.isArray(assigned) && assigned.includes(permission);
+  // Super Admin currently has specific permissions defined in ROLE_PERMISSIONS, but for legacy support we leave this.
+  // We'll rely on ROLE_PERMISSIONS merge.
+  
+  const basePermissions = ROLE_PERMISSIONS[effectiveRole] || [];
+  if (basePermissions.includes(permission)) {
+    return true;
   }
 
-  return false;
+  // Check individually assigned permissions
+  let assigned = userPermissions;
+  if (!assigned) {
+    try {
+      const stored = localStorage.getItem('permissions');
+      assigned = stored ? JSON.parse(stored) : [];
+    } catch {
+      assigned = [];
+    }
+  }
+
+  return Array.isArray(assigned) && assigned.includes(permission);
 };
 
 export const getPermissionsForRole = (role) => {

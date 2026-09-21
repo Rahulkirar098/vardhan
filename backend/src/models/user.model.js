@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
 
         role: {
             type: String,
-            enum: ["super_admin", "admin", "hr"],
+            enum: ["super_admin", "admin", "hr", "employee"],
             default: "admin",
             required: true,
         },
@@ -49,6 +49,12 @@ const userSchema = new mongoose.Schema(
         hospitalId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Hospital",
+            default: null,
+        },
+
+        employeeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Employee",
             default: null,
         },
 

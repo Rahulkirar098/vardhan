@@ -4,11 +4,11 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Divider,
   Stack,
   Typography,
+  TextField,
 } from '@mui/material';
 import {
   BadgeRounded,
@@ -26,6 +26,7 @@ const AcceptEmployeeInvitation = () => {
   const [submitting, setSubmitting] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState('');
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     const fetchInvitation = async () => {
@@ -51,7 +52,7 @@ const AcceptEmployeeInvitation = () => {
     setError('');
     try {
       setSubmitting(true);
-      await employeeService.acceptInvitation(token);
+      await employeeService.acceptInvitation(token, invitation.createLogin ? password : undefined);
       setAccepted(true);
     } catch (err) {
       setError(
@@ -169,16 +170,16 @@ const AcceptEmployeeInvitation = () => {
               </Typography>
             </Stack>
 
-            {/* Designation */}
-            {invitation?.designation && (
+            {/* Position */}
+            {invitation?.position && (
               <Stack direction="row" spacing={1} alignItems="center">
                 <BadgeRounded
                   fontSize="small"
                   sx={{ color: 'text.secondary' }}
                 />
                 <Typography variant="body2" color="text.secondary">
-                  <strong style={{ color: '#0A0A0A' }}>Designation:</strong>{' '}
-                  {invitation.designation}
+                  <strong style={{ color: '#0A0A0A' }}>Position:</strong>{' '}
+                  {invitation.position}
                 </Typography>
               </Stack>
             )}
@@ -197,13 +198,25 @@ const AcceptEmployeeInvitation = () => {
           </Stack>
         </Box>
 
+        {invitation?.createLogin && (
+          <TextField
+            label="Create Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+            required
+            helperText="Create a password to access Vardhan"
+          />
+        )}
+
         {error && <Alert severity="error">{error}</Alert>}
 
         <Button
           variant="contained"
           size="large"
           onClick={handleAccept}
-          disabled={submitting}
+          disabled={submitting || (invitation?.createLogin && !password)}
           fullWidth
           sx={{ fontWeight: 700, py: 1.5 }}
         >
@@ -221,8 +234,8 @@ const AcceptEmployeeInvitation = () => {
           sx={{ display: 'block' }}
         >
           By accepting, your employee profile will be activated at{' '}
-          <strong>{invitation?.hospitalName || 'this hospital'}</strong>. No
-          login account will be created at this time.
+          <strong>{invitation?.hospitalName || 'this hospital'}</strong>. 
+          {invitation?.createLogin ? ' Your Vardhan login account will be created.' : ' No login account will be created at this time.'}
         </Typography>
       </Stack>
     </AuthLayout>
