@@ -113,6 +113,7 @@ The platform enforces controlled ownership and access rules:
 │       │   ├── hospital.controller.js
 │       │   ├── hr.controller.js
 │       │   ├── module.controller.js
+│       │   ├── position.controller.js
 │       │   ├── structure.controller.js
 │       │   └── superAdmin.controller.js
 │       ├── middleware
@@ -125,6 +126,7 @@ The platform enforces controlled ownership and access rules:
 │       │   ├── floor.model.js
 │       │   ├── hospital.model.js
 │       │   ├── invitation.model.js
+│       │   ├── position.model.js
 │       │   ├── revokedToken.model.js
 │       │   ├── room.model.js
 │       │   └── user.model.js
@@ -134,6 +136,7 @@ The platform enforces controlled ownership and access rules:
 │       │   ├── hospital.route.js
 │       │   ├── hr.route.js
 │       │   ├── module.route.js
+│       │   ├── position.route.js
 │       │   ├── structure.route.js
 │       │   └── superAdmin.route.js
 │       ├── services
@@ -210,7 +213,8 @@ The platform enforces controlled ownership and access rules:
         │   ├── employee.service.js
         │   ├── hospital.service.js
         │   ├── hr.service.js
-        │   ├── module.service.js
+        │   ├── invitation.service.js
+        │   ├── position.service.js
         │   ├── structure.service.js
         │   └── superAdmin.service.js
         ├── theme
@@ -423,7 +427,9 @@ FRONTEND_URL=http://localhost:5173
 - Hospital
 - Floor
 - Room
-- HR Invitation
+- Invitation
+- Employee
+- Position
 - Revoked Token
 
 *(Department is legacy and removed from active models)*

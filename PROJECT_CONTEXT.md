@@ -56,8 +56,8 @@ The current authoritative folder structure as inspected in the repository:
 - `controllers/` (auth, employee, hospital, hr, module, structure, superAdmin)
 - `middleware/` (auth, module, permission, role)
 - `migrations/` (migrateHrInvitationsToGeneric.js)
-- `models/` (employee, floor, hospital, invitation, revokedToken, room, user)
-- `routes/` (auth, employee, hospital, hr, module, structure, superAdmin)
+- `models/` (employee, floor, hospital, invitation, position, revokedToken, room, user)
+- `routes/` (auth, employee, hospital, hr, module, position, structure, superAdmin)
 - `services/` (employee, invitation, structure)
 - `utils/` (jwt, mail, password, validate)
 - `tests/` (Various Jest tests)
@@ -66,7 +66,7 @@ The current authoritative folder structure as inspected in the repository:
 - `components/` (AppLayout, AuthLayout, ConfirmDialog, DataTable, EmptyState, ErrorState, GlassCard, InfoRow, InitialsAvatar, Loading, Modal, Navbar, PageHeader, SectionCard, Sidebar, StatCard, StatusBadge, sidebar.config.js)
 - `pages/`
   - `auth/` (AcceptEmployeeInvitation, AcceptHRInvitation, ForgotPassword, Landing, Login, Register, ResetPassword)
-  - `admin/` (AdminDashboard, FloorDetails, Hospital, StructurePage)
+  - `admin/` (AdminDashboard, FloorDetails, Hospital, HRManagement, PositionsPage, StructurePage)
   - `hr/` (EmployeesPage, HRDashboard, HRProfile, MyHospital)
   - `shared/` (Profile)
   - `super-admin/` (SuperAdminDashboard, SuperAdminHospitalDetails, SuperAdminHospitals)
@@ -133,8 +133,10 @@ The current authoritative folder structure as inspected in the repository:
 - **Status:** Active.
 
 ### `RevokedToken` (revokedToken.model.js)
-- **Purpose:** Stores invalidated JWTs for secure logout.
-- **Status:** Active.
+- **Purpose:** Security model to blacklist JWT tokens upon explicit logout before they expire.
+
+### `Position` (position.model.js)
+- **Purpose:** Stores employee job titles/designations scoped per hospital. Used instead of roles for descriptive job titles.
 
 ---
 
@@ -253,8 +255,9 @@ The application uses a single centralized `Invitation` model (`invitation.model.
 
 ## 16. HRMS
 
-- **HR Access:** Implemented (Phase 1).
-- **Employees:** Implemented (Phase 2 - Includes generic invitations, Employee model, creation, status toggling).
+- **HR Access:** Implemented (Phase 2 - Rebuilt to use `Employee` model + `hr` role user. `HR` distinct model removed).
+- **Employees:** Implemented (Phase 2 - Includes generic invitations, Employee model, creation, status toggling, and granular position updating).
+- **Positions:** Implemented (Position Master module for CRUD of hospital-scoped designations).
 - **Reporting Manager:** Not implemented.
 - **Roster:** Not implemented.
 - **Attendance:** Not implemented.
