@@ -2,77 +2,13 @@ const Hospital = require("../models/hospital.model");
 const { isValidObjectId } = require("../utils/validate");
 const structureService = require("../services/structure.service");
 const {
-    createFloorSchema,
-    updateFloorSchema,
-    createRoomSchema,
-    updateRoomSchema,
+    validateCreateFloor,
+    validateUpdateFloor,
+    validateCreateRoom,
+    validateUpdateRoom,
 } = require("../validators/structure.validator");
 
-const resolveAuthorizedHospital = async (req) => {
-    if (!req.user) {
-        return { errorStatus: 401, errorMessage: "Authentication required" };
-    }
 
-    const { hospitalId } = req.params;
-    if (!isValidObjectId(hospitalId)) {
-        return { errorStatus: 400, errorMessage: "Invalid hospital ID format" };
-    }
-
-    if (req.user.role === "admin") {
-        let hospital = await Hospital.findOne({ createdBy: req.user.id });
-        if (!hospital && req.user.hospitalId) {
-            hospital = await Hospital.findById(req.user.hospitalId);
-        }
-
-        if (!hospital) {
-            return {
-                errorStatus: 404,
-                errorMessage: "Hospital not found for this administrator",
-            };
-        }
-
-        if (hospital._id.toString() !== hospitalId) {
-            return {
-                errorStatus: 403,
-                errorMessage: "Access denied to requested hospital",
-            };
-        }
-
-        return { authorizedHospitalId: hospital._id };
-    }
-
-    if (req.user.role === "super_admin") {
-        const hospital = await Hospital.findById(hospitalId);
-        if (!hospital) {
-            return {
-                errorStatus: 404,
-                errorMessage: "Hospital not found",
-            };
-        }
-
-        return { authorizedHospitalId: hospital._id };
-    }
-
-    if (req.user.role === "hr") {
-        if (!req.user.hospitalId) {
-            return {
-                errorStatus: 404,
-                errorMessage: "Hospital not found for this HR",
-            };
-        }
-
-        if (req.user.hospitalId.toString() !== hospitalId) {
-            return {
-                errorStatus: 403,
-                errorMessage: "Access denied to requested hospital",
-            };
-        }
-
-        return { authorizedHospitalId: req.user.hospitalId };
-    }
-
-    return { errorStatus: 403, errorMessage: "Access denied" };
-};
 
 const handleServiceError = (res, error, defaultMessage = "Server error") => {
     if (error instanceof structureService.ServiceError) {
@@ -110,7 +46,7 @@ const handleServiceError = (res, error, defaultMessage = "Server error") => {
 const getFloors = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -132,7 +68,7 @@ const getFloors = async (req, res) => {
 const getFloorById = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -165,7 +101,7 @@ const getFloorById = async (req, res) => {
 const createFloor = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -173,14 +109,12 @@ const createFloor = async (req, res) => {
                 .json({ success: false, message: errorMessage });
         }
 
-        const { error, value } = createFloorSchema.validate(req.body, {
-            stripUnknown: true,
-        });
+        const { error, value } = validateCreateFloor(req.body);
 
         if (error) {
             return res.status(400).json({
                 success: false,
-                message: error.details[0].message,
+                message: error,
             });
         }
 
@@ -203,7 +137,7 @@ const createFloor = async (req, res) => {
 const updateFloor = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -219,14 +153,12 @@ const updateFloor = async (req, res) => {
             });
         }
 
-        const { error, value } = updateFloorSchema.validate(req.body, {
-            stripUnknown: true,
-        });
+        const { error, value } = validateUpdateFloor(req.body);
 
         if (error) {
             return res.status(400).json({
                 success: false,
-                message: error.details[0].message,
+                message: error,
             });
         }
 
@@ -249,7 +181,7 @@ const updateFloor = async (req, res) => {
 const deactivateFloor = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -287,7 +219,7 @@ const deactivateFloor = async (req, res) => {
 const getRooms = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -320,7 +252,7 @@ const getRooms = async (req, res) => {
 const getRoomById = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -360,7 +292,7 @@ const getRoomById = async (req, res) => {
 const createRoom = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -376,14 +308,12 @@ const createRoom = async (req, res) => {
             });
         }
 
-        const { error, value } = createRoomSchema.validate(req.body, {
-            stripUnknown: true,
-        });
+        const { error, value } = validateCreateRoom(req.body);
 
         if (error) {
             return res.status(400).json({
                 success: false,
-                message: error.details[0].message,
+                message: error,
             });
         }
 
@@ -407,7 +337,7 @@ const createRoom = async (req, res) => {
 const updateRoom = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res
@@ -429,14 +359,12 @@ const updateRoom = async (req, res) => {
             });
         }
 
-        const { error, value } = updateRoomSchema.validate(req.body, {
-            stripUnknown: true,
-        });
+        const { error, value } = validateUpdateRoom(req.body);
 
         if (error) {
             return res.status(400).json({
                 success: false,
-                message: error.details[0].message,
+                message: error,
             });
         }
 
@@ -460,7 +388,7 @@ const updateRoom = async (req, res) => {
 const deactivateRoom = async (req, res) => {
     try {
         const { authorizedHospitalId, errorStatus, errorMessage } =
-            await resolveAuthorizedHospital(req);
+            await structureService.resolveAuthorizedHospital(req.user, req.params.hospitalId);
 
         if (errorStatus) {
             return res

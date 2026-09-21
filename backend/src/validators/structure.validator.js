@@ -1,87 +1,78 @@
-const Joi = require("joi");
+const validateCreateFloor = (data) => {
+    const { name, floorNumber, code, description } = data;
+    if (!name || typeof name !== "string" || name.trim() === "") {
+        return { error: "Floor name is required" };
+    }
+    if (floorNumber === undefined || floorNumber === null || isNaN(Number(floorNumber))) {
+        return { error: "Floor number must be a valid number" };
+    }
+    return {
+        value: {
+            name: name.trim(),
+            floorNumber: Number(floorNumber),
+            code: code ? String(code).trim() : undefined,
+            description: description ? String(description).trim() : undefined,
+        },
+    };
+};
 
-const objectIdPattern = /^[0-9a-fA-F]{24}$/;
+const validateUpdateFloor = (data) => {
+    const { name, floorNumber, code, description } = data;
+    
+    if (Object.keys(data).length === 0) {
+        return { error: "At least one field must be provided for update" };
+    }
 
-const objectIdValidator = Joi.string()
-    .pattern(objectIdPattern)
-    .message("Invalid ID format");
+    const value = {};
+    if (name !== undefined) {
+        if (typeof name !== "string" || name.trim() === "") return { error: "Floor name must not be empty" };
+        value.name = name.trim();
+    }
+    if (floorNumber !== undefined) {
+        if (isNaN(Number(floorNumber))) return { error: "Floor number must be a valid number" };
+        value.floorNumber = Number(floorNumber);
+    }
+    if (code !== undefined) value.code = String(code).trim();
+    if (description !== undefined) value.description = String(description).trim();
 
-const createFloorSchema = Joi.object({
-    name: Joi.string().trim().min(1).max(100).required().messages({
-        "string.empty": "Floor name is required",
-        "any.required": "Floor name is required",
-    }),
-    floorNumber: Joi.number().integer().required().messages({
-        "number.base": "Floor number must be a valid number",
-        "any.required": "Floor number is required",
-    }),
-    code: Joi.string().trim().max(30).allow("", null).optional(),
-    description: Joi.string().trim().max(500).allow("", null).optional(),
-});
+    return { value };
+};
 
-const updateFloorSchema = Joi.object({
-    name: Joi.string().trim().min(1).max(100).optional(),
-    floorNumber: Joi.number().integer().optional(),
-    code: Joi.string().trim().max(30).allow("", null).optional(),
-    description: Joi.string().trim().max(500).allow("", null).optional(),
-})
-    .min(1)
-    .messages({
-        "object.min": "At least one field must be provided for update",
-    });
+const validateCreateRoom = (data) => {
+    const { name, code, description } = data;
+    if (!name || typeof name !== "string" || name.trim() === "") {
+        return { error: "Room name is required" };
+    }
+    return {
+        value: {
+            name: name.trim(),
+            code: code ? String(code).trim() : undefined,
+            description: description ? String(description).trim() : undefined,
+        },
+    };
+};
 
-const createRoomSchema = Joi.object({
-    name: Joi.string().trim().min(1).max(100).required().messages({
-        "string.empty": "Room name is required",
-        "any.required": "Room name is required",
-    }),
-    code: Joi.string().trim().max(30).allow("", null).optional(),
-    description: Joi.string().trim().max(500).allow("", null).optional(),
-});
+const validateUpdateRoom = (data) => {
+    const { name, code, description } = data;
+    
+    if (Object.keys(data).length === 0) {
+        return { error: "At least one field must be provided for update" };
+    }
 
-const updateRoomSchema = Joi.object({
-    name: Joi.string().trim().min(1).max(100).optional(),
-    code: Joi.string().trim().max(30).allow("", null).optional(),
-    description: Joi.string().trim().max(500).allow("", null).optional(),
-})
-    .min(1)
-    .messages({
-        "object.min": "At least one field must be provided for update",
-    });
+    const value = {};
+    if (name !== undefined) {
+        if (typeof name !== "string" || name.trim() === "") return { error: "Room name must not be empty" };
+        value.name = name.trim();
+    }
+    if (code !== undefined) value.code = String(code).trim();
+    if (description !== undefined) value.description = String(description).trim();
 
-const hospitalParamsSchema = Joi.object({
-    hospitalId: objectIdValidator.required().messages({
-        "any.required": "Hospital ID is required",
-    }),
-});
-
-const floorParamsSchema = Joi.object({
-    hospitalId: objectIdValidator.required().messages({
-        "any.required": "Hospital ID is required",
-    }),
-    floorId: objectIdValidator.required().messages({
-        "any.required": "Floor ID is required",
-    }),
-});
-
-const roomParamsSchema = Joi.object({
-    hospitalId: objectIdValidator.required().messages({
-        "any.required": "Hospital ID is required",
-    }),
-    floorId: objectIdValidator.required().messages({
-        "any.required": "Floor ID is required",
-    }),
-    roomId: objectIdValidator.required().messages({
-        "any.required": "Room ID is required",
-    }),
-});
+    return { value };
+};
 
 module.exports = {
-    createFloorSchema,
-    updateFloorSchema,
-    createRoomSchema,
-    updateRoomSchema,
-    hospitalParamsSchema,
-    floorParamsSchema,
-    roomParamsSchema,
+    validateCreateFloor,
+    validateUpdateFloor,
+    validateCreateRoom,
+    validateUpdateRoom,
 };

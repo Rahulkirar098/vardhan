@@ -13,12 +13,6 @@ import {
   Snackbar,
   Stack,
   Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Tabs,
   TextField,
   Tooltip,
@@ -51,6 +45,7 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import InitialsAvatar from '../../components/InitialsAvatar';
+import DataTable from '../../components/DataTable';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -267,11 +262,11 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim() || null,
-        designation: form.designation.trim() || null,
-        dateOfJoining: form.dateOfJoining || null,
+        phone: form.phone.trim() || undefined,
+        designation: form.designation.trim() || undefined,
+        dateOfJoining: form.dateOfJoining || undefined,
       });
-      onSuccess(`Employee ${form.firstName} updated successfully.`);
+      onSuccess('Employee updated successfully.');
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || 'Unable to update employee.');
@@ -280,14 +275,12 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
     }
   };
 
-  if (!employee) return null;
-
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Edit Employee"
-      description={`Update information for ${employee.firstName} ${employee.lastName}`}
+      description="Update basic information for this employee."
       submitLabel="Save Changes"
       submittingLabel="Saving..."
       onSubmit={handleSubmit}
@@ -474,6 +467,144 @@ const EmployeesPage = () => {
     [invitations]
   );
 
+  const employeeColumns = [
+    { key: 'employee', label: 'Employee' },
+    { key: 'employeeId', label: 'Employee ID' },
+    { key: 'contact', label: 'Contact' },
+    { key: 'designation', label: 'Designation' },
+    { key: 'joined', label: 'Joined' },
+    { key: 'status', label: 'Status' }
+  ];
+  
+  const renderEmployeeCell = (emp, column) => {
+    const fullName = `${emp.firstName} ${emp.lastName}`;
+    const isActive = emp.employmentStatus === 'ACTIVE';
+  
+    switch (column.key) {
+      case 'employee':
+        return (
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <InitialsAvatar name={fullName} />
+            <Box>
+              <Typography variant="body2" fontWeight={600}>{fullName}</Typography>
+              <Typography variant="caption" color="text.secondary">{emp.email}</Typography>
+            </Box>
+          </Stack>
+        );
+      case 'employeeId':
+        return (
+          <Chip
+            label={emp.employeeId}
+            size="small"
+            variant="outlined"
+            sx={{ fontWeight: 600, fontFamily: 'monospace' }}
+          />
+        );
+      case 'contact':
+        return (
+          <>
+            <Typography variant="body2">{emp.email}</Typography>
+            {emp.phone && (
+              <Typography variant="caption" color="text.secondary">{emp.phone}</Typography>
+            )}
+          </>
+        );
+      case 'designation':
+        return <Typography variant="body2">{emp.designation || '—'}</Typography>;
+      case 'joined':
+        return <Typography variant="body2">{formatDate(emp.dateOfJoining)}</Typography>;
+      case 'status':
+        return <StatusBadge status={isActive ? 'active' : 'inactive'} />;
+      default:
+        return null;
+    }
+  };
+  
+  const renderEmployeeActions = (emp) => {
+    const isActive = emp.employmentStatus === 'ACTIVE';
+    return (
+      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+        <Tooltip title="View details">
+          <IconButton size="small" onClick={() => setDetailsEmployee(emp)}>
+            <PersonRounded fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        {hasUpdate && (
+          <Tooltip title="Edit employee">
+            <IconButton size="small" color="primary" onClick={() => setEditEmployee(emp)}>
+              <EditRounded fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+        {hasDeactivate && (
+          <Tooltip title={isActive ? 'Deactivate' : 'Activate'}>
+            <IconButton
+              size="small"
+              color={isActive ? 'error' : 'success'}
+              onClick={() => setDeactivateTarget(emp)}
+            >
+              {isActive ? <ToggleOffRounded fontSize="small" /> : <ToggleOnRounded fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        )}
+      </Stack>
+    );
+  };
+
+  const invitationColumns = [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'designation', label: 'Designation' },
+    { key: 'status', label: 'Status' },
+    { key: 'expires', label: 'Expires' }
+  ];
+  
+  const renderInvitationCell = (inv, column) => {
+    const isExpiredByDate = inv.status === 'pending' && new Date(inv.expiresAt) < new Date();
+    const effectiveStatus = isExpiredByDate ? 'expired' : inv.status;
+  
+    switch (column.key) {
+      case 'name':
+        return <Typography variant="body2" fontWeight={600}>{inv.firstName} {inv.lastName}</Typography>;
+      case 'email':
+        return <Typography variant="body2">{inv.email}</Typography>;
+      case 'designation':
+        return <Typography variant="body2">{inv.designation || '—'}</Typography>;
+      case 'status':
+        return <StatusBadge status={effectiveStatus} />;
+      case 'expires':
+        return <Typography variant="body2">{inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString() : '—'}</Typography>;
+      default:
+        return null;
+    }
+  };
+  
+  const renderInvitationActions = (inv) => {
+    const isExpiredByDate = inv.status === 'pending' && new Date(inv.expiresAt) < new Date();
+    if (inv.status === 'pending' && !isExpiredByDate && hasCreate) {
+      return (
+        <Tooltip title="Cancel invitation">
+          <IconButton
+            size="small"
+            color="error"
+            onClick={async () => {
+              try {
+                await employeeService.cancelInvitation(inv._id);
+                showSnack('Invitation cancelled.');
+                loadEmployees();
+              } catch (err) {
+                showSnack(err?.response?.data?.message || 'Failed to cancel.', 'error');
+              }
+            }}
+          >
+            <CloseRounded fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      );
+    }
+    return null;
+  };
+
   return (
     <AppLayout>
       <Stack spacing={3}>
@@ -567,196 +698,33 @@ const EmployeesPage = () => {
               </Stack>
             </Stack>
 
-            <GlassCard sx={{ p: 0, overflow: 'hidden' }}>
-              {loading ? (
-                <Box sx={{ p: 3 }}>
-                  {[1, 2, 3].map((k) => <Skeleton key={k} height={54} sx={{ mb: 1 }} />)}
-                </Box>
-              ) : employees.length === 0 ? (
-                <EmptyState
-                  icon={GroupsRounded}
-                  title="No employees found"
-                  description={
-                    search || statusFilter
-                      ? 'No employees match your search or filter.'
-                      : 'No employees yet. Send an invitation to onboard your first employee.'
-                  }
-                  actionLabel={hasCreate && !search && !statusFilter ? 'Invite Employee' : null}
-                  onAction={hasCreate && !search && !statusFilter ? () => setInviteOpen(true) : null}
-                />
-              ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Employee</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Employee ID</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Contact</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Designation</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Joined</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {employees.map((emp) => {
-                        const fullName = `${emp.firstName} ${emp.lastName}`;
-                        const isActive = emp.employmentStatus === 'ACTIVE';
-                        return (
-                          <TableRow key={emp._id} hover>
-                            <TableCell>
-                              <Stack direction="row" spacing={1.5} alignItems="center">
-                                <InitialsAvatar name={fullName} />
-                                <Box>
-                                  <Typography variant="body2" fontWeight={600}>{fullName}</Typography>
-                                  <Typography variant="caption" color="text.secondary">{emp.email}</Typography>
-                                </Box>
-                              </Stack>
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={emp.employeeId}
-                                size="small"
-                                variant="outlined"
-                                sx={{ fontWeight: 600, fontFamily: 'monospace' }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{emp.email}</Typography>
-                              {emp.phone && (
-                                <Typography variant="caption" color="text.secondary">{emp.phone}</Typography>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{emp.designation || '—'}</Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{formatDate(emp.dateOfJoining)}</Typography>
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={isActive ? 'active' : 'inactive'} />
-                            </TableCell>
-                            <TableCell align="right">
-                              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                                <Tooltip title="View details">
-                                  <IconButton size="small" onClick={() => setDetailsEmployee(emp)}>
-                                    <PersonRounded fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                {hasUpdate && (
-                                  <Tooltip title="Edit employee">
-                                    <IconButton size="small" color="primary" onClick={() => setEditEmployee(emp)}>
-                                      <EditRounded fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-                                {hasDeactivate && (
-                                  <Tooltip title={isActive ? 'Deactivate' : 'Activate'}>
-                                    <IconButton
-                                      size="small"
-                                      color={isActive ? 'error' : 'success'}
-                                      onClick={() => setDeactivateTarget(emp)}
-                                    >
-                                      {isActive ? <ToggleOffRounded fontSize="small" /> : <ToggleOnRounded fontSize="small" />}
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-                              </Stack>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </GlassCard>
+            <DataTable 
+              columns={employeeColumns}
+              rows={employees}
+              getRowKey={(emp) => emp._id}
+              loading={loading}
+              emptyTitle="No employees found"
+              emptyDescription={search || statusFilter ? 'No employees match your search or filter.' : 'No employees yet. Send an invitation to onboard your first employee.'}
+              emptyIcon={GroupsRounded}
+              renderCell={renderEmployeeCell}
+              renderActions={renderEmployeeActions}
+            />
           </>
         )}
 
         {/* Invitations Tab */}
         {tabIndex === 1 && (
-          <GlassCard sx={{ p: 0, overflow: 'hidden' }}>
-            {loading ? (
-              <Box sx={{ p: 3 }}>
-                {[1, 2].map((k) => <Skeleton key={k} height={54} sx={{ mb: 1 }} />)}
-              </Box>
-            ) : invitations.length === 0 ? (
-              <EmptyState
-                icon={EmailRounded}
-                title="No invitations"
-                description="No employee invitations found."
-                actionLabel={hasCreate ? 'Invite Employee' : null}
-                onAction={hasCreate ? () => setInviteOpen(true) : null}
-              />
-            ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Designation</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Expires</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {invitations.map((inv) => {
-                      const isExpiredByDate =
-                        inv.status === 'pending' && new Date(inv.expiresAt) < new Date();
-                      const effectiveStatus = isExpiredByDate ? 'expired' : inv.status;
-                      return (
-                        <TableRow key={inv._id} hover>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {inv.firstName} {inv.lastName}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">{inv.email}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">{inv.designation || '—'}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={effectiveStatus} />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString() : '—'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            {inv.status === 'pending' && !isExpiredByDate && hasCreate && (
-                              <Tooltip title="Cancel invitation">
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={async () => {
-                                    try {
-                                      await employeeService.cancelInvitation(inv._id);
-                                      showSnack('Invitation cancelled.');
-                                      loadEmployees();
-                                    } catch (err) {
-                                      showSnack(err?.response?.data?.message || 'Failed to cancel.', 'error');
-                                    }
-                                  }}
-                                >
-                                  <CloseRounded fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </GlassCard>
+          <DataTable 
+            columns={invitationColumns}
+            rows={invitations}
+            getRowKey={(inv) => inv._id}
+            loading={loading}
+            emptyTitle="No invitations"
+            emptyDescription="No employee invitations found."
+            emptyIcon={EmailRounded}
+            renderCell={renderInvitationCell}
+            renderActions={renderInvitationActions}
+          />
         )}
       </Stack>
 

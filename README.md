@@ -92,6 +92,36 @@ The platform enforces controlled ownership and access rules:
 
 ---
 
+## 📂 Folder Structure
+
+The authoritative folder structure of the repository:
+
+**Backend (`backend/src/`)**
+- `config/` (modules.config.js, permissions.js, rolePermissions.js)
+- `controllers/` (auth, employee, hospital, hr, module, structure, superAdmin)
+- `middleware/` (auth, module, permission, role)
+- `models/` (employee, floor, hospital, invitation, revokedToken, room, user)
+- `routes/` (auth, employee, hospital, hr, module, structure, superAdmin)
+- `services/` (auth, hospital, hr, structure)
+- `utils/` (jwt, mail, password, validate)
+- `validators/` (structure.validator.js)
+- `tests/` (Various Jest tests)
+
+**Frontend (`frontend/src/`)**
+- `components/` (AppLayout, AuthLayout, ConfirmDialog, DataTable, EmptyState, ErrorState, GlassCard, InfoRow, InitialsAvatar, Loading, Modal, Navbar, PageHeader, SectionCard, Sidebar, StatCard, StatusBadge, sidebar.config.js)
+- `pages/`
+  - `auth/` (AcceptEmployeeInvitation, AcceptHRInvitation, ForgotPassword, Landing, Login, Register, ResetPassword)
+  - `admin/` (AdminDashboard, FloorDetails, Hospital, HRManagement, StructurePage)
+  - `hr/` (EmployeesPage, HRDashboard, HRProfile, MyHospital)
+  - `shared/` (Profile)
+  - `super-admin/` (SuperAdminDashboard, SuperAdminHospitalDetails, SuperAdminHospitals)
+- `routes/` (index.jsx)
+- `services/` (api/, auth, employee, hospital, hr, structure, superAdmin)
+- `theme/` (theme.js)
+- `utils/` (permissions.js)
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Backend
@@ -137,32 +167,43 @@ cloudcherry/
 │   ├── package.json
 │   └── src/
 │       ├── config/
+│       │   ├── modules.config.js
 │       │   ├── permissions.js
 │       │   └── rolePermissions.js
 │       ├── controllers/
 │       │   ├── auth.controller.js
+│       │   ├── employee.controller.js
 │       │   ├── hospital.controller.js
 │       │   ├── hr.controller.js
+│       │   ├── module.controller.js
 │       │   ├── structure.controller.js
-│       │   ├── superAdmin.controller.js
+│       │   └── superAdmin.controller.js
 │       ├── middleware/
 │       │   ├── auth.middleware.js
+│       │   ├── module.middleware.js
 │       │   ├── permission.middleware.js
 │       │   └── role.middleware.js
+│       ├── migrations/
+│       │   └── migrateHrInvitationsToGeneric.js
 │       ├── models/
+│       │   ├── employee.model.js
 │       │   ├── floor.model.js
 │       │   ├── hospital.model.js
-│       │   ├── hrInvitation.model.js
+│       │   ├── invitation.model.js
 │       │   ├── revokedToken.model.js
 │       │   ├── room.model.js
 │       │   └── user.model.js
 │       ├── routes/
 │       │   ├── auth.route.js
+│       │   ├── employee.route.js
 │       │   ├── hospital.route.js
 │       │   ├── hr.route.js
+│       │   ├── module.route.js
 │       │   ├── structure.route.js
 │       │   └── superAdmin.route.js
 │       ├── services/
+│       │   ├── employee.service.js
+│       │   ├── invitation.service.js
 │       │   └── structure.service.js
 │       └── utils/
 │           ├── jwt.js
@@ -201,6 +242,7 @@ cloudcherry/
 │       │   └── sidebar.config.js
 │       ├── pages/
 │       │   ├── auth/
+│       │   │   ├── AcceptEmployeeInvitation.jsx
 │       │   │   ├── AcceptHRInvitation.jsx
 │       │   │   ├── ForgotPassword.jsx
 │       │   │   ├── Landing.jsx
@@ -213,6 +255,7 @@ cloudcherry/
 │       │   │   ├── Hospital.jsx
 │       │   │   └── StructurePage.jsx
 │       │   ├── hr/
+│       │   │   ├── EmployeesPage.jsx
 │       │   │   ├── HRDashboard.jsx
 │       │   │   ├── HRProfile.jsx
 │       │   │   └── MyHospital.jsx
@@ -229,6 +272,7 @@ cloudcherry/
 │       │   │   ├── client.js
 │       │   │   └── interceptors.js
 │       │   ├── auth.service.js
+│       │   ├── employee.service.js
 │       │   ├── hospital.service.js
 │       │   ├── hr.service.js
 │       │   ├── structure.service.js
@@ -482,10 +526,15 @@ These features are live, covered by automated test suites, and connected end-to-
 - **Super Admin**:
   - Super admin platform metrics (`GET /api/super-admin/dashboard`, `/super-admin/dashboard`)
   - Cross-hospital directory & detail view (`GET /api/super-admin/hospitals`, `/super-admin/hospitals`)
-- **HR Portal**:
-  - Secure invitation acceptance flow (`GET/POST /api/hr/invite/:token`, `/hr/invite/:token`)
+- **HR Portal (Phase 1)**:
+  - Secure invitation acceptance flow for HR (`GET/POST /api/v1/hr/invite/:token`, `/hr/invite/:token`)
   - HR dashboard workspace (`/hr/dashboard`)
-  - HR hospital info view (`GET /api/hr/hospital`, `/hr/hospital`)
+  - HR hospital info view (`GET /api/v1/hr/hospital`, `/hr/hospital`)
+- **HRMS Module (Phase 2 - Employee Management)**:
+  - Centralized generic `Invitation` model supporting both HR and Employees.
+  - Employee creation, listing, status toggling (`POST/GET/PATCH /api/v1/hrms/employees`, `/hr/employees`).
+  - Employee secure invitation flow (non-user Vardhan accounts) (`/employee/invite/:token`).
+  - Dedicated Employee dashboard statistics.
 
 ---
 
@@ -515,8 +564,10 @@ These items are remnants from previous prototypes and are not part of the CloudC
 Hospital
    ├── Floors -> Rooms (Phase 2: Hospital Structure - COMPLETED)
    ├── Permissions (Phase 3: Role & Permission System - COMPLETED)
-   └── Employees -> Reporting Manager (Phase 4: UPCOMING)
-          └── Roster, Shifts, Attendance & Leave (Phase 5: UPCOMING)
+   ├── HRMS Module 
+   │      ├── Employee Management & Invitations (Phase 4: HRMS Core - COMPLETED)
+   │      ├── Reporting Manager (Phase 5: UPCOMING)
+   │      └── Roster, Shifts, Attendance & Leave (Phase 6: UPCOMING)
 ```
 
 ---

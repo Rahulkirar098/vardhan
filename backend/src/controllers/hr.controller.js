@@ -1,18 +1,8 @@
-const crypto = require("crypto");
-const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
 const Invitation = require("../models/invitation.model");
-const { hashTokenValue } = require("../services/invitation.service");
-const { hashPassword } = require("../utils/password");
-const { sendEmail } = require("../utils/mail");
 const { isValidObjectId } = require("../utils/validate");
 const { VALID_MODULE_KEYS } = require("../config/modules.config");
-
-// hashTokenValue moved to invitation.service.js
-
-const getAdminHospital = async (adminId) => {
-    return Hospital.findOne({ createdBy: adminId });
-};
+const hrService = require("../services/hr.service");
 
 const getHRHospital = async (req, res) => {
     try {
@@ -23,10 +13,7 @@ const getHRHospital = async (req, res) => {
             });
         }
 
-        const hospital = await Hospital.findById(req.user.hospitalId).populate(
-            "createdBy",
-            "name email phone role status"
-        );
+        const hospital = await hrService.getAdminHospital(req.user.hospitalId);
 
         if (!hospital) {
             return res.status(404).json({
@@ -34,6 +21,9 @@ const getHRHospital = async (req, res) => {
                 message: "Hospital not found",
             });
         }
+
+        // To match original behavior which populates createdBy
+        await hospital.populate("createdBy", "name email phone role status");
 
         return res.status(200).json({
             success: true,
@@ -77,7 +67,7 @@ const getMyHR = async (req, res) => {
             });
         }
 
-        const hospital = await Hospital.findOne({ createdBy: req.user.id });
+        const hospital = await hrService.getAdminHospital(req.user.id);
 
         if (!hospital) {
             return res.status(400).json({
@@ -103,7 +93,6 @@ const getMyHR = async (req, res) => {
         });
     } catch (error) {
         console.error("Get My HR Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -154,7 +143,6 @@ const getHRById = async (req, res) => {
         });
     } catch (error) {
         console.error("Get HR By Id Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -180,82 +168,45 @@ const createHR = async (req, res) => {
             });
         }
 
-        const normalizedName = String(name).trim();
-        const normalizedEmail = String(email).trim().toLowerCase();
-
-        if (!normalizedName || !normalizedEmail || !String(password).trim()) {
-            return res.status(400).json({
-                success: false,
-                message: "Name, email and password are required",
-            });
-        }
-
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailRegex.test(normalizedEmail)) {
+        if (!emailRegex.test(String(email).trim().toLowerCase())) {
             return res.status(400).json({
                 success: false,
                 message: "Please enter a valid email address",
             });
         }
 
-        const hospital = await Hospital.findOne({ createdBy: req.user.id });
-
-        if (!hospital) {
-            return res.status(400).json({
-                success: false,
-                message: "Please create your hospital first",
+        try {
+            const hrUser = await hrService.createHR({
+                name,
+                email,
+                phone,
+                password,
+                adminId: req.user.id
             });
-        }
 
-        const existingUser = await User.findOne({
-            email: normalizedEmail,
-            hospitalId: hospital._id,
-            role: "hr",
-        });
-
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                message: "An HR account with this email already exists for this hospital",
+            return res.status(201).json({
+                success: true,
+                message: "HR profile created successfully",
+                data: {
+                    id: hrUser._id,
+                    name: hrUser.name,
+                    email: hrUser.email,
+                    phone: hrUser.phone,
+                    role: hrUser.role,
+                    status: hrUser.status,
+                    hospitalId: hrUser.hospitalId,
+                },
             });
+        } catch (serviceErr) {
+            if (serviceErr.code === "NO_HOSPITAL" || serviceErr.code === "DUPLICATE_HR" || serviceErr.code === "DUPLICATE_EMAIL") {
+                return res.status(serviceErr.code === "NO_HOSPITAL" ? 400 : 409).json({
+                    success: false,
+                    message: serviceErr.message,
+                });
+            }
+            throw serviceErr;
         }
-
-        const existingUserByEmail = await User.findOne({ email: normalizedEmail });
-
-        if (existingUserByEmail) {
-            return res.status(409).json({
-                success: false,
-                message: "Email already registered",
-            });
-        }
-
-        const hashedPasswordValue = await hashPassword(password);
-
-        const hrUser = await User.create({
-            name: normalizedName,
-            email: normalizedEmail,
-            phone: phone ? String(phone).trim() : null,
-            password: hashedPasswordValue,
-            role: "hr",
-            status: "active",
-            createdBy: req.user.id,
-            hospitalId: hospital._id,
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: "HR profile created successfully",
-            data: {
-                id: hrUser._id,
-                name: hrUser.name,
-                email: hrUser.email,
-                phone: hrUser.phone,
-                role: hrUser.role,
-                status: hrUser.status,
-                hospitalId: hrUser.hospitalId,
-            },
-        });
     } catch (error) {
         if (error && error.code === 11000) {
             return res.status(409).json({
@@ -263,9 +214,7 @@ const createHR = async (req, res) => {
                 message: "Email already registered",
             });
         }
-
         console.error("Create HR Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -284,24 +233,13 @@ const createInvitation = async (req, res) => {
 
         const { name, email, phone, modules, permissions } = req.body;
 
-        if (!name || !email) {
+        if (!name || !email || !String(name).trim() || !String(email).trim()) {
             return res.status(400).json({
                 success: false,
                 message: "HR name and email are required",
             });
         }
 
-        const normalizedName = String(name).trim();
-        const normalizedEmail = String(email).trim().toLowerCase();
-
-        if (!normalizedName || !normalizedEmail) {
-            return res.status(400).json({
-                success: false,
-                message: "HR name and email are required",
-            });
-        }
-
-        let validModules = ["core"];
         if (modules !== undefined) {
             if (!Array.isArray(modules)) {
                 return res.status(400).json({
@@ -316,10 +254,8 @@ const createInvitation = async (req, res) => {
                     message: `Invalid modules: ${invalidMods.join(", ")}. Valid modules are: ${VALID_MODULE_KEYS.join(", ")}`,
                 });
             }
-            validModules = [...new Set(["core", ...modules])];
         }
 
-        let validPermissions = [];
         if (permissions !== undefined) {
             if (!Array.isArray(permissions)) {
                 return res.status(400).json({
@@ -327,101 +263,24 @@ const createInvitation = async (req, res) => {
                     message: "permissions must be an array",
                 });
             }
-            const invalidPerms = permissions.filter((p) => !VALID_HR_PERMISSIONS.includes(p));
+            const invalidPerms = permissions.filter((p) => !hrService.VALID_HR_PERMISSIONS.includes(p));
             if (invalidPerms.length > 0) {
                 return res.status(400).json({
                     success: false,
-                    message: `Invalid permissions: ${invalidPerms.join(", ")}. Valid permissions are: ${VALID_HR_PERMISSIONS.join(", ")}`,
+                    message: `Invalid permissions: ${invalidPerms.join(", ")}. Valid permissions are: ${hrService.VALID_HR_PERMISSIONS.join(", ")}`,
                 });
             }
-            validPermissions = [...new Set(permissions)];
         }
-
-        const hospital = await getAdminHospital(req.user.id);
-
-        if (!hospital) {
-            return res.status(400).json({
-                success: false,
-                message: "Please create a hospital first",
-            });
-        }
-
-        const activeHR = await User.findOne({
-            email: normalizedEmail,
-            hospitalId: hospital._id,
-            role: "hr",
-            status: "active",
-        });
-
-        if (activeHR) {
-            return res.status(409).json({
-                success: false,
-                message: "An HR account with this email already exists for this hospital",
-            });
-        }
-
-        const existingInvitation = await Invitation.findOne({
-            hospitalId: hospital._id,
-            email: normalizedEmail,
-            type: "HR",
-            status: "pending",
-        });
-
-        if (existingInvitation) {
-            return res.status(409).json({
-                success: false,
-                message: "An HR invitation is already pending for this email",
-            });
-        }
-
-        const rawToken = crypto.randomBytes(32).toString("hex");
-        const tokenHash = hashTokenValue(rawToken);
-        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
-
-        // For Generic Invitation, split name into firstName and lastName
-        const nameParts = normalizedName.split(" ");
-        const firstName = nameParts[0];
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null;
-
-        const invitation = await Invitation.create({
-            type: "HR",
-            firstName,
-            lastName,
-            email: normalizedEmail,
-            phone: phone ? String(phone).trim() : null,
-            hospitalId: hospital._id,
-            invitedBy: req.user.id,
-            tokenHash,
-            expiresAt,
-            status: "pending",
-            role: "hr",
-            modules: validModules,
-            permissions: validPermissions,
-        });
-
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        const invitationUrl = `${frontendUrl}/hr/invite/${rawToken}`;
 
         try {
-            await sendEmail({
-                to: normalizedEmail,
-                subject: `You're invited to join ${hospital.name}`,
-                text: `Hello ${normalizedName},\n\nYou have been invited by ${req.user.name || "your admin"} to join ${hospital.name}.\n\nRole: HR\n\nClick here to accept the invitation and create your account: ${invitationUrl}\n\nThis invitation expires in 48 hours.`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-                        <h2>You're invited to join ${hospital.name}</h2>
-                        <p>Hello ${normalizedName},</p>
-                        <p>You have been invited by ${req.user.name || "your admin"} to join <strong>${hospital.name}</strong>.</p>
-                        <p><strong>Role:</strong> HR</p>
-                        <p>Click the button below to accept the invitation and create your account.</p>
-                        <p>
-                            <a href="${invitationUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: bold;">Accept Invitation</a>
-                        </p>
-                        <p>Invitation expires in 48 hours.</p>
-                        <p>If you did not expect this invitation, you can ignore this email.</p>
-                        <p>Regards,<br />Krince.in</p>
-                    </div>
-                `,
+            const invitation = await hrService.inviteHR({
+                name,
+                email,
+                phone,
+                modules,
+                permissions,
+                adminId: req.user.id,
+                adminName: req.user.name
             });
 
             return res.status(201).json({
@@ -438,33 +297,29 @@ const createInvitation = async (req, res) => {
                     expiresAt: invitation.expiresAt,
                 },
             });
-        } catch (emailError) {
-            console.error("Send HR Invitation Email Error:", emailError);
-
-            await Invitation.findByIdAndDelete(invitation._id);
-
-            const emailMessage = String(emailError?.message || "");
-
-            if (
-                emailMessage.includes("SMTP configuration is missing") ||
-                emailMessage.includes("SMTP configuration is invalid") ||
-                emailMessage.includes("placeholder values") ||
-                emailMessage.includes("ENOTFOUND")
-            ) {
-                return res.status(503).json({
+        } catch (serviceErr) {
+            if (serviceErr.code === "NO_HOSPITAL") {
+                return res.status(400).json({ success: false, message: serviceErr.message });
+            }
+            if (serviceErr.code === "DUPLICATE_HR" || serviceErr.code === "DUPLICATE_INVITATION") {
+                return res.status(409).json({ success: false, message: serviceErr.message });
+            }
+            if (serviceErr.code === "EMAIL_FAILED") {
+                if (serviceErr.message.includes("SMTP configuration is missing") || serviceErr.message.includes("ENOTFOUND")) {
+                    return res.status(503).json({
+                        success: false,
+                        message: "Email service is not configured correctly. Please update backend/.env with valid SMTP credentials.",
+                    });
+                }
+                return res.status(500).json({
                     success: false,
-                    message: "Email service is not configured correctly. Please update backend/.env with valid SMTP credentials.",
+                    message: "Unable to send invitation email. Please try again.",
                 });
             }
-
-            return res.status(500).json({
-                success: false,
-                message: "Unable to send invitation email. Please try again.",
-            });
+            throw serviceErr;
         }
     } catch (error) {
         console.error("Create HR Invitation Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -483,24 +338,9 @@ const getInvitationByToken = async (req, res) => {
             });
         }
 
-        const tokenHash = hashTokenValue(token);
-        const invitation = await Invitation.findOne({
-            tokenHash,
-            status: "pending",
-            type: "HR",
-        }).populate("hospitalId", "name");
+        const invitation = await hrService.getInvitationByToken(token);
 
         if (!invitation) {
-            return res.status(400).json({
-                success: false,
-                message: "Invitation is invalid or has expired.",
-            });
-        }
-
-        if (new Date(invitation.expiresAt) < new Date()) {
-            invitation.status = "expired";
-            await invitation.save();
-
             return res.status(400).json({
                 success: false,
                 message: "Invitation is invalid or has expired.",
@@ -522,7 +362,6 @@ const getInvitationByToken = async (req, res) => {
         });
     } catch (error) {
         console.error("Get Invitation By Token Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -542,79 +381,35 @@ const acceptInvitation = async (req, res) => {
             });
         }
 
-        const tokenHash = hashTokenValue(token);
-        const invitation = await Invitation.findOne({
-            tokenHash,
-            status: "pending",
-            type: "HR"
-        }).populate("hospitalId", "name");
+        try {
+            const hrUser = await hrService.acceptInvitation(token, password);
 
-        if (!invitation) {
-            return res.status(400).json({
-                success: false,
-                message: "Invitation is invalid or has expired.",
+            return res.status(201).json({
+                success: true,
+                message: "HR account created successfully",
+                data: {
+                    id: hrUser._id,
+                    name: hrUser.name,
+                    email: hrUser.email,
+                    phone: hrUser.phone,
+                    role: hrUser.role,
+                    hospitalId: hrUser.hospitalId,
+                    status: hrUser.status,
+                    modules: hrUser.modules,
+                    permissions: hrUser.permissions,
+                },
             });
+        } catch (serviceErr) {
+            if (serviceErr.code === "INVALID_INVITATION" || serviceErr.code === "EXPIRED_INVITATION") {
+                return res.status(400).json({ success: false, message: serviceErr.message });
+            }
+            if (serviceErr.code === "DUPLICATE_EMAIL") {
+                return res.status(409).json({ success: false, message: serviceErr.message });
+            }
+            throw serviceErr;
         }
-
-        if (new Date(invitation.expiresAt) < new Date()) {
-            invitation.status = "expired";
-            await invitation.save();
-
-            return res.status(400).json({
-                success: false,
-                message: "Invitation is invalid or has expired.",
-            });
-        }
-
-        const existingUser = await User.findOne({ email: invitation.email });
-
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                message: "An account with this email already exists",
-            });
-        }
-
-        const hashedPassword = await hashPassword(password);
-        const assignedModules = Array.isArray(invitation.modules) && invitation.modules.length > 0
-            ? [...new Set(["core", ...invitation.modules])]
-            : ["core"];
-
-        const hrUser = await User.create({
-            name: `${invitation.firstName} ${invitation.lastName || ""}`.trim(),
-            email: invitation.email,
-            phone: invitation.phone,
-            password: hashedPassword,
-            role: "hr",
-            hospitalId: invitation.hospitalId,
-            createdBy: invitation.invitedBy,
-            status: "active",
-            modules: assignedModules,
-            permissions: invitation.permissions || [],
-        });
-
-        invitation.status = "accepted";
-        invitation.acceptedAt = new Date();
-        await invitation.save();
-
-        return res.status(201).json({
-            success: true,
-            message: "HR account created successfully",
-            data: {
-                id: hrUser._id,
-                name: hrUser.name,
-                email: hrUser.email,
-                phone: hrUser.phone,
-                role: hrUser.role,
-                hospitalId: hrUser.hospitalId,
-                status: hrUser.status,
-                modules: hrUser.modules,
-                permissions: hrUser.permissions,
-            },
-        });
     } catch (error) {
         console.error("Accept Invitation Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -640,86 +435,38 @@ const resendInvitation = async (req, res) => {
             });
         }
 
-        const hospital = await getAdminHospital(req.user.id);
-
-        if (!hospital) {
-            return res.status(400).json({
-                success: false,
-                message: "Please create a hospital first",
-            });
-        }
-
-        const invitation = await HrInvitation.findOne({
-            _id: invitationId,
-            hospitalId: hospital._id,
-            invitedBy: req.user.id,
-        });
-
-        if (!invitation) {
-            return res.status(404).json({
-                success: false,
-                message: "Invitation not found",
-            });
-        }
-
-        if (invitation.status === "accepted" || invitation.status === "cancelled") {
-            return res.status(400).json({
-                success: false,
-                message: "This invitation cannot be resent",
-            });
-        }
-
-        const rawToken = crypto.randomBytes(32).toString("hex");
-        const tokenHash = hashTokenValue(rawToken);
-        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
-
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        const invitationUrl = `${frontendUrl}/hr/invite/${rawToken}`;
-
         try {
-            await sendEmail({
-                to: invitation.email,
-                subject: `You're invited to join ${hospital.name} as HR`,
-                text: `Hello ${invitation.name},\n\nYou have been invited by ${req.user.name || "your admin"} to join ${hospital.name} as an HR.\n\nClick here to accept the invitation: ${invitationUrl}\n\nThis invitation expires in 48 hours.`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-                        <h2>You're invited to join ${hospital.name} as HR</h2>
-                        <p>Hello ${invitation.name},</p>
-                        <p>You have been invited by ${req.user.name || "your admin"} to join <strong>${hospital.name}</strong> as an HR.</p>
-                        <p><a href="${invitationUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: bold;">Accept Invitation</a></p>
-                        <p>This invitation expires in 48 hours.</p>
-                    </div>
-                `,
-            });
-
-            invitation.tokenHash = tokenHash;
-            invitation.expiresAt = expiresAt;
-            invitation.status = "pending";
-            invitation.acceptedAt = null;
-            await invitation.save();
-
+            await hrService.resendInvitation(invitationId, req.user.id, req.user.name);
             return res.status(200).json({
                 success: true,
                 message: "Invitation resent successfully",
             });
-        } catch (emailError) {
-            console.error("Resend HR Invitation Email Error:", emailError);
-
-            if (String(emailError?.message || "").includes("SMTP configuration is missing")) {
-                return res.status(503).json({
+        } catch (serviceErr) {
+            if (serviceErr.code === "NO_HOSPITAL") {
+                return res.status(400).json({ success: false, message: serviceErr.message });
+            }
+            if (serviceErr.code === "NOT_FOUND") {
+                return res.status(404).json({ success: false, message: serviceErr.message });
+            }
+            if (serviceErr.code === "INVALID_STATUS") {
+                return res.status(400).json({ success: false, message: serviceErr.message });
+            }
+            if (serviceErr.code === "EMAIL_FAILED") {
+                if (serviceErr.message.includes("SMTP configuration is missing")) {
+                    return res.status(503).json({
+                        success: false,
+                        message: "Email service is not configured. Please add SMTP credentials in backend/.env.",
+                    });
+                }
+                return res.status(500).json({
                     success: false,
-                    message: "Email service is not configured. Please add SMTP credentials in backend/.env.",
+                    message: "Unable to send invitation email. Please try again.",
                 });
             }
-
-            return res.status(500).json({
-                success: false,
-                message: "Unable to send invitation email. Please try again.",
-            });
+            throw serviceErr;
         }
     } catch (error) {
         console.error("Resend Invitation Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -745,38 +492,23 @@ const cancelInvitation = async (req, res) => {
             });
         }
 
-        const hospital = await getAdminHospital(req.user.id);
-
-        if (!hospital) {
-            return res.status(400).json({
-                success: false,
-                message: "Please create a hospital first",
+        try {
+            await hrService.cancelInvitation(invitationId, req.user.id);
+            return res.status(200).json({
+                success: true,
+                message: "Invitation cancelled successfully",
             });
+        } catch (serviceErr) {
+            if (serviceErr.code === "NO_HOSPITAL") {
+                return res.status(400).json({ success: false, message: serviceErr.message });
+            }
+            if (serviceErr.code === "NOT_FOUND") {
+                return res.status(404).json({ success: false, message: serviceErr.message });
+            }
+            throw serviceErr;
         }
-
-        const invitation = await HrInvitation.findOne({
-            _id: invitationId,
-            hospitalId: hospital._id,
-            invitedBy: req.user.id,
-        });
-
-        if (!invitation) {
-            return res.status(404).json({
-                success: false,
-                message: "Invitation not found",
-            });
-        }
-
-        invitation.status = "cancelled";
-        await invitation.save();
-
-        return res.status(200).json({
-            success: true,
-            message: "Invitation cancelled successfully",
-        });
     } catch (error) {
         console.error("Cancel Invitation Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -793,7 +525,7 @@ const getInvitations = async (req, res) => {
             });
         }
 
-        const hospital = await getAdminHospital(req.user.id);
+        const hospital = await hrService.getAdminHospital(req.user.id);
 
         if (!hospital) {
             return res.status(400).json({
@@ -802,7 +534,6 @@ const getInvitations = async (req, res) => {
             });
         }
 
-        // Automatically update expired invitations
         const now = new Date();
         await Invitation.updateMany(
             { hospitalId: hospital._id, type: "HR", status: "pending", expiresAt: { $lt: now } },
@@ -825,20 +556,12 @@ const getInvitations = async (req, res) => {
         });
     } catch (error) {
         console.error("Get Invitations Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
         });
     }
 };
-
-const VALID_HR_PERMISSIONS = [
-    "structure.view",
-    "structure.create",
-    "structure.update",
-    "structure.delete",
-];
 
 const getHRPermissions = async (req, res) => {
     try {
@@ -868,7 +591,7 @@ const getHRPermissions = async (req, res) => {
         }
 
         if (req.user.role === "admin") {
-            const hospital = await getAdminHospital(req.user.id);
+            const hospital = await hrService.getAdminHospital(req.user.id);
             if (!hospital || !hrUser.hospitalId || hrUser.hospitalId.toString() !== hospital._id.toString()) {
                 return res.status(403).json({
                     success: false,
@@ -889,7 +612,6 @@ const getHRPermissions = async (req, res) => {
         });
     } catch (error) {
         console.error("Get HR Permissions Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -924,55 +646,40 @@ const updateHRPermissions = async (req, res) => {
             });
         }
 
-        // Validate permission values against whitelist
         const invalidPermissions = permissions.filter(
-            (p) => !VALID_HR_PERMISSIONS.includes(p)
+            (p) => !hrService.VALID_HR_PERMISSIONS.includes(p)
         );
 
         if (invalidPermissions.length > 0) {
             return res.status(400).json({
                 success: false,
-                message: `Invalid permissions: ${invalidPermissions.join(", ")}. Valid permissions are: ${VALID_HR_PERMISSIONS.join(", ")}`,
+                message: `Invalid permissions: ${invalidPermissions.join(", ")}. Valid permissions are: ${hrService.VALID_HR_PERMISSIONS.join(", ")}`,
             });
         }
 
-        const hrUser = await User.findById(hrId);
-
-        if (!hrUser || hrUser.role !== "hr") {
-            return res.status(404).json({
-                success: false,
-                message: "HR profile not found",
+        try {
+            const hrUser = await hrService.updateHRPermissions(hrId, permissions, req.user.id);
+            return res.status(200).json({
+                success: true,
+                message: "HR permissions updated successfully",
+                data: {
+                    hrId: hrUser._id,
+                    name: hrUser.name,
+                    email: hrUser.email,
+                    permissions: hrUser.permissions,
+                },
             });
-        }
-
-        if (req.user.role === "admin") {
-            const hospital = await getAdminHospital(req.user.id);
-            if (!hospital || !hrUser.hospitalId || hrUser.hospitalId.toString() !== hospital._id.toString()) {
-                return res.status(403).json({
-                    success: false,
-                    message: "You can only modify permissions for HR in your hospital",
-                });
+        } catch (serviceErr) {
+            if (serviceErr.code === "NOT_FOUND") {
+                return res.status(404).json({ success: false, message: serviceErr.message });
             }
+            if (serviceErr.code === "FORBIDDEN") {
+                return res.status(403).json({ success: false, message: serviceErr.message });
+            }
+            throw serviceErr;
         }
-
-        const uniquePermissions = [...new Set(permissions)];
-
-        hrUser.permissions = uniquePermissions;
-        await hrUser.save();
-
-        return res.status(200).json({
-            success: true,
-            message: "HR permissions updated successfully",
-            data: {
-                hrId: hrUser._id,
-                name: hrUser.name,
-                email: hrUser.email,
-                permissions: hrUser.permissions,
-            },
-        });
     } catch (error) {
         console.error("Update HR Permissions Error:", error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -1008,7 +715,7 @@ const getHRModules = async (req, res) => {
         }
 
         if (req.user.role === "admin") {
-            const hospital = await getAdminHospital(req.user.id);
+            const hospital = await hrService.getAdminHospital(req.user.id);
             if (!hospital || !hrUser.hospitalId || hrUser.hospitalId.toString() !== hospital._id.toString()) {
                 return res.status(403).json({
                     success: false,
@@ -1071,39 +778,27 @@ const updateHRModules = async (req, res) => {
             });
         }
 
-        const hrUser = await User.findById(id);
-
-        if (!hrUser || hrUser.role !== "hr") {
-            return res.status(404).json({
-                success: false,
-                message: "HR profile not found",
+        try {
+            const hrUser = await hrService.updateHRModules(id, modules, req.user.id);
+            return res.status(200).json({
+                success: true,
+                message: "HR modules updated successfully",
+                data: {
+                    hrId: hrUser._id,
+                    name: hrUser.name,
+                    email: hrUser.email,
+                    modules: hrUser.modules,
+                },
             });
-        }
-
-        if (req.user.role === "admin") {
-            const hospital = await getAdminHospital(req.user.id);
-            if (!hospital || !hrUser.hospitalId || hrUser.hospitalId.toString() !== hospital._id.toString()) {
-                return res.status(403).json({
-                    success: false,
-                    message: "You can only modify modules for HR in your hospital",
-                });
+        } catch (serviceErr) {
+            if (serviceErr.code === "NOT_FOUND") {
+                return res.status(404).json({ success: false, message: serviceErr.message });
             }
+            if (serviceErr.code === "FORBIDDEN") {
+                return res.status(403).json({ success: false, message: serviceErr.message });
+            }
+            throw serviceErr;
         }
-
-        const uniqueModules = [...new Set(["core", ...modules])];
-        hrUser.modules = uniqueModules;
-        await hrUser.save();
-
-        return res.status(200).json({
-            success: true,
-            message: "HR modules updated successfully",
-            data: {
-                hrId: hrUser._id,
-                name: hrUser.name,
-                email: hrUser.email,
-                modules: hrUser.modules,
-            },
-        });
     } catch (error) {
         console.error("Update HR Modules Error:", error);
         return res.status(500).json({

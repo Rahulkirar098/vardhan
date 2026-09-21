@@ -1,5 +1,7 @@
 const Floor = require("../models/floor.model");
 const Room = require("../models/room.model");
+const Hospital = require("../models/hospital.model");
+const { isValidObjectId } = require("../utils/validate");
 
 class ServiceError extends Error {
     constructor(message, statusCode = 400) {
@@ -7,6 +9,56 @@ class ServiceError extends Error {
         this.statusCode = statusCode;
     }
 }
+
+const resolveAuthorizedHospital = async (user, hospitalId) => {
+    if (!user) {
+        return { errorStatus: 401, errorMessage: "Authentication required" };
+    }
+
+    if (!isValidObjectId(hospitalId)) {
+        return { errorStatus: 400, errorMessage: "Invalid hospital ID format" };
+    }
+
+    if (user.role === "admin") {
+        let hospital = await Hospital.findOne({ createdBy: user.id });
+        if (!hospital && user.hospitalId) {
+            hospital = await Hospital.findById(user.hospitalId);
+        }
+
+        if (!hospital) {
+            return { errorStatus: 404, errorMessage: "Hospital not found for this administrator" };
+        }
+
+        if (hospital._id.toString() !== hospitalId) {
+            return { errorStatus: 403, errorMessage: "Access denied to requested hospital" };
+        }
+
+        return { authorizedHospitalId: hospital._id };
+    }
+
+    if (user.role === "super_admin") {
+        const hospital = await Hospital.findById(hospitalId);
+        if (!hospital) {
+            return { errorStatus: 404, errorMessage: "Hospital not found" };
+        }
+
+        return { authorizedHospitalId: hospital._id };
+    }
+
+    if (user.role === "hr") {
+        if (!user.hospitalId) {
+            return { errorStatus: 404, errorMessage: "Hospital not found for this HR" };
+        }
+
+        if (user.hospitalId.toString() !== hospitalId) {
+            return { errorStatus: 403, errorMessage: "Access denied to requested hospital" };
+        }
+
+        return { authorizedHospitalId: user.hospitalId };
+    }
+
+    return { errorStatus: 403, errorMessage: "Access denied" };
+};
 
 /**
  * Floor Services
@@ -406,6 +458,7 @@ const deactivateRoom = async (hospitalId, floorId, roomId) => {
 
 module.exports = {
     ServiceError,
+    resolveAuthorizedHospital,
     getFloors,
     getFloorById,
     createFloor,

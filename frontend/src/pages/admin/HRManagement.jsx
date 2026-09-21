@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import DataTable from '../../components/DataTable';
 import {
   Alert,
   Box,
@@ -16,13 +17,7 @@ import {
   Snackbar,
   Stack,
   Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tabs,
+    Tabs,
   TextField,
   Tooltip,
   Typography,
@@ -716,6 +711,151 @@ const HRManagement = () => {
     return match ? match.label : moduleKey;
   };
 
+    const hrColumns = [
+    { key: 'name', label: 'HR Member' },
+    { key: 'contact', label: 'Contact' },
+    { key: 'status', label: 'Status' },
+    { key: 'modules', label: 'Modules' },
+    { key: 'permissions', label: 'Structure Permissions' },
+  ];
+
+  const renderHrCell = (hr, column) => {
+    switch (column.key) {
+      case 'name':
+        return (
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <InitialsAvatar name={hr.name} />
+            <Box>
+              <Typography variant="body2" fontWeight={600}>
+                {hr.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                HR Specialist
+              </Typography>
+            </Box>
+          </Stack>
+        );
+      case 'contact':
+        return (
+          <Box>
+            <Typography variant="body2">{hr.email}</Typography>
+            {hr.phone && (
+              <Typography variant="caption" color="text.secondary">
+                {hr.phone}
+              </Typography>
+            )}
+          </Box>
+        );
+      case 'status':
+        return <StatusBadge status={hr.status || 'active'} />;
+      case 'modules': {
+        const mods = (Array.isArray(hr.modules) ? hr.modules : ['core']).filter((m) => m !== 'core');
+        if (mods.length === 0) {
+          return (
+            <Typography variant="caption" color="text.secondary" fontStyle="italic">
+              Core only
+            </Typography>
+          );
+        }
+        return (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+            {mods.map((m) => {
+              const label = formatModuleLabel(m);
+              return label ? (
+                <Chip key={m} label={label} size="small" color="primary" sx={{ fontWeight: 500, fontSize: '0.72rem' }} />
+              ) : null;
+            })}
+          </Stack>
+        );
+      }
+      case 'permissions': {
+        const perms = Array.isArray(hr.permissions) ? hr.permissions : [];
+        if (perms.length === 0) {
+          return (
+            <Typography variant="caption" color="text.secondary" fontStyle="italic">
+              No structure permissions
+            </Typography>
+          );
+        }
+        return (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+            {perms.map((p) => (
+              <Chip key={p} label={formatPermissionLabel(p)} size="small" color="primary" variant="outlined" sx={{ fontWeight: 500, fontSize: '0.72rem' }} />
+            ))}
+          </Stack>
+        );
+      }
+      default:
+        return null;
+    }
+  };
+
+  const renderHrActions = (hr) => (
+    <Stack direction="row" spacing={1} justifyContent="flex-end">
+      <Tooltip title="Manage module access">
+        <Button variant="outlined" size="small" startIcon={<AppsRounded />} onClick={() => setModuleModalHr(hr)} sx={{ fontWeight: 600, textTransform: 'none' }}>Modules</Button>
+      </Tooltip>
+      <Button variant="outlined" size="small" startIcon={<LockPersonRounded />} onClick={() => setPermissionModalHr(hr)} sx={{ fontWeight: 600, textTransform: 'none' }}>Permissions</Button>
+    </Stack>
+  );
+
+  const invitationColumns = [
+    { key: 'name', label: 'Invited Person' },
+    { key: 'email', label: 'Email' },
+    { key: 'status', label: 'Status' },
+    { key: 'modules', label: 'Modules Granted' },
+    { key: 'expires', label: 'Expires At' },
+  ];
+
+  const renderInvitationCell = (inv, column) => {
+    const isExpired = inv.status === 'pending' && new Date(inv.expiresAt) < new Date();
+    const currentStatus = isExpired ? 'expired' : inv.status;
+    
+    switch (column.key) {
+      case 'name':
+        return <Typography variant="body2" fontWeight={600}>{inv.name}</Typography>;
+      case 'email':
+        return <Typography variant="body2">{inv.email}</Typography>;
+      case 'status':
+        return <StatusBadge status={currentStatus} />;
+      case 'modules': {
+        const mods = (Array.isArray(inv.modules) ? inv.modules : ['core']).filter((m) => m !== 'core');
+        if (mods.length === 0) {
+          return <Typography variant="caption" color="text.secondary" fontStyle="italic">Core only</Typography>;
+        }
+        return (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+            {mods.map((m) => {
+              const label = formatModuleLabel(m);
+              return label ? <Chip key={m} label={label} size="small" color="primary" variant="outlined" sx={{ fontWeight: 500, fontSize: '0.72rem' }} /> : null;
+            })}
+          </Stack>
+        );
+      }
+      case 'expires':
+        return <Typography variant="body2">{new Date(inv.expiresAt).toLocaleDateString()}</Typography>;
+      default:
+        return null;
+    }
+  };
+
+  const renderInvitationActions = (inv) => {
+    const isExpired = inv.status === 'pending' && new Date(inv.expiresAt) < new Date();
+    if (inv.status === 'pending' && !isExpired) {
+      return (
+        <Tooltip title="Cancel invitation">
+          <IconButton size="small" color="error" onClick={() => {
+            setConfirmAction(() => () => handleCancelInvitation(inv._id));
+            setConfirmModalOpen(true);
+          }}>
+            <CloseRounded fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      );
+    }
+    return null;
+  };
+
   return (
     <AppLayout>
       <Stack spacing={3}>
@@ -805,124 +945,13 @@ const HRManagement = () => {
                 onAction={() => setInviteModalOpen(true)}
               />
             ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>HR Member</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Contact</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Modules</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Structure Permissions</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700 }}>
-                        Actions
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {hrList.map((hr) => {
-                      const perms = Array.isArray(hr.permissions) ? hr.permissions : [];
-                      const mods = (Array.isArray(hr.modules) ? hr.modules : ['core']).filter(
-                        (m) => m !== 'core',
-                      );
-                      return (
-                        <TableRow key={hr._id} hover>
-                          <TableCell>
-                            <Stack direction="row" spacing={1.5} alignItems="center">
-                              <InitialsAvatar name={hr.name} />
-                              <Box>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {hr.name}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  HR Specialist
-                                </Typography>
-                              </Box>
-                            </Stack>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">{hr.email}</Typography>
-                            {hr.phone && (
-                              <Typography variant="caption" color="text.secondary">
-                                {hr.phone}
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={hr.status || 'active'} />
-                          </TableCell>
-                          <TableCell>
-                            {mods.length === 0 ? (
-                              <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                                Core only
-                              </Typography>
-                            ) : (
-                              <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
-                                {mods.map((m) => {
-                                  const label = formatModuleLabel(m);
-                                  return label ? (
-                                    <Chip
-                                      key={m}
-                                      label={label}
-                                      size="small"
-                                      color="primary"
-                                      sx={{ fontWeight: 500, fontSize: '0.72rem' }}
-                                    />
-                                  ) : null;
-                                })}
-                              </Stack>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {perms.length === 0 ? (
-                              <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                                No structure permissions
-                              </Typography>
-                            ) : (
-                              <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
-                                {perms.map((p) => (
-                                  <Chip
-                                    key={p}
-                                    label={formatPermissionLabel(p)}
-                                    size="small"
-                                    color="primary"
-                                    variant="outlined"
-                                    sx={{ fontWeight: 500, fontSize: '0.72rem' }}
-                                  />
-                                ))}
-                              </Stack>
-                            )}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                              <Tooltip title="Manage module access">
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  startIcon={<AppsRounded />}
-                                  onClick={() => setModuleModalHr(hr)}
-                                  sx={{ fontWeight: 600, textTransform: 'none' }}
-                                >
-                                  Modules
-                                </Button>
-                              </Tooltip>
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                startIcon={<LockPersonRounded />}
-                                onClick={() => setPermissionModalHr(hr)}
-                                sx={{ fontWeight: 600, textTransform: 'none' }}
-                              >
-                                Permissions
-                              </Button>
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <DataTable
+                columns={hrColumns}
+                rows={hrList}
+                getRowKey={(row) => row._id}
+                renderCell={renderHrCell}
+                renderActions={renderHrActions}
+              />
             )}
           </GlassCard>
         )}
@@ -944,105 +973,13 @@ const HRManagement = () => {
                 onAction={() => setInviteModalOpen(true)}
               />
             ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Invited Person</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Modules Granted</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Expires At</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700 }}>
-                        Actions
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {invitations.map((inv) => {
-                      const isExpired =
-                        inv.status === 'expired' ||
-                        (inv.status === 'pending' && new Date(inv.expiresAt) < new Date());
-                      const effectiveStatus = isExpired ? 'expired' : inv.status;
-                      const invMods = (inv.modules || []).filter((m) => m !== 'core');
-
-                      return (
-                        <TableRow key={inv._id} hover>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {inv.name}
-                            </Typography>
-                            {inv.phone && (
-                              <Typography variant="caption" color="text.secondary">
-                                {inv.phone}
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">{inv.email}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={effectiveStatus} />
-                          </TableCell>
-                          <TableCell>
-                            {invMods.length === 0 ? (
-                              <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                                Core only
-                              </Typography>
-                            ) : (
-                              <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
-                                {invMods.map((m) => {
-                                  const label = formatModuleLabel(m);
-                                  return label ? (
-                                    <Chip
-                                      key={m}
-                                      label={label}
-                                      size="small"
-                                      color="primary"
-                                      sx={{ fontWeight: 500, fontSize: '0.72rem' }}
-                                    />
-                                  ) : null;
-                                })}
-                              </Stack>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString() : '—'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                              {(inv.status === 'pending' || isExpired) && (
-                                <Tooltip title="Resend invitation email">
-                                  <IconButton
-                                    size="small"
-                                    color="primary"
-                                    onClick={() => handleResendInvitation(inv._id)}
-                                  >
-                                    <SendRounded fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              {inv.status === 'pending' && (
-                                <Tooltip title="Cancel invitation">
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => setCancelInviteTarget(inv)}
-                                  >
-                                    <CloseRounded fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <DataTable
+                columns={invitationColumns}
+                rows={invitations}
+                getRowKey={(row) => row._id}
+                renderCell={renderInvitationCell}
+                renderActions={renderInvitationActions}
+              />
             )}
           </GlassCard>
         )}
