@@ -17,7 +17,6 @@ import MyHospital from '../pages/hr/MyHospital';
 import EmployeesPage from '../pages/hr/EmployeesPage';
 import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
-import HRManagement from '../pages/admin/HRManagement';
 import PositionsPage from '../pages/admin/PositionsPage';
 
 const getUserRole = () => {
@@ -203,14 +202,6 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['hr']}>
             <MyHospital />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/hr-management"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <HRManagement />
           </ProtectedRoute>
         }
       />

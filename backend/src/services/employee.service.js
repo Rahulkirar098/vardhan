@@ -88,7 +88,7 @@ const listEmployees = async ({
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(take)
-            .populate("userId", "role status")
+            .populate("userId", "role status permissions modules")
             .populate("positionId", "name")
             .lean(),
         Employee.countDocuments(filter),

@@ -3,11 +3,16 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   Divider,
+  FormControlLabel,
+  FormGroup,
+  FormHelperText,
   Grid,
   IconButton,
   InputAdornment,
+  Paper,
   Snackbar,
   Stack,
   Tab,
@@ -27,11 +32,13 @@ import {
   PersonOffRounded,
   PersonRounded,
   SearchRounded,
+  SecurityRounded,
   ToggleOffRounded,
   ToggleOnRounded,
 } from '@mui/icons-material';
 import employeeService from '../../services/employee.service';
 import positionService from '../../services/position.service';
+import hrService from '../../services/hr.service';
 import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -42,6 +49,17 @@ import ErrorState from '../../components/ErrorState';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import DataTable from '../../components/DataTable';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+
+const PERMISSION_OPTIONS = [
+  { key: 'structure.view', label: 'View Floors & Rooms', description: 'Allow HR to inspect floors, rooms, and structural layout' },
+  { key: 'structure.create', label: 'Create Floors & Rooms', description: 'Allow HR to add new floors and rooms' },
+  { key: 'structure.update', label: 'Edit Floors & Rooms', description: 'Allow HR to update room and floor metadata' },
+  { key: 'structure.delete', label: 'Delete/Deactivate Floors & Rooms', description: 'Allow HR to deactivate rooms and floors safely' },
+];
+
+const MODULE_OPTIONS = [
+  { key: 'hrms', label: 'HRMS Module', description: 'Employee management, Roster, Attendance, and Leave tracking' },
+];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -71,16 +89,28 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
     dateOfJoining: '',
     employeeId: '',
   });
+  const [selectedModules, setSelectedModules] = useState([]);
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
       setForm({ firstName: '', lastName: '', email: '', phone: '', positionId: '', role: 'employee', createLogin: false, dateOfJoining: '', employeeId: '' });
+      setSelectedModules([]);
+      setSelectedPermissions([]);
       setError('');
       setSubmitting(false);
     }
   }, [open]);
+
+  const toggleModule = (key) => {
+    setSelectedModules((prev) => prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key]);
+  };
+
+  const togglePermission = (key) => {
+    setSelectedPermissions((prev) => prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]);
+  };
 
   const handleChange = (e) => {
     const name = e.target.name;
@@ -106,6 +136,8 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
         createLogin: form.createLogin,
         dateOfJoining: form.dateOfJoining || undefined,
         employeeId: form.employeeId.trim() || undefined,
+        modules: form.role === 'hr' ? selectedModules : undefined,
+        permissions: form.role === 'hr' ? selectedPermissions : undefined,
       });
       onSuccess('Invitation sent successfully.');
       onClose();
@@ -226,10 +258,102 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
               SelectProps={{ native: true }}
             >
               <option value="employee">Employee</option>
-              {/* Do not allow assigning HR from standard employee invite without explicit design */}
+              <option value="hr">HR</option>
             </TextField>
           )}
         </Stack>
+
+        {form.createLogin && form.role === 'hr' && (
+          <>
+            <Divider />
+            <Box>
+              <Typography variant="subtitle2" fontWeight={700} gutterBottom>Module Access</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+                Grant this HR access to additional business modules.
+              </Typography>
+              <Stack spacing={1}>
+                {MODULE_OPTIONS.map((mod) => {
+                  const isChecked = selectedModules.includes(mod.key);
+                  return (
+                    <Paper
+                      key={mod.key}
+                      variant="outlined"
+                      onClick={() => toggleModule(mod.key)}
+                      sx={{
+                        p: 1.5, borderRadius: 2, cursor: 'pointer',
+                        borderColor: isChecked ? 'primary.main' : 'divider',
+                        bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
+                        transition: 'all 0.15s ease-in-out',
+                      }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={isChecked}
+                            onChange={() => toggleModule(mod.key)}
+                            onClick={(e) => e.stopPropagation()}
+                            color="primary"
+                          />
+                        }
+                        label={
+                          <Box sx={{ ml: 0.5 }}>
+                            <Typography variant="body2" fontWeight={600} color="text.primary">{mod.label}</Typography>
+                            <FormHelperText sx={{ m: 0 }}>{mod.description}</FormHelperText>
+                          </Box>
+                        }
+                        sx={{ width: '100%', m: 0 }}
+                      />
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            </Box>
+            
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+                <Typography variant="subtitle2" fontWeight={700}>Hospital Structure Permissions</Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" variant="text" onClick={() => setSelectedPermissions(PERMISSION_OPTIONS.map(p => p.key))}>Select All</Button>
+                  <Button size="small" variant="text" color="inherit" onClick={() => setSelectedPermissions([])}>Clear</Button>
+                </Stack>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+                Control which Hospital Structure actions this HR can perform.
+              </Typography>
+              <FormGroup sx={{ gap: 1 }}>
+                {PERMISSION_OPTIONS.map((option) => {
+                  const isChecked = selectedPermissions.includes(option.key);
+                  return (
+                    <Paper
+                      key={option.key}
+                      variant="outlined"
+                      onClick={() => togglePermission(option.key)}
+                      sx={{
+                        p: 1.5, borderRadius: 2, cursor: 'pointer',
+                        borderColor: isChecked ? 'primary.main' : 'divider',
+                        bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
+                        transition: 'all 0.15s ease-in-out',
+                      }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox checked={isChecked} onChange={() => togglePermission(option.key)} onClick={(e) => e.stopPropagation()} />
+                        }
+                        label={
+                          <Box sx={{ ml: 0.5 }}>
+                            <Typography variant="body2" fontWeight={600} color="text.primary">{option.label}</Typography>
+                            <FormHelperText sx={{ m: 0 }}>{option.description}</FormHelperText>
+                          </Box>
+                        }
+                        sx={{ width: '100%', m: 0 }}
+                      />
+                    </Paper>
+                  );
+                })}
+              </FormGroup>
+            </Box>
+          </>
+        )}
       </Stack>
     </Modal>
   );
@@ -238,10 +362,13 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
 // ─── Edit Employee Modal ──────────────────────────────────────────────────────
 const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) => {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', positionId: '', dateOfJoining: '' });
+  const [selectedModules, setSelectedModules] = useState([]);
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   
   const hasPositionUpdate = hasPermission(PERMISSIONS.EMPLOYEE_POSITION_UPDATE);
+  const isHR = employee?.userId?.role === 'hr';
 
   useEffect(() => {
     if (open && employee) {
@@ -253,6 +380,8 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
         positionId: employee.positionId?._id || employee.positionId || '',
         dateOfJoining: employee.dateOfJoining ? new Date(employee.dateOfJoining).toISOString().split('T')[0] : '',
       });
+      setSelectedModules(employee.userId?.modules || []);
+      setSelectedPermissions(employee.userId?.permissions || []);
       setError('');
       setSubmitting(false);
     }
@@ -263,6 +392,14 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const toggleModule = (key) => {
+    setSelectedModules((prev) => prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key]);
+  };
+
+  const togglePermission = (key) => {
+    setSelectedPermissions((prev) => prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]);
+  };
+
   const handleSubmit = async () => {
     setError('');
     if (!form.firstName.trim()) { setError('First name is required.'); return; }
@@ -271,14 +408,26 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
 
     try {
       setSubmitting(true);
-      await employeeService.updateEmployee(employee._id, {
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim() || undefined,
-        positionId: form.positionId || undefined,
-        dateOfJoining: form.dateOfJoining || undefined,
-      });
+      
+      const updatePromises = [
+        employeeService.updateEmployee(employee._id, {
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim() || undefined,
+          positionId: form.positionId || undefined,
+          dateOfJoining: form.dateOfJoining || undefined,
+        })
+      ];
+
+      // Update HR permissions and modules concurrently if they are HR
+      if (isHR && employee.userId?._id) {
+        updatePromises.push(hrService.updatePermissions(employee.userId._id, selectedPermissions));
+        updatePromises.push(hrService.updateModules(employee.userId._id, selectedModules));
+      }
+
+      await Promise.all(updatePromises);
+      
       onSuccess('Employee updated successfully.');
       onClose();
     } catch (err) {
@@ -371,6 +520,93 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
           fullWidth
           slotProps={{ inputLabel: { shrink: true } }}
         />
+
+        {isHR && (
+          <>
+            <Divider />
+            <Box>
+              <Typography variant="subtitle2" fontWeight={700} gutterBottom>Module Access</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+                Grant this HR access to additional business modules.
+              </Typography>
+              <Stack spacing={1}>
+                {MODULE_OPTIONS.map((mod) => {
+                  const isChecked = selectedModules.includes(mod.key);
+                  return (
+                    <Paper
+                      key={mod.key}
+                      variant="outlined"
+                      onClick={() => toggleModule(mod.key)}
+                      sx={{
+                        p: 1.5, borderRadius: 2, cursor: 'pointer',
+                        borderColor: isChecked ? 'primary.main' : 'divider',
+                        bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
+                        transition: 'all 0.15s ease-in-out',
+                      }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox checked={isChecked} onChange={() => toggleModule(mod.key)} onClick={(e) => e.stopPropagation()} color="primary" />
+                        }
+                        label={
+                          <Box sx={{ ml: 0.5 }}>
+                            <Typography variant="body2" fontWeight={600} color="text.primary">{mod.label}</Typography>
+                            <FormHelperText sx={{ m: 0 }}>{mod.description}</FormHelperText>
+                          </Box>
+                        }
+                        sx={{ width: '100%', m: 0 }}
+                      />
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            </Box>
+            
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+                <Typography variant="subtitle2" fontWeight={700}>Hospital Structure Permissions</Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" variant="text" onClick={() => setSelectedPermissions(PERMISSION_OPTIONS.map(p => p.key))}>Select All</Button>
+                  <Button size="small" variant="text" color="inherit" onClick={() => setSelectedPermissions([])}>Clear</Button>
+                </Stack>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+                Control which Hospital Structure actions this HR can perform.
+              </Typography>
+              <FormGroup sx={{ gap: 1 }}>
+                {PERMISSION_OPTIONS.map((option) => {
+                  const isChecked = selectedPermissions.includes(option.key);
+                  return (
+                    <Paper
+                      key={option.key}
+                      variant="outlined"
+                      onClick={() => togglePermission(option.key)}
+                      sx={{
+                        p: 1.5, borderRadius: 2, cursor: 'pointer',
+                        borderColor: isChecked ? 'primary.main' : 'divider',
+                        bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
+                        transition: 'all 0.15s ease-in-out',
+                      }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox checked={isChecked} onChange={() => togglePermission(option.key)} onClick={(e) => e.stopPropagation()} />
+                        }
+                        label={
+                          <Box sx={{ ml: 0.5 }}>
+                            <Typography variant="body2" fontWeight={600} color="text.primary">{option.label}</Typography>
+                            <FormHelperText sx={{ m: 0 }}>{option.description}</FormHelperText>
+                          </Box>
+                        }
+                        sx={{ width: '100%', m: 0 }}
+                      />
+                    </Paper>
+                  );
+                })}
+              </FormGroup>
+            </Box>
+          </>
+        )}
       </Stack>
     </Modal>
   );
@@ -408,6 +644,9 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
           { label: 'Employment Status', value: employee.employmentStatus },
           ...(employee.employmentStatus === 'INACTIVE' ? [{ label: 'Leaving Date', value: formatDate(employee.leavingDate) }] : []),
           { label: 'Vardhan Account', value: employee.userId ? (employee.employmentStatus === 'INACTIVE' ? 'Disabled' : 'Active') : 'No Login' },
+          { label: 'Role', value: employee.userId ? (employee.userId.role === 'hr' ? 'HR' : 'Employee') : '—' },
+          { label: 'Modules', value: employee.userId?.modules?.length ? employee.userId.modules.join(', ') : '—' },
+          { label: 'Permissions', value: employee.userId?.permissions?.length ? employee.userId.permissions.length + ' permissions' : '—' },
           { label: 'Created', value: formatDate(employee.createdAt) },
         ].map(({ label, value }) => (
           <Stack key={label} direction="row" justifyContent="space-between" alignItems="center">
@@ -437,6 +676,7 @@ const EmployeesPage = () => {
   // Search & filter
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  const [roleFilter, setRoleFilter] = useState('');
 
   // Modals
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -459,7 +699,7 @@ const EmployeesPage = () => {
       setLoading(true);
       setError('');
       const [empRes, invRes, statRes, posRes] = await Promise.all([
-        employeeService.listEmployees({ search: search || undefined, status: statusFilter || undefined }),
+        employeeService.listEmployees({ search: search || undefined, status: statusFilter || undefined, role: roleFilter || undefined }),
         employeeService.listInvitations().catch(() => ({ data: { data: [] } })),
         employeeService.getEmployeeStats().catch(() => ({ data: { data: { total: 0, active: 0, inactive: 0, pendingInvitations: 0 } } })),
         positionService.getPositions({ status: 'active' }).catch(() => ({ data: [] })),
@@ -474,7 +714,7 @@ const EmployeesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter]);
+  }, [search, statusFilter, roleFilter]);
 
   useEffect(() => {
     const t = setTimeout(loadEmployees, search ? 350 : 0);
@@ -720,22 +960,41 @@ const EmployeesPage = () => {
                   },
                 }}
               />
-              <Stack direction="row" spacing={1}>
-                {[
-                  { label: 'All', value: '' },
-                  { label: 'Active', value: 'ACTIVE' },
-                  { label: 'Inactive', value: 'INACTIVE' },
-                ].map(({ label, value }) => (
-                  <Button
-                    key={label}
-                    variant={statusFilter === value ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => setStatusFilter(value)}
-                    sx={{ fontWeight: 600, minWidth: 80 }}
-                  >
-                    {label}
-                  </Button>
-                ))}
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} justifyContent="space-between">
+                <Stack direction="row" spacing={1}>
+                  {[
+                    { label: 'All Roles', value: '' },
+                    { label: 'HR', value: 'hr' },
+                    { label: 'Employee', value: 'employee' },
+                  ].map(({ label, value }) => (
+                    <Button
+                      key={label}
+                      variant={roleFilter === value ? 'contained' : 'outlined'}
+                      size="small"
+                      onClick={() => setRoleFilter(value)}
+                      sx={{ fontWeight: 600, minWidth: 80 }}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </Stack>
+                <Stack direction="row" spacing={1}>
+                  {[
+                    { label: 'All Status', value: '' },
+                    { label: 'Active', value: 'ACTIVE' },
+                    { label: 'Inactive', value: 'INACTIVE' },
+                  ].map(({ label, value }) => (
+                    <Button
+                      key={label}
+                      variant={statusFilter === value ? 'contained' : 'outlined'}
+                      size="small"
+                      onClick={() => setStatusFilter(value)}
+                      sx={{ fontWeight: 600, minWidth: 80 }}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </Stack>
               </Stack>
             </Stack>
 
