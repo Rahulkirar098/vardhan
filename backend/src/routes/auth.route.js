@@ -7,6 +7,8 @@ const {
     getCurrentUser,
     forgotPassword,
     resetPassword,
+    changePassword,
+    updateProfile,
 } = require("../controllers/auth.controller");
 const { authMiddleware } = require("../middleware/auth.middleware");
 
@@ -18,6 +20,8 @@ authUserRoute.post("/logout", logoutUser);
 authUserRoute.post("/forgot-password", forgotPassword);
 authUserRoute.post("/reset-password", resetPassword);
 authUserRoute.get("/me", authMiddleware, getCurrentUser);
+authUserRoute.post("/change-password", authMiddleware, changePassword);
+authUserRoute.patch("/profile", authMiddleware, updateProfile);
 
 module.exports = {
     authUserRoute,

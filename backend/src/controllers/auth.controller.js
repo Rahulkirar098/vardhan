@@ -386,6 +386,111 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Current password and new password are required",
+            });
+        }
+
+        if (String(newPassword).length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be at least 6 characters long",
+            });
+        }
+
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const isCurrentMatch = await comparePassword(currentPassword, user.password);
+
+        if (!isCurrentMatch) {
+            return res.status(400).json({
+                success: false,
+                message: "Current password does not match",
+            });
+        }
+
+        user.password = await hashPassword(newPassword);
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Password changed successfully",
+        });
+    } catch (error) {
+        console.error("Change Password Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
+const updateProfile = async (req, res) => {
+    try {
+        const { name, phone } = req.body;
+
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        if (name !== undefined) {
+            const trimmedName = String(name).trim();
+            if (!trimmedName) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Name cannot be empty",
+                });
+            }
+            user.name = trimmedName;
+        }
+
+        if (phone !== undefined) {
+            user.phone = phone ? String(phone).trim() : null;
+        }
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            data: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                status: user.status,
+                hospitalId: user.hospitalId,
+                permissions: user.permissions || [],
+            },
+        });
+    } catch (error) {
+        console.error("Update Profile Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
@@ -393,4 +498,6 @@ module.exports = {
     getCurrentUser,
     forgotPassword,
     resetPassword,
+    changePassword,
+    updateProfile,
 };

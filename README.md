@@ -521,20 +521,55 @@ Hospital
 
 ---
 
+## 🏛️ Core Platform Architecture
+
+Vardhan SaaS is cleanly separated into the **Core Platform** and modular **Business Modules**:
+
+```
+VARDHAN SaaS
+│
+├── CORE PLATFORM (Complete - 100%)
+│   ├── 1. Hospital / Tenant (Tenant Isolation, 1:1 Admin Ownership, Active Status)
+│   ├── 2. Authentication (JWT, Register, Login, Logout, Me, Password Reset, Password Change)
+│   ├── 3. Users (User Model, Profile, Profile Update, Activation/Deactivation, Roles)
+│   ├── 4. Roles (super_admin, admin, hr)
+│   ├── 5. Permissions (User-specific permissions array, structure.* constants, authorization)
+│   ├── 6. Hospital Structure (Hospital → Floors → generic Rooms)
+│   └── 7. Module Foundation (System Module Catalog & Availability Resolution)
+│
+└── MODULES (Future Expansions)
+    └── HRMS (Employees, Roster, Attendance, Leave, Reporting Manager)
+```
+
+### Module Foundation Endpoints
+| Method | Path | Access | Purpose |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/modules` | Authenticated | Lists all registered system modules with availability and user accessibility resolution |
+| `GET` | `/api/v1/modules/:moduleKey` | Authenticated | Retrieves detailed metadata and status for a single module |
+
+### Additional Authentication & Profile Endpoints
+| Method | Path | Access | Purpose |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/change-password` | Authenticated | In-app password change requiring current and new password (min 6 chars) |
+| `PATCH` | `/api/v1/auth/profile` | Authenticated | In-app profile update for `name` and `phone` |
+
+---
+
 ## 📊 Core Progress Implementation Tracker
 
-A persistent implementation tracking system to monitor progress across all 7 Core Platform modules and their 57 features:
+A persistent implementation tracking Kanban system to monitor progress across all 7 Core Platform modules and their 57 features:
 
 ### Route & Navigation
-- **Frontend URL**: `/core-progress` (Accessible to `admin` and `super_admin`)
-- **Navigation**: Directly accessible from the sidebar menu under **Core Progress**.
+- **Frontend URL**: `/core-progress` (Strictly accessible to `super_admin`)
+- **Navigation**: Visible exclusively to Super Administrators.
+- **Interactive Views**: Kanban Board (4 status columns with quick-move arrows) and Module List views.
 
 ### API Endpoints
 | Method | Path | Access | Purpose |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/core-progress` | Admin, Super Admin | Returns all 7 Core modules, constituent features, module percentages, and overall progress metrics |
-| `GET` | `/api/v1/core-progress/:featureId` | Admin, Super Admin | Retrieves details for a specific feature |
-| `PATCH` | `/api/v1/core-progress/:featureId` | Admin, Super Admin | Updates implementation status and persistent notes |
+| `GET` | `/api/v1/core-progress` | Super Admin | Returns all 7 Core modules, constituent features, module percentages, and overall progress metrics |
+| `GET` | `/api/v1/core-progress/:featureId` | Super Admin | Retrieves details for a specific feature |
+| `PATCH` | `/api/v1/core-progress/:featureId` | Super Admin | Updates implementation status and persistent notes |
 
 ### Database Model (`CoreProgress`)
 - `moduleKey`: e.g. `hospital_foundation`, `authentication`, `users`, `roles`, `permissions`, `hospital_structure`, `module_foundation`
