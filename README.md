@@ -437,23 +437,68 @@ npm run lint    # oxlint
 
 ---
 
-## ✅ Current status
+---
 
-This project is a functioning hospital management platform with:
+## 📊 Feature Status & Audit
 
-- auth flow
-- role-based dashboards
-- hospital creation and ownership checks
-- hospital structure management (Floor → Room hierarchy)
-- HR invitation flow (invite, resend, cancel)
-- invitation acceptance flow
-- protected routing and UI layout
-- role-driven shared sidebar navigation
-- polished monochrome SaaS UI
+### 1. Fully Implemented & Working Features (18)
+These features are live, covered by automated test suites, and connected end-to-end (Backend + Frontend):
 
-*(Department feature is legacy / removed from active product architecture)*
+- **Authentication & Security**:
+  - Admin registration (`POST /api/auth/register`)
+  - Multi-role JWT login (`POST /api/auth/login`)
+  - Route guards (`ProtectedRoute`, `PublicRoute` with strict role and authenticated session redirection)
+  - Token revocation and logout (`POST /api/auth/logout`, `revokedToken.model.js`)
+  - Password reset request & email token delivery (`POST /api/auth/forgot-password`)
+  - Password reset completion (`POST /api/auth/reset-password`)
+  - User profile retrieval (`GET /api/auth/me`)
+- **Hospital Management**:
+  - Hospital creation (`POST /api/hospitals`) with one-hospital-per-admin enforcement
+  - Hospital overview & details (`GET /api/hospitals/overview`, `/hospital`)
+- **Hospital Structure (Phase 2)**:
+  - Floor creation, listing, updating (`POST/GET/PUT /api/v1/hospitals/:id/floors`, `/structure`)
+  - Floor deactivation safety validation (blocks deactivating floors with active rooms, `409 Conflict`)
+  - Generic Room creation, listing, updating (`POST/GET/PUT /api/v1/hospitals/:id/floors/:id/rooms`, `/structure/:floorId`)
+  - Room status toggling (`PATCH /rooms/:roomId/status`)
+- **Super Admin**:
+  - Super admin platform metrics (`GET /api/super-admin/dashboard`, `/super-admin/dashboard`)
+  - Cross-hospital directory & detail view (`GET /api/super-admin/hospitals`, `/super-admin/hospitals`)
+- **HR Portal**:
+  - Secure invitation acceptance flow (`GET/POST /api/hr/invite/:token`, `/hr/invite/:token`)
+  - HR dashboard workspace (`/hr/dashboard`)
+  - HR hospital info view (`GET /api/hr/hospital`, `/hr/hospital`)
 
-It is ready for local development and can be extended with modules like appointments, staff records, billing, patient modules, and analytics.
+---
+
+### 2. Partially Implemented / Disconnected from UI (4)
+These backend endpoints and models are active and tested, but currently lack dedicated frontend UI buttons:
+
+- **Admin HR Invitation UI (`POST /api/hr/invite`)**: Backend invitation token generation and email dispatch are fully functional, but the trigger modal was previously nested inside the legacy Department view and is pending the Phase 4 Employee Onboarding screen.
+- **Pending Invitation Management (`POST /resend`, `PATCH /cancel`)**: Endpoints exist in `hr.controller.js` to resend and cancel pending invitations, but no admin UI table currently lists pending invitations.
+- **Hospital Edit Details (`PUT /api/hospitals/:id`)**: Backend supports full hospital updates, while frontend modal currently updates a subset of fields.
+- **Super Admin Hospital Status Toggle (`PATCH /api/hospitals/:id/status`)**: Backend supports status changes; Super Admin UI is currently read-only.
+
+---
+
+### 3. Useless, Dead, or Deprecated Concepts in Codebase (4)
+These items are remnants from previous prototypes and are not part of the Vardhan HRMS architecture:
+
+- **Unused User Roles in `user.model.js`**: `nurse`, `doctor`, `patient`, `user` are defined in the schema enum but have zero routes, logic, or screens (Vardhan is an HRMS, not an EHR).
+- **Direct HR Creation (`POST /api/hr`)**: Bypasses the secure invitation workflow and has no frontend caller.
+- **Redundant `hr.getAll()` query in `Hospital.jsx`**: Overview statistics already calculate HR counts directly on the database.
+- **Legacy Department Module**: Removed from active application code (historical database data preserved).
+
+---
+
+## 🗺️ Product Roadmap
+
+```
+Hospital
+   ├── Floors -> Rooms (Phase 2: Hospital Structure - COMPLETED)
+   ├── Permissions (Phase 3: UPCOMING)
+   └── Employees -> Reporting Manager (Phase 4: UPCOMING)
+          └── Roster, Shifts, Attendance & Leave (Phase 5: UPCOMING)
+```
 
 ---
 
