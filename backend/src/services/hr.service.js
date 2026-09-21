@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
 const Invitation = require("../models/invitation.model");
-const { hashTokenValue } = require("./invitation.service");
+const { hashTokenValue, generateInvitationToken, getStandardExpiry, buildInvitationEmailTemplate } = require("./invitation.service");
 const { hashPassword } = require("../utils/password");
 const { sendEmail } = require("../utils/mail");
 
@@ -124,9 +124,9 @@ const inviteHR = async ({
         validPermissions = [...new Set(permissions)];
     }
 
-    const rawToken = crypto.randomBytes(32).toString("hex");
+    const rawToken = generateInvitationToken();
     const tokenHash = hashTokenValue(rawToken);
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const expiresAt = getStandardExpiry();
 
     const nameParts = normalizedName.split(" ");
     const firstName = nameParts[0];
@@ -151,26 +151,20 @@ const inviteHR = async ({
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const invitationUrl = `${frontendUrl}/hr/invite/${rawToken}`;
 
+    const { text, html } = buildInvitationEmailTemplate({
+        hospitalName: hospital.name,
+        recipientName: normalizedName,
+        inviterName: adminName,
+        role: "HR",
+        invitationUrl,
+    });
+
     try {
         await sendEmail({
             to: normalizedEmail,
             subject: `You're invited to join ${hospital.name}`,
-            text: `Hello ${normalizedName},\n\nYou have been invited by ${adminName || "your admin"} to join ${hospital.name}.\n\nRole: HR\n\nClick here to accept the invitation and create your account: ${invitationUrl}\n\nThis invitation expires in 48 hours.`,
-            html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-                    <h2>You're invited to join ${hospital.name}</h2>
-                    <p>Hello ${normalizedName},</p>
-                    <p>You have been invited by ${adminName || "your admin"} to join <strong>${hospital.name}</strong>.</p>
-                    <p><strong>Role:</strong> HR</p>
-                    <p>Click the button below to accept the invitation and create your account.</p>
-                    <p>
-                        <a href="${invitationUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: bold;">Accept Invitation</a>
-                    </p>
-                    <p>Invitation expires in 48 hours.</p>
-                    <p>If you did not expect this invitation, you can ignore this email.</p>
-                    <p>Regards,<br />Krince.in</p>
-                </div>
-            `,
+            text,
+            html,
         });
     } catch (emailError) {
         await Invitation.findByIdAndDelete(invitation._id);
@@ -284,29 +278,29 @@ const resendInvitation = async (invitationId, adminId, adminName) => {
         throw err;
     }
 
-    const rawToken = crypto.randomBytes(32).toString("hex");
+    const rawToken = generateInvitationToken();
     const tokenHash = hashTokenValue(rawToken);
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const expiresAt = getStandardExpiry();
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const invitationUrl = `${frontendUrl}/hr/invite/${rawToken}`;
 
-    const fullName = `${invitation.firstName} ${invitation.lastName || ""}`.trim();
+    const recipientName = `${invitation.firstName} ${invitation.lastName || ""}`.trim();
+
+    const { text, html } = buildInvitationEmailTemplate({
+        hospitalName: hospital.name,
+        recipientName,
+        inviterName: adminName,
+        role: "HR",
+        invitationUrl,
+    });
 
     try {
         await sendEmail({
             to: invitation.email,
-            subject: `You're invited to join ${hospital.name} as HR`,
-            text: `Hello ${fullName},\n\nYou have been invited by ${adminName || "your admin"} to join ${hospital.name} as an HR.\n\nClick here to accept the invitation: ${invitationUrl}\n\nThis invitation expires in 48 hours.`,
-            html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-                    <h2>You're invited to join ${hospital.name} as HR</h2>
-                    <p>Hello ${fullName},</p>
-                    <p>You have been invited by ${adminName || "your admin"} to join <strong>${hospital.name}</strong> as an HR.</p>
-                    <p><a href="${invitationUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: bold;">Accept Invitation</a></p>
-                    <p>This invitation expires in 48 hours.</p>
-                </div>
-            `,
+            subject: `You're invited to join ${hospital.name}`,
+            text,
+            html,
         });
 
         invitation.tokenHash = tokenHash;

@@ -208,6 +208,7 @@ The application uses a single centralized `Invitation` model (`invitation.model.
 - **System:** Primarily user-specific but heavily influenced by role defaults.
 - **Middleware:** `permission.middleware.js` enforces specific actions.
 - **Examples:** `structure.view`, `structure.create`, `structure.update`, `structure.delete`.
+- **HR Employee Access:** The `hr` role has `employee.*` permissions natively seeded in `rolePermissions.js`. However, HR users still cannot access employee data unless they are explicitly granted the `hrms` module, due to the `module.middleware.js` guard.
 
 ---
 

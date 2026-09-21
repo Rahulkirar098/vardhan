@@ -3,7 +3,7 @@ const Employee = require("../models/employee.model");
 const Invitation = require("../models/invitation.model");
 const Hospital = require("../models/hospital.model");
 const { sendEmail } = require("../utils/mail");
-const { hashTokenValue, generateInvitationToken, getStandardExpiry } = require("./invitation.service");
+const { hashTokenValue, generateInvitationToken, getStandardExpiry, buildInvitationEmailTemplate } = require("./invitation.service");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -232,26 +232,19 @@ const inviteEmployee = async ({
     const invitationUrl = `${frontendUrl}/employee/invite/${rawToken}`;
     const fullName = `${invitation.firstName} ${invitation.lastName}`;
 
+    const { text, html } = buildInvitationEmailTemplate({
+        hospitalName: hospital.name,
+        recipientName: fullName,
+        inviterName: "", // The template handles "by your HR" natively if no inviterName and role is Employee
+        role: "EMPLOYEE",
+        invitationUrl,
+    });
+
     await sendEmail({
         to: normalizedEmail,
         subject: `You've been invited to join ${hospital.name}`,
-        text: `Hello ${fullName},\n\nYou have been invited by your HR to join ${hospital.name} as an employee.\n\nClick the link below to complete your onboarding:\n${invitationUrl}\n\nThis invitation expires in 48 hours.\n\nIf you did not expect this, you can ignore this email.`,
-        html: `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-                <h2>You've been invited to join ${hospital.name}</h2>
-                <p>Hello ${fullName},</p>
-                <p>You have been invited by your HR to join <strong>${hospital.name}</strong> as an employee.</p>
-                <p>Click the button below to complete your onboarding and confirm your employee record.</p>
-                <p>
-                    <a href="${invitationUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                        Accept Invitation
-                    </a>
-                </p>
-                <p>This invitation expires in 48 hours.</p>
-                <p>If you did not expect this invitation, you can ignore this email.</p>
-                <p>Regards,<br />Krince.in</p>
-            </div>
-        `,
+        text,
+        html,
     });
 
     return { invitation, rawToken };

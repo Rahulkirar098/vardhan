@@ -46,35 +46,13 @@ import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import DataTable from '../../components/DataTable';
+import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const canCreate = () => {
-  try {
-    const perms = JSON.parse(localStorage.getItem('permissions') || '[]');
-    return Array.isArray(perms) && perms.includes('employee.create');
-  } catch {
-    return false;
-  }
-};
-
-const canUpdate = () => {
-  try {
-    const perms = JSON.parse(localStorage.getItem('permissions') || '[]');
-    return Array.isArray(perms) && perms.includes('employee.update');
-  } catch {
-    return false;
-  }
-};
-
-const canDeactivate = () => {
-  try {
-    const perms = JSON.parse(localStorage.getItem('permissions') || '[]');
-    return Array.isArray(perms) && perms.includes('employee.delete');
-  } catch {
-    return false;
-  }
-};
+const canCreate = () => hasPermission(PERMISSIONS.EMPLOYEE_CREATE);
+const canUpdate = () => hasPermission(PERMISSIONS.EMPLOYEE_UPDATE);
+const canDeactivate = () => hasPermission(PERMISSIONS.EMPLOYEE_DELETE);
 
 const formatDate = (d) => {
   if (!d) return '—';
