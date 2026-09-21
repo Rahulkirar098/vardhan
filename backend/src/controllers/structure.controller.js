@@ -64,6 +64,20 @@ const handleServiceError = (res, error, defaultMessage = "Server error") => {
         });
     }
 
+    if (error && error.code === 11000) {
+        const keyPattern = error.keyPattern || {};
+        let duplicateMsg = "A record with these details already exists in this hospital.";
+        if (keyPattern.floorNumber) {
+            duplicateMsg = "A floor with this number already exists in this hospital.";
+        } else if (keyPattern.name) {
+            duplicateMsg = "A record with this name already exists in this hospital.";
+        }
+        return res.status(409).json({
+            success: false,
+            message: duplicateMsg,
+        });
+    }
+
     console.error("Structure Controller Error:", error);
     return res.status(500).json({
         success: false,

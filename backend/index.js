@@ -26,10 +26,19 @@ app.use("/api/hr", hrRoute);
 app.use("/api/super-admin", superAdminRoute);
 app.use("/api/v1/hospitals/:hospitalId", structureRoute);
 
+const Floor = require("./src/models/floor.model");
+const Room = require("./src/models/room.model");
+
 mongoose
     .connect(process.env.MONGODB_URI)
-    .then(() => {
+    .then(async () => {
         console.log("Connected to MongoDB");
+        try {
+            await Floor.syncIndexes();
+            await Room.syncIndexes();
+        } catch (indexErr) {
+            console.error("Error syncing structure indexes:", indexErr);
+        }
 
         app.listen(process.env.PORT || 3000, () => {
             console.log(
