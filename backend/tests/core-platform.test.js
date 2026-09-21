@@ -216,7 +216,7 @@ const runTests = async () => {
         });
 
         // 8. Module Foundation - GET /api/v1/modules
-        await test("TEST 8: GET /api/v1/modules returns catalog with core enabled and business modules disabled", async () => {
+        await test("TEST 8: GET /api/v1/modules returns catalog with core, hospital_structure, and hrms enabled", async () => {
             const res = await apiRequest("/api/v1/modules", {
                 headers: { Authorization: `Bearer ${tokenAdmin}` },
             });
@@ -224,7 +224,7 @@ const runTests = async () => {
             assert.strictEqual(res.data.success, true);
             const { modules, totalCount, activeModulesCount } = res.data.data;
             assert.strictEqual(totalCount, 4);
-            assert.strictEqual(activeModulesCount, 2); // core + hospital_structure
+            assert.strictEqual(activeModulesCount, 3); // core + hospital_structure + hrms (all enabled for Phase 1)
 
             const coreMod = modules.find((m) => m.key === "core");
             assert(coreMod, "Core module must exist");
@@ -233,8 +233,7 @@ const runTests = async () => {
 
             const hrmsMod = modules.find((m) => m.key === "hrms");
             assert(hrmsMod, "HRMS module must exist in foundation");
-            assert.strictEqual(hrmsMod.isEnabled, false);
-            assert.strictEqual(hrmsMod.isAccessible, false);
+            assert.strictEqual(hrmsMod.isEnabled, true); // Phase 1: hrms is now enabled
         });
 
         // 9. Module Foundation - Permission-aware accessibility for HR
