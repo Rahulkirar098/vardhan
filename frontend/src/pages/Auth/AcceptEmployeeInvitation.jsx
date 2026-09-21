@@ -50,9 +50,13 @@ const AcceptEmployeeInvitation = () => {
 
   const handleAccept = async () => {
     setError('');
+    if (!password) {
+      setError('Please set a password for your Vardhan login account.');
+      return;
+    }
     try {
       setSubmitting(true);
-      await employeeService.acceptInvitation(token, invitation.createLogin ? password : undefined);
+      await employeeService.acceptInvitation(token, password);
       setAccepted(true);
     } catch (err) {
       setError(
@@ -110,11 +114,19 @@ const AcceptEmployeeInvitation = () => {
             <Typography variant="h6" fontWeight={700} gutterBottom>
               Onboarding Complete
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Your employee record has been activated at{' '}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Your account has been activated at{' '}
               <strong>{invitation?.hospitalName || 'your hospital'}</strong>.
-              Please contact your HR for next steps.
+              You can now sign in using your email and password.
             </Typography>
+            <Button
+              variant="contained"
+              fullWidth
+              href="/login"
+              sx={{ fontWeight: 700, py: 1.2 }}
+            >
+              Go to Login
+            </Button>
           </Box>
         </Stack>
       </AuthLayout>
@@ -124,7 +136,7 @@ const AcceptEmployeeInvitation = () => {
   return (
     <AuthLayout
       title="Employee Onboarding"
-      subtitle="Confirm your invitation to join the hospital."
+      subtitle="Confirm your invitation and set your login password."
     >
       <Stack spacing={2.5}>
         {/* Invitation Card */}
@@ -179,7 +191,7 @@ const AcceptEmployeeInvitation = () => {
                 />
                 <Typography variant="body2" color="text.secondary">
                   <strong style={{ color: '#0A0A0A' }}>Position:</strong>{' '}
-                  {invitation?.positionId?.name || invitation?.positionId || invitation?.position}
+                  {invitation?.position || invitation?.positionId?.name || invitation?.positionId}
                 </Typography>
               </Stack>
             )}
@@ -198,17 +210,15 @@ const AcceptEmployeeInvitation = () => {
           </Stack>
         </Box>
 
-        {invitation?.createLogin && (
-          <TextField
-            label="Create Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            fullWidth
-            required
-            helperText="Create a password to access Vardhan"
-          />
-        )}
+        <TextField
+          label="Create Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          fullWidth
+          required
+          helperText="Create a password to access Vardhan"
+        />
 
         {error && <Alert severity="error">{error}</Alert>}
 
@@ -216,7 +226,7 @@ const AcceptEmployeeInvitation = () => {
           variant="contained"
           size="large"
           onClick={handleAccept}
-          disabled={submitting || (invitation?.createLogin && !password)}
+          disabled={submitting || !password}
           fullWidth
           sx={{ fontWeight: 700, py: 1.5 }}
         >
@@ -233,9 +243,8 @@ const AcceptEmployeeInvitation = () => {
           align="center"
           sx={{ display: 'block' }}
         >
-          By accepting, your employee profile will be activated at{' '}
-          <strong>{invitation?.hospitalName || 'this hospital'}</strong>. 
-          {invitation?.createLogin ? ' Your Vardhan login account will be created.' : ' No login account will be created at this time.'}
+          By accepting, your employee profile and Vardhan login account will be activated at{' '}
+          <strong>{invitation?.hospitalName || 'this hospital'}</strong>.
         </Typography>
       </Stack>
     </AuthLayout>

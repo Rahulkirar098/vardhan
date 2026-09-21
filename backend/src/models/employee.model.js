@@ -4,8 +4,7 @@ const mongoose = require("mongoose");
  * Employee Model
  *
  * Represents an HRMS Employee managed by HR.
- * An Employee is SEPARATE from a Vardhan User (login account).
- * userId is OPTIONAL — an employee does not require a Vardhan login.
+ * Every Employee is linked to a Vardhan User login account via userId.
  */
 const employeeSchema = new mongoose.Schema(
     {
@@ -71,9 +70,8 @@ const employeeSchema = new mongoose.Schema(
         },
 
         /**
-         * Optional link to a Vardhan User login account.
-         * null = employee does not have a Vardhan login.
-         * Phase 2 does NOT create User accounts from Employees.
+         * Link to the Vardhan User login account.
+         * Created when the employee accepts their invitation.
          */
         userId: {
             type: mongoose.Schema.Types.ObjectId,

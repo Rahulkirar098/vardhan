@@ -197,13 +197,22 @@ const inviteEmployee = async ({
     dateOfJoining,
     positionId,
     role = "employee",
-    createLogin = false,
     employeeId: providedEmployeeId,
-    modules = [],
-    permissions = [],
 }) => {
     const normalizedEmail = String(email).trim().toLowerCase();
     const type = role === "hr" ? "HR" : "EMPLOYEE";
+
+    if (!positionId) {
+        const err = new Error("Position is required.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (!role || !["hr", "employee"].includes(role)) {
+        const err = new Error("Valid role is required (hr or employee).");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
 
     // No duplicate active employee
     const existingEmployee = await Employee.findOne({
@@ -239,13 +248,12 @@ const inviteEmployee = async ({
         ? String(providedEmployeeId).trim().toUpperCase()
         : await generateEmployeeId(hospital._id);
 
-    if (positionId) {
-        const pos = await Position.findOne({ _id: positionId, hospitalId: hospital._id, status: 'active' });
-        if (!pos) {
-            const err = new Error("Selected position is invalid, inactive, or belongs to another hospital.");
-            err.code = "INVALID_POSITION";
-            throw err;
-        }
+    // Validate position is active and belongs to this hospital
+    const pos = await Position.findOne({ _id: positionId, hospitalId: hospital._id, status: 'active' });
+    if (!pos) {
+        const err = new Error("Selected position is invalid, inactive, or belongs to another hospital.");
+        err.code = "INVALID_POSITION";
+        throw err;
     }
 
     const invitation = await Invitation.create({
@@ -258,10 +266,7 @@ const inviteEmployee = async ({
         phone: phone ? String(phone).trim() : null,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
         positionId,
-        role: createLogin ? role : null,
-        createLogin,
-        modules: createLogin && modules.length > 0 ? modules : undefined,
-        permissions: createLogin && permissions.length > 0 ? permissions : undefined,
+        role,
         tokenHash,
         expiresAt,
         status: "pending",
@@ -324,7 +329,7 @@ const acceptInvitation = async (rawToken, password) => {
         status: "pending",
     })
         .populate("hospitalId", "name")
-        .populate("positionId", "name");
+        .populate("positionId", "name defaultModules");
 
     if (!invitation) {
         const err = new Error("Invitation is invalid or has already been used.");
@@ -337,6 +342,12 @@ const acceptInvitation = async (rawToken, password) => {
         await invitation.save();
         const err = new Error("This invitation has expired.");
         err.code = "EXPIRED_INVITATION";
+        throw err;
+    }
+
+    if (!password || String(password).length < 6) {
+        const err = new Error("Password is required and must be at least 6 characters.");
+        err.code = "VALIDATION_ERROR";
         throw err;
     }
 
@@ -368,6 +379,25 @@ const acceptInvitation = async (rawToken, password) => {
         resolvedEmployeeId = await generateEmployeeId(invitation.hospitalId._id);
     }
 
+    // Derive modules from Position defaults
+    const positionDefaultModules = invitation.positionId?.defaultModules || [];
+    const userModules = ["core", ...positionDefaultModules.filter(m => m !== "core")];
+
+    // Create User account (every employee gets a login)
+    const hashedPassword = await hashPassword(password);
+    const user = await User.create({
+        name: `${invitation.firstName} ${invitation.lastName}`.trim(),
+        email: invitation.email,
+        phone: invitation.phone,
+        password: hashedPassword,
+        role: invitation.role,
+        hospitalId: invitation.hospitalId._id,
+        status: "active",
+        createdBy: invitation.invitedBy,
+        modules: userModules,
+        permissions: [],
+    });
+
     const employee = await Employee.create({
         employeeId: resolvedEmployeeId,
         firstName: invitation.firstName,
@@ -379,28 +409,12 @@ const acceptInvitation = async (rawToken, password) => {
         employmentStatus: "ACTIVE",
         hospitalId: invitation.hospitalId._id,
         createdBy: invitation.invitedBy,
-        userId: null,
+        userId: user._id,
     });
 
-    if (invitation.createLogin && invitation.role && password) {
-        const hashedPassword = await hashPassword(password);
-        const user = await User.create({
-            name: `${employee.firstName} ${employee.lastName}`.trim(),
-            email: employee.email,
-            phone: employee.phone,
-            password: hashedPassword,
-            role: invitation.role,
-            hospitalId: employee.hospitalId,
-            employeeId: employee._id,
-            status: "active",
-            createdBy: invitation.invitedBy,
-            modules: invitation.modules && invitation.modules.length > 0 ? invitation.modules : ["core"],
-            permissions: invitation.permissions || [],
-        });
-
-        employee.userId = user._id;
-        await employee.save();
-    }
+    // Back-link Employee to User
+    user.employeeId = employee._id;
+    await user.save();
 
     invitation.status = "accepted";
     invitation.acceptedAt = new Date();

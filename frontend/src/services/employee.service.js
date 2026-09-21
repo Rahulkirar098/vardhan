@@ -34,8 +34,8 @@ const employeeService = {
   getInvitationByToken: (token) =>
     client.get(`/v1/hrms/employee-invitations/${token}`),
 
-  acceptInvitation: (token) =>
-    client.post(`/v1/hrms/employee-invitations/${token}/accept`),
+  acceptInvitation: (token, password) =>
+    client.post(`/v1/hrms/employee-invitations/${token}/accept`, { password }),
 };
 
 export default employeeService;

@@ -12,6 +12,7 @@ import {
   Grid,
   IconButton,
   InputAdornment,
+  MenuItem,
   Paper,
   Snackbar,
   Stack,
@@ -77,44 +78,48 @@ const formatDate = (d) => {
 };
 
 // ─── Invite Employee Modal ────────────────────────────────────────────────────
-const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
+const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     positionId: '',
-    role: 'employee',
-    createLogin: false,
+    role: '',
     dateOfJoining: '',
     employeeId: '',
   });
-  const [selectedModules, setSelectedModules] = useState([]);
-  const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const resetForm = () => {
+    setForm({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      positionId: '',
+      role: '',
+      dateOfJoining: '',
+      employeeId: '',
+    });
+    setError('');
+    setSubmitting(false);
+  };
+
   useEffect(() => {
     if (open) {
-      setForm({ firstName: '', lastName: '', email: '', phone: '', positionId: '', role: 'employee', createLogin: false, dateOfJoining: '', employeeId: '' });
-      setSelectedModules([]);
-      setSelectedPermissions([]);
-      setError('');
-      setSubmitting(false);
+      resetForm();
     }
   }, [open]);
 
-  const toggleModule = (key) => {
-    setSelectedModules((prev) => prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key]);
-  };
-
-  const togglePermission = (key) => {
-    setSelectedPermissions((prev) => prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]);
+  const handleClose = () => {
+    resetForm();
+    onClose();
   };
 
   const handleChange = (e) => {
-    const name = e.target.name;
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -123,6 +128,8 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
     if (!form.firstName.trim()) { setError('First name is required.'); return; }
     if (!form.lastName.trim()) { setError('Last name is required.'); return; }
     if (!form.email.trim()) { setError('Email is required.'); return; }
+    if (!form.positionId) { setError('Position is required.'); return; }
+    if (!form.role) { setError('Vardhan Role is required.'); return; }
 
     try {
       setSubmitting(true);
@@ -131,16 +138,13 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
-        positionId: form.positionId || undefined,
-        role: form.createLogin ? form.role : undefined,
-        createLogin: form.createLogin,
+        positionId: form.positionId,
+        role: form.role,
         dateOfJoining: form.dateOfJoining || undefined,
         employeeId: form.employeeId.trim() || undefined,
-        modules: form.role === 'hr' ? selectedModules : undefined,
-        permissions: form.role === 'hr' ? selectedPermissions : undefined,
       });
       onSuccess('Invitation sent successfully.');
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err?.response?.data?.message || 'Unable to send employee invitation.');
     } finally {
@@ -151,7 +155,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title="Invite Employee"
       description="Send an onboarding invitation to a new employee."
       submitLabel="Send Invitation"
@@ -213,151 +217,80 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
             select
-            label="Hospital Position (optional)"
+            label="Position"
             name="positionId"
             value={form.positionId}
             onChange={handleChange}
+            required
             fullWidth
-            SelectProps={{ native: true }}
+            slotProps={{
+              inputLabel: { shrink: true },
+              select: {
+                displayEmpty: true,
+                renderValue: (selected) => {
+                  if (!selected) {
+                    return <Typography component="span" variant="body1" color="text.secondary">Select Position</Typography>;
+                  }
+                  const found = positions.find((p) => p._id === selected);
+                  return found ? found.name : selected;
+                },
+              },
+            }}
           >
-            <option value="">None</option>
-            {positions.map(p => (
-              <option key={p._id} value={p._id}>{p.name}</option>
+            <MenuItem value="">
+              <em>Select Position</em>
+            </MenuItem>
+            {positions.map((p) => (
+              <MenuItem key={p._id} value={p._id}>
+                {p.name}
+              </MenuItem>
             ))}
           </TextField>
           <TextField
-            label="Date of Joining (optional)"
-            name="dateOfJoining"
-            type="date"
-            value={form.dateOfJoining}
+            select
+            label="Vardhan Role"
+            name="role"
+            value={form.role}
             onChange={handleChange}
+            required
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
+            slotProps={{
+              inputLabel: { shrink: true },
+              select: {
+                displayEmpty: true,
+                renderValue: (selected) => {
+                  if (!selected) {
+                    return <Typography component="span" variant="body1" color="text.secondary">Select Role</Typography>;
+                  }
+                  if (selected === 'employee') return 'Employee';
+                  if (selected === 'hr') return 'HR';
+                  return selected;
+                },
+              },
+            }}
+          >
+            <MenuItem value="">
+              <em>Select Role</em>
+            </MenuItem>
+            <MenuItem value="employee">Employee</MenuItem>
+            <MenuItem value="hr">HR</MenuItem>
+          </TextField>
         </Stack>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              name="createLogin"
-              checked={form.createLogin}
-              onChange={handleChange}
-              style={{ width: '16px', height: '16px' }}
-            />
-            <Typography variant="body2" color="text.secondary">Create Vardhan Login Account</Typography>
-          </label>
-          
-          {form.createLogin && (
-            <TextField
-              select
-              label="Vardhan Access Role"
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="employee">Employee</option>
-              <option value="hr">HR</option>
-            </TextField>
-          )}
-        </Stack>
-
-        {form.createLogin && form.role === 'hr' && (
-          <>
-            <Divider />
-            <Box>
-              <Typography variant="subtitle2" fontWeight={700} gutterBottom>Module Access</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
-                Grant this HR access to additional business modules.
-              </Typography>
-              <Stack spacing={1}>
-                {MODULE_OPTIONS.map((mod) => {
-                  const isChecked = selectedModules.includes(mod.key);
-                  return (
-                    <Paper
-                      key={mod.key}
-                      variant="outlined"
-                      onClick={() => toggleModule(mod.key)}
-                      sx={{
-                        p: 1.5, borderRadius: 2, cursor: 'pointer',
-                        borderColor: isChecked ? 'primary.main' : 'divider',
-                        bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
-                        transition: 'all 0.15s ease-in-out',
-                      }}
-                    >
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={isChecked}
-                            onChange={() => toggleModule(mod.key)}
-                            onClick={(e) => e.stopPropagation()}
-                            color="primary"
-                          />
-                        }
-                        label={
-                          <Box sx={{ ml: 0.5 }}>
-                            <Typography variant="body2" fontWeight={600} color="text.primary">{mod.label}</Typography>
-                            <FormHelperText sx={{ m: 0 }}>{mod.description}</FormHelperText>
-                          </Box>
-                        }
-                        sx={{ width: '100%', m: 0 }}
-                      />
-                    </Paper>
-                  );
-                })}
-              </Stack>
-            </Box>
-            
-            <Box>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
-                <Typography variant="subtitle2" fontWeight={700}>Hospital Structure Permissions</Typography>
-                <Stack direction="row" spacing={1}>
-                  <Button size="small" variant="text" onClick={() => setSelectedPermissions(PERMISSION_OPTIONS.map(p => p.key))}>Select All</Button>
-                  <Button size="small" variant="text" color="inherit" onClick={() => setSelectedPermissions([])}>Clear</Button>
-                </Stack>
-              </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
-                Control which Hospital Structure actions this HR can perform.
-              </Typography>
-              <FormGroup sx={{ gap: 1 }}>
-                {PERMISSION_OPTIONS.map((option) => {
-                  const isChecked = selectedPermissions.includes(option.key);
-                  return (
-                    <Paper
-                      key={option.key}
-                      variant="outlined"
-                      onClick={() => togglePermission(option.key)}
-                      sx={{
-                        p: 1.5, borderRadius: 2, cursor: 'pointer',
-                        borderColor: isChecked ? 'primary.main' : 'divider',
-                        bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
-                        transition: 'all 0.15s ease-in-out',
-                      }}
-                    >
-                      <FormControlLabel
-                        control={
-                          <Checkbox checked={isChecked} onChange={() => togglePermission(option.key)} onClick={(e) => e.stopPropagation()} />
-                        }
-                        label={
-                          <Box sx={{ ml: 0.5 }}>
-                            <Typography variant="body2" fontWeight={600} color="text.primary">{option.label}</Typography>
-                            <FormHelperText sx={{ m: 0 }}>{option.description}</FormHelperText>
-                          </Box>
-                        }
-                        sx={{ width: '100%', m: 0 }}
-                      />
-                    </Paper>
-                  );
-                })}
-              </FormGroup>
-            </Box>
-          </>
-        )}
+        <TextField
+          label="Date of Joining (optional)"
+          name="dateOfJoining"
+          type="date"
+          value={form.dateOfJoining}
+          onChange={handleChange}
+          fullWidth
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
       </Stack>
     </Modal>
   );
 };
+
+
 
 // ─── Edit Employee Modal ──────────────────────────────────────────────────────
 const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) => {
@@ -494,11 +427,16 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
               value={form.positionId}
               onChange={handleChange}
               fullWidth
-              SelectProps={{ native: true }}
+              slotProps={{
+                inputLabel: { shrink: true },
+                select: { displayEmpty: true },
+              }}
             >
-              <option value="">None</option>
-              {positions.map(p => (
-                <option key={p._id} value={p._id}>{p.name}</option>
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {positions.map((p) => (
+                <MenuItem key={p._id} value={p._id}>{p.name}</MenuItem>
               ))}
             </TextField>
           ) : (

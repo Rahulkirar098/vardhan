@@ -1,6 +1,7 @@
 const Position = require('../models/position.model');
+const { VALID_MODULE_KEYS } = require('../config/modules.config');
 
-const createPosition = async (hospitalId, name) => {
+const createPosition = async (hospitalId, name, defaultModules = []) => {
     if (!name) {
         const err = new Error('Position name is required');
         err.code = 'VALIDATION_ERROR';
@@ -14,10 +15,16 @@ const createPosition = async (hospitalId, name) => {
         throw err;
     }
 
+    // Validate module keys
+    const validatedModules = Array.isArray(defaultModules)
+        ? defaultModules.filter(m => VALID_MODULE_KEYS.includes(m))
+        : [];
+
     try {
         const position = await Position.create({
             hospitalId,
             name: normalizedName,
+            defaultModules: validatedModules,
             status: 'active'
         });
         return position;
@@ -52,7 +59,7 @@ const getPositionById = async (hospitalId, positionId) => {
     return position;
 };
 
-const updatePosition = async (hospitalId, positionId, name) => {
+const updatePosition = async (hospitalId, positionId, name, defaultModules) => {
     const position = await getPositionById(hospitalId, positionId);
     
     if (!name || name.trim().length === 0) {
@@ -62,6 +69,12 @@ const updatePosition = async (hospitalId, positionId, name) => {
     }
 
     position.name = name.trim();
+
+    if (defaultModules !== undefined) {
+        position.defaultModules = Array.isArray(defaultModules)
+            ? defaultModules.filter(m => VALID_MODULE_KEYS.includes(m))
+            : [];
+    }
     
     try {
         await position.save();

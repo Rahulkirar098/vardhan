@@ -70,7 +70,7 @@ const getEmployee = async (req, res) => {
 
 const inviteEmployee = async (req, res) => {
     try {
-        const { firstName, lastName, email, phone, dateOfJoining, positionId, employeeId, role, createLogin, modules, permissions } = req.body;
+        const { firstName, lastName, email, phone, dateOfJoining, positionId, employeeId, role } = req.body;
 
         if (!firstName || !String(firstName).trim()) {
             return res.status(400).json({ success: false, message: "First name is required" });
@@ -83,6 +83,12 @@ const inviteEmployee = async (req, res) => {
         }
         if (!employeeService.EMAIL_REGEX.test(String(email).trim())) {
             return res.status(400).json({ success: false, message: "Please enter a valid email address" });
+        }
+        if (!positionId) {
+            return res.status(400).json({ success: false, message: "Position is required" });
+        }
+        if (!role || !["hr", "employee"].includes(role)) {
+            return res.status(400).json({ success: false, message: "Valid Vardhan role is required (hr or employee)" });
         }
 
         const hospital = await employeeService.getHospitalForUser(req.user);
@@ -105,10 +111,7 @@ const inviteEmployee = async (req, res) => {
                 dateOfJoining,
                 positionId,
                 role,
-                createLogin,
                 employeeId,
-                modules,
-                permissions,
             });
 
             return res.status(201).json({
@@ -188,7 +191,7 @@ const getInvitationByToken = async (req, res) => {
                 phone: invitation.phone,
                 position: invitation.positionId?.name || null,
                 hospitalName: invitation.hospitalId?.name || "Hospital",
-                createLogin: invitation.createLogin,
+                role: invitation.role,
                 expiresAt: invitation.expiresAt,
             },
         });

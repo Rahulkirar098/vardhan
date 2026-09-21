@@ -14,6 +14,10 @@ const positionSchema = new mongoose.Schema(
             trim: true,
             maxlength: 100,
         },
+        defaultModules: {
+            type: [String],
+            default: [],
+        },
         status: {
             type: String,
             enum: ['active', 'inactive'],

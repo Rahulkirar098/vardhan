@@ -66,23 +66,11 @@ const invitationSchema = new mongoose.Schema(
             default: null,
         },
 
-        // HR/Employee User Account specifics
+        // Vardhan Role for the new User account
         role: {
             type: String,
             enum: ["hr", "employee"],
-            default: null,
-        },
-        createLogin: {
-            type: Boolean,
-            default: false,
-        },
-        modules: {
-            type: [String],
-            default: undefined,
-        },
-        permissions: {
-            type: [String],
-            default: undefined,
+            required: true,
         },
 
         // Employee Specific

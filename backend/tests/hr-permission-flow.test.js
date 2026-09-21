@@ -101,6 +101,7 @@ const setupTestEnvironment = async () => {
         hospitalId: hospitalA._id,
         name: `HR Position ${testTimestamp}`,
         status: "active",
+        defaultModules: ["hrms"],
     });
 };
 
@@ -203,8 +204,6 @@ const runTests = async () => {
                 expiresAt,
                 status: "pending",
                 role: "hr",
-                createLogin: true,
-                modules: ["core"],
             });
             invitationId = inv._id.toString();
 
@@ -232,6 +231,7 @@ const runTests = async () => {
             hrA = await User.findOne({ email: `hrA_${testTimestamp}@example.com` });
             assert(hrA, "HR user must exist in database");
             assert.deepStrictEqual(hrA.permissions, [], "New HR permissions must default to empty array");
+            assert(hrA.modules.includes("hrms"), "HR user modules must include defaultModules from position");
 
             tokenHrA = generateToken({
                 id: hrA._id.toString(),

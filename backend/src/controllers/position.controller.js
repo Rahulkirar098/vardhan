@@ -2,14 +2,14 @@ const positionService = require('../services/position.service');
 
 const createPosition = async (req, res, next) => {
     try {
-        const { name } = req.body;
+        const { name, defaultModules } = req.body;
         
         const hospitalId = req.user.hospitalId;
         if (!hospitalId) {
             return res.status(403).json({ success: false, message: 'No hospital found for your account' });
         }
 
-        const position = await positionService.createPosition(hospitalId, name);
+        const position = await positionService.createPosition(hospitalId, name, defaultModules);
         
         res.status(201).json({
             success: true,
@@ -51,10 +51,10 @@ const getPositions = async (req, res, next) => {
 const updatePosition = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name } = req.body;
+        const { name, defaultModules } = req.body;
         const hospitalId = req.user.hospitalId;
 
-        const position = await positionService.updatePosition(hospitalId, id, name);
+        const position = await positionService.updatePosition(hospitalId, id, name, defaultModules);
         
         res.status(200).json({
             success: true,
