@@ -1,17 +1,15 @@
 const positionService = require('../services/position.service');
-const { getAdminHospital } = require('../services/hospital.service');
 
 const createPosition = async (req, res, next) => {
     try {
         const { name } = req.body;
         
-        // Admin creates position for their hospital
-        const hospital = await getAdminHospital(req.user._id);
-        if (!hospital) {
+        const hospitalId = req.user.hospitalId;
+        if (!hospitalId) {
             return res.status(403).json({ success: false, message: 'No hospital found for your account' });
         }
 
-        const position = await positionService.createPosition(hospital._id, name);
+        const position = await positionService.createPosition(hospitalId, name);
         
         res.status(201).json({
             success: true,

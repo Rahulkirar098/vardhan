@@ -267,6 +267,7 @@ const updateEmployee = async (req, res) => {
             employeeMongoId: id,
             hospitalId: req.user.hospitalId,
             updatedBy: req.user.id,
+            user: req.user,
             updates: { firstName, lastName, email, phone, dateOfJoining, positionId },
         });
 
@@ -280,6 +281,12 @@ const updateEmployee = async (req, res) => {
             data: employee,
         });
     } catch (error) {
+        if (error.code === "UNAUTHORIZED_POSITION_UPDATE") {
+            return res.status(403).json({ success: false, message: error.message });
+        }
+        if (error.code === "INVALID_POSITION") {
+            return res.status(400).json({ success: false, message: error.message });
+        }
         console.error("Update Employee Error:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }

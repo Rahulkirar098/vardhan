@@ -666,7 +666,8 @@ const HRManagement = () => {
       ]);
       const data = Array.isArray(res.data?.data?.employees) ? res.data.data.employees : [];
       setHrList(data);
-      setInvitations(invRes?.data?.data || []);
+      const allInvs = invRes?.data?.data || [];
+      setInvitations(allInvs.filter(i => i.status === 'pending'));
       setPositions(posRes?.data || []);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to load HR management data.');

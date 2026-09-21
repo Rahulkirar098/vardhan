@@ -240,6 +240,8 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', positionId: '', dateOfJoining: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  const hasPositionUpdate = hasPermission(PERMISSIONS.EMPLOYEE_POSITION_UPDATE);
 
   useEffect(() => {
     if (open && employee) {
@@ -335,20 +337,30 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
             onChange={handleChange}
             fullWidth
           />
-          <TextField
-            select
-            label="Position"
-            name="positionId"
-            value={form.positionId}
-            onChange={handleChange}
-            fullWidth
-            SelectProps={{ native: true }}
-          >
-            <option value="">None</option>
-            {positions.map(p => (
-              <option key={p._id} value={p._id}>{p.name}</option>
-            ))}
-          </TextField>
+          {hasPositionUpdate ? (
+            <TextField
+              select
+              label="Position"
+              name="positionId"
+              value={form.positionId}
+              onChange={handleChange}
+              fullWidth
+              SelectProps={{ native: true }}
+            >
+              <option value="">None</option>
+              {positions.map(p => (
+                <option key={p._id} value={p._id}>{p.name}</option>
+              ))}
+            </TextField>
+          ) : (
+            <TextField
+              label="Position"
+              name="positionId"
+              value={positions.find(p => p._id === form.positionId)?.name || 'None'}
+              fullWidth
+              disabled
+            />
+          )}
         </Stack>
         <TextField
           label="Date of Joining"
@@ -453,7 +465,8 @@ const EmployeesPage = () => {
         positionService.getPositions({ status: 'active' }).catch(() => ({ data: [] })),
       ]);
       setEmployees(empRes?.data?.data?.employees || []);
-      setInvitations(invRes?.data?.data || []);
+      const allInvs = invRes?.data?.data || [];
+      setInvitations(allInvs.filter(i => i.status === 'pending'));
       setStats(statRes?.data?.data || { total: 0, active: 0, inactive: 0, pendingInvitations: 0 });
       setPositions(posRes?.data || []);
     } catch (err) {

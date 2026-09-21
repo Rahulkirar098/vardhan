@@ -19,6 +19,7 @@ export const PERMISSIONS = Object.freeze({
   EMPLOYEE_VIEW: 'employee.view',
   EMPLOYEE_CREATE: 'employee.create',
   EMPLOYEE_UPDATE: 'employee.update',
+  EMPLOYEE_POSITION_UPDATE: 'employee.position.update',
   EMPLOYEE_DELETE: 'employee.delete',
 
   ROSTER_VIEW: 'roster.view',

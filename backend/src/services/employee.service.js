@@ -415,6 +415,7 @@ const updateEmployee = async ({
     employeeMongoId,
     hospitalId,
     updatedBy,
+    user,
     updates,
 }) => {
     const employee = await Employee.findOne({
@@ -442,6 +443,15 @@ const updateEmployee = async ({
                     ? new Date(updates.dateOfJoining)
                     : null;
             } else if (field === "positionId") {
+                const { hasPermission } = require("../config/rolePermissions");
+                const { PERMISSIONS } = require("../config/permissions");
+                
+                if (!hasPermission(user, PERMISSIONS.EMPLOYEE_POSITION_UPDATE)) {
+                    const err = new Error("You do not have permission to change employee positions.");
+                    err.code = "UNAUTHORIZED_POSITION_UPDATE";
+                    throw err;
+                }
+
                 const pos = await Position.findOne({ _id: updates.positionId, hospitalId, status: 'active' });
                 if (!pos) {
                     const err = new Error("Selected position is invalid, inactive, or belongs to another hospital.");

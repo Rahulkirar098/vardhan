@@ -126,35 +126,34 @@ const PositionsPage = () => {
 
     const columns = [
         { key: 'name', label: 'Position Name', sortable: true },
-        { 
-            key: 'status', 
-            label: 'Status',
-            render: (pos) => <StatusBadge status={pos.status} />
-        },
-        {
-            key: 'actions',
-            label: 'Actions',
-            align: 'right',
-            render: (pos) => (
-                <Box display="flex" justifyContent="flex-end" gap={1}>
-                    <Tooltip title="Edit Position">
-                        <IconButton size="small" onClick={() => handleOpenEdit(pos)}>
-                            <EditRounded fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title={pos.status === 'active' ? "Deactivate Position" : "Activate Position"}>
-                        <IconButton 
-                            size="small" 
-                            color={pos.status === 'active' ? "error" : "success"}
-                            onClick={() => handleOpenToggleStatus(pos)}
-                        >
-                            <PowerSettingsNewRounded fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-            )
-        }
+        { key: 'status', label: 'Status' }
     ];
+
+    const renderCell = (pos, column) => {
+        if (column.key === 'status') {
+            return <StatusBadge status={pos.status} />;
+        }
+        return pos[column.key];
+    };
+
+    const renderActions = (pos) => (
+        <Box display="flex" justifyContent="flex-end" gap={1}>
+            <Tooltip title="Edit Position">
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenEdit(pos); }}>
+                    <EditRounded fontSize="small" />
+                </IconButton>
+            </Tooltip>
+            <Tooltip title={pos.status === 'active' ? "Deactivate Position" : "Activate Position"}>
+                <IconButton 
+                    size="small" 
+                    color={pos.status === 'active' ? "error" : "success"}
+                    onClick={(e) => { e.stopPropagation(); handleOpenToggleStatus(pos); }}
+                >
+                    <PowerSettingsNewRounded fontSize="small" />
+                </IconButton>
+            </Tooltip>
+        </Box>
+    );
 
     if (error) {
         return (
@@ -209,18 +208,17 @@ const PositionsPage = () => {
                     <EmptyState 
                         title="No Positions Found"
                         description="Start by adding your first hospital position."
-                        icon={<BusinessCenterRounded sx={{ fontSize: 64, color: 'text.disabled' }} />}
-                        action={
-                            <Button variant="contained" startIcon={<AddRounded />} onClick={handleOpenAdd}>
-                                Add Position
-                            </Button>
-                        }
+                        icon={BusinessCenterRounded}
+                        actionLabel="Add Position"
+                        onAction={handleOpenAdd}
                     />
                 ) : (
                     <DataTable 
                         columns={columns}
-                        data={positions}
-                        keyExtractor={(pos) => pos._id}
+                        rows={positions}
+                        getRowKey={(pos) => pos._id}
+                        renderCell={renderCell}
+                        renderActions={renderActions}
                     />
                 )}
             </GlassCard>
@@ -229,14 +227,10 @@ const PositionsPage = () => {
                 open={isAddOpen}
                 onClose={() => !submitting && setIsAddOpen(false)}
                 title="Add New Position"
-                footer={
-                    <>
-                        <Button onClick={() => setIsAddOpen(false)} disabled={submitting}>Cancel</Button>
-                        <Button variant="contained" onClick={handleSubmitAdd} disabled={submitting || !formData.name.trim()}>
-                            {submitting ? 'Saving...' : 'Add Position'}
-                        </Button>
-                    </>
-                }
+                submitLabel="Add Position"
+                onSubmit={handleSubmitAdd}
+                submitting={submitting}
+                disableSubmit={!formData.name.trim()}
             >
                 <TextField 
                     fullWidth
@@ -253,14 +247,10 @@ const PositionsPage = () => {
                 open={isEditOpen}
                 onClose={() => !submitting && setIsEditOpen(false)}
                 title="Edit Position"
-                footer={
-                    <>
-                        <Button onClick={() => setIsEditOpen(false)} disabled={submitting}>Cancel</Button>
-                        <Button variant="contained" onClick={handleSubmitEdit} disabled={submitting || !formData.name.trim()}>
-                            {submitting ? 'Saving...' : 'Save Changes'}
-                        </Button>
-                    </>
-                }
+                submitLabel="Save Changes"
+                onSubmit={handleSubmitEdit}
+                submitting={submitting}
+                disableSubmit={!formData.name.trim()}
             >
                 <TextField 
                     fullWidth

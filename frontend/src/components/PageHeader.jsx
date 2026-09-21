@@ -1,6 +1,8 @@
 import { Box, Stack, Typography } from '@mui/material';
 
-const PageHeader = ({ title, subtitle, breadcrumb, actions }) => (
+const PageHeader = ({ title, subtitle, breadcrumb, actions, action }) => {
+  const headerActions = actions || action;
+  return (
   <Stack
     direction={{ xs: 'column', md: 'row' }}
     spacing={2}
@@ -38,16 +40,17 @@ const PageHeader = ({ title, subtitle, breadcrumb, actions }) => (
       )}
     </Box>
 
-    {actions && (
+    {headerActions && (
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={1.25}
         sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}
       >
-        {actions}
+        {headerActions}
       </Stack>
     )}
   </Stack>
-);
+  );
+};
 
 export default PageHeader;
