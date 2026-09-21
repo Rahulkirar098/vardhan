@@ -136,6 +136,9 @@ cloudcherry/
 │   ├── index.js
 │   ├── package.json
 │   └── src/
+│       ├── config/
+│       │   ├── permissions.js
+│       │   └── rolePermissions.js
 │       ├── controllers/
 │       │   ├── auth.controller.js
 │       │   ├── hospital.controller.js
@@ -144,6 +147,7 @@ cloudcherry/
 │       │   ├── superAdmin.controller.js
 │       ├── middleware/
 │       │   ├── auth.middleware.js
+│       │   ├── permission.middleware.js
 │       │   └── role.middleware.js
 │       ├── models/
 │       │   ├── floor.model.js
@@ -229,8 +233,10 @@ cloudcherry/
 │       │   ├── hr.service.js
 │       │   ├── structure.service.js
 │       │   └── superAdmin.service.js
-│       └── theme/
-│           └── theme.js
+│       ├── theme/
+│       │   └── theme.js
+│       └── utils/
+│           └── permissions.js
 │
 └── README.md
 ```
@@ -412,15 +418,27 @@ npm run lint    # oxlint
 
 ---
 
-## 🔐 Security notes
+## 🔐 Security & Permission System (Phase 3)
 
-- JWTs are used for authentication and authorization
-- passwords are hashed before storage using bcrypt
-- protected routes enforce authorization rules
-- invitation tokens are hashed and expire after a set window
-- revoked tokens are tracked server-side for logout
-- hospital access remains scoped to the user's ownership chain
-- logout revokes the current token
+The application implements a 4-tier security pipeline:
+
+```text
+Request
+  ↓
+JWT Authentication  (Who is this user?)
+  ↓
+Role Authorization  (What type of user is this?)
+  ↓
+Permission Authorization (What is this user allowed to do?)
+  ↓
+Hospital Scope Check (Can this user access this specific hospital?)
+  ↓
+Controller → Service → Database
+```
+
+- **Backend Authority**: Backend middleware (`authorizePermission`) is the final authority. Frontend permission utilities (`hasPermission`) are strictly for UX (hiding/disabling actions).
+- **Static In-Code Mapping**: Permissions are derived directly from `user.role` via `backend/src/config/rolePermissions.js` without database query overhead.
+- **Hospital Isolation**: Role permissions do not bypass hospital ownership/scoping checks.
 
 ---
 
@@ -428,6 +446,7 @@ npm run lint    # oxlint
 
 - backend route registration is centralized in `backend/src/routes`
 - authentication middleware is in `backend/src/middleware/auth.middleware.js`
+- permission authorization middleware is in `backend/src/middleware/permission.middleware.js`
 - role enforcement happens in the middleware layer
 - frontend routing is centralized in `frontend/src/routes/index.jsx`
 - sidebar navigation is role-driven from `frontend/src/components/sidebar.config.js`
@@ -495,7 +514,7 @@ These items are remnants from previous prototypes and are not part of the CloudC
 ```
 Hospital
    ├── Floors -> Rooms (Phase 2: Hospital Structure - COMPLETED)
-   ├── Permissions (Phase 3: UPCOMING)
+   ├── Permissions (Phase 3: Role & Permission System - COMPLETED)
    └── Employees -> Reporting Manager (Phase 4: UPCOMING)
           └── Roster, Shifts, Attendance & Leave (Phase 5: UPCOMING)
 ```

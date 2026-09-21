@@ -36,6 +36,7 @@ import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
+import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
 const initialFloorForm = {
   name: '',
@@ -227,42 +228,50 @@ const FloorCard = ({ floor, onEdit, onDeactivate, onViewRooms }) => {
             </Stack>
           </Box>
 
-          <IconButton size="small" onClick={handleMenuClick} aria-label="Floor actions">
-            <MoreVertRounded fontSize="small" />
-          </IconButton>
+          {(hasPermission(PERMISSIONS.STRUCTURE_UPDATE) || hasPermission(PERMISSIONS.STRUCTURE_DELETE)) && (
+          <>
+            <IconButton size="small" onClick={handleMenuClick} aria-label="Floor actions">
+              <MoreVertRounded fontSize="small" />
+            </IconButton>
 
-          <Menu
-            anchorEl={anchorEl}
-            open={menuOpen}
-            onClose={handleMenuClose}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                onEdit(floor);
-              }}
+            <Menu
+              anchorEl={anchorEl}
+              open={menuOpen}
+              onClose={handleMenuClose}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
-              <ListItemIcon>
-                <EditRounded fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Edit Floor" />
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                onDeactivate(floor);
-              }}
-              sx={{ color: 'error.main' }}
-            >
-              <ListItemIcon sx={{ color: 'inherit' }}>
-                <DeleteOutlineRounded fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Deactivate Floor" />
-            </MenuItem>
-          </Menu>
-        </Stack>
+              {hasPermission(PERMISSIONS.STRUCTURE_UPDATE) && (
+                <MenuItem
+                  onClick={() => {
+                    handleMenuClose();
+                    onEdit(floor);
+                  }}
+                >
+                  <ListItemIcon>
+                    <EditRounded fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Edit Floor" />
+                </MenuItem>
+              )}
+              {hasPermission(PERMISSIONS.STRUCTURE_DELETE) && (
+                <MenuItem
+                  onClick={() => {
+                    handleMenuClose();
+                    onDeactivate(floor);
+                  }}
+                  sx={{ color: 'error.main' }}
+                >
+                  <ListItemIcon sx={{ color: 'inherit' }}>
+                    <DeleteOutlineRounded fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Deactivate Floor" />
+                </MenuItem>
+              )}
+            </Menu>
+          </>
+        )}
+      </Stack>
 
         {floor.description && (
           <Typography
@@ -417,14 +426,16 @@ const StructurePage = () => {
           title="Hospital Structure"
           subtitle="Manage hospital floors and rooms"
           actions={
-            <Button
-              variant="contained"
-              startIcon={<AddRounded />}
-              onClick={handleOpenCreate}
-              sx={{ fontWeight: 600 }}
-            >
-              Add Floor
-            </Button>
+            hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
+              <Button
+                variant="contained"
+                startIcon={<AddRounded />}
+                onClick={handleOpenCreate}
+                sx={{ fontWeight: 600 }}
+              >
+                Add Floor
+              </Button>
+            ) : null
           }
         />
 

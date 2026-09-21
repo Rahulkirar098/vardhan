@@ -1,6 +1,8 @@
 const express = require("express");
 const { authMiddleware } = require("../middleware/auth.middleware");
 const { authorizeRoles } = require("../middleware/role.middleware");
+const { authorizePermission } = require("../middleware/permission.middleware");
+const { PERMISSIONS } = require("../config/permissions");
 const {
     createHospital,
     getHospitals,
@@ -12,11 +14,11 @@ const {
 const hospitalRoute = express.Router();
 
 hospitalRoute.use(authMiddleware);
-hospitalRoute.get("/me", authorizeRoles("admin"), getMyHospital);
-hospitalRoute.get("/overview", authorizeRoles("admin"), getHospitalOverview);
-hospitalRoute.get("/", authorizeRoles("admin"), getHospitals);
+hospitalRoute.get("/me", authorizePermission(PERMISSIONS.HOSPITAL_VIEW), getMyHospital);
+hospitalRoute.get("/overview", authorizePermission(PERMISSIONS.HOSPITAL_VIEW), getHospitalOverview);
+hospitalRoute.get("/", authorizePermission(PERMISSIONS.HOSPITAL_VIEW), getHospitals);
 hospitalRoute.post("/", authorizeRoles("admin"), createHospital);
-hospitalRoute.patch("/:hospitalId", authorizeRoles("admin"), updateHospital);
+hospitalRoute.patch("/:hospitalId", authorizePermission(PERMISSIONS.HOSPITAL_UPDATE), updateHospital);
 
 module.exports = {
     hospitalRoute,

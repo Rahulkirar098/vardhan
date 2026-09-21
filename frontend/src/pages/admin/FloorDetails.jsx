@@ -34,6 +34,7 @@ import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
+import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
 const initialRoomForm = {
   name: '',
@@ -187,41 +188,49 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
             )}
           </Box>
 
-          <IconButton size="small" onClick={handleMenuClick} aria-label="Room actions">
-            <MoreVertRounded fontSize="small" />
-          </IconButton>
+          {(hasPermission(PERMISSIONS.STRUCTURE_UPDATE) || hasPermission(PERMISSIONS.STRUCTURE_DELETE)) && (
+            <>
+              <IconButton size="small" onClick={handleMenuClick} aria-label="Room actions">
+                <MoreVertRounded fontSize="small" />
+              </IconButton>
 
-          <Menu
-            anchorEl={anchorEl}
-            open={menuOpen}
-            onClose={handleMenuClose}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                onEdit(room);
-              }}
-            >
-              <ListItemIcon>
-                <EditRounded fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Edit Room" />
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                onDeactivate(room);
-              }}
-              sx={{ color: 'error.main' }}
-            >
-              <ListItemIcon sx={{ color: 'inherit' }}>
-                <DeleteOutlineRounded fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Deactivate Room" />
-            </MenuItem>
-          </Menu>
+              <Menu
+                anchorEl={anchorEl}
+                open={menuOpen}
+                onClose={handleMenuClose}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+              >
+                {hasPermission(PERMISSIONS.STRUCTURE_UPDATE) && (
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose();
+                      onEdit(room);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <EditRounded fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Edit Room" />
+                  </MenuItem>
+                )}
+                {hasPermission(PERMISSIONS.STRUCTURE_DELETE) && (
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose();
+                      onDeactivate(room);
+                    }}
+                    sx={{ color: 'error.main' }}
+                  >
+                    <ListItemIcon sx={{ color: 'inherit' }}>
+                      <DeleteOutlineRounded fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Deactivate Room" />
+                  </MenuItem>
+                )}
+              </Menu>
+            </>
+          )}
         </Stack>
 
         {room.description && (
@@ -376,14 +385,16 @@ const FloorDetails = () => {
               : 'Manage rooms and spaces'
           }
           actions={
-            <Button
-              variant="contained"
-              startIcon={<AddRounded />}
-              onClick={handleOpenCreate}
-              sx={{ fontWeight: 600 }}
-            >
-              Add Room
-            </Button>
+            hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
+              <Button
+                variant="contained"
+                startIcon={<AddRounded />}
+                onClick={handleOpenCreate}
+                sx={{ fontWeight: 600 }}
+              >
+                Add Room
+              </Button>
+            ) : null
           }
         />
 
