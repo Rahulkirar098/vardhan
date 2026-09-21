@@ -1,6 +1,5 @@
 import {
   AccountCircleRounded,
-  AssignmentTurnedInRounded,
   DashboardRounded,
   LayersRounded,
   LocalHospitalRounded,
@@ -15,7 +14,6 @@ const sidebarConfig = {
         items: [
           { label: 'Dashboard', path: '/super-admin/dashboard', icon: DashboardRounded },
           { label: 'Hospitals', path: '/super-admin/hospitals', icon: LocalHospitalRounded },
-          { label: 'Core Progress', path: '/core-progress', icon: AssignmentTurnedInRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
       },

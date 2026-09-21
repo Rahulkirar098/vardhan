@@ -17,7 +17,6 @@ import MyHospital from '../pages/hr/MyHospital';
 import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 import HRManagement from '../pages/admin/HRManagement';
-import CoreProgressPage from '../pages/admin/CoreProgressPage';
 
 const getUserRole = () => {
   const token = localStorage.getItem('token');
@@ -202,14 +201,6 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <HRManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/core-progress"
-        element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
-            <CoreProgressPage />
           </ProtectedRoute>
         }
       />

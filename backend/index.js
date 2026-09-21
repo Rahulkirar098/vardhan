@@ -10,9 +10,7 @@ const { hospitalRoute } = require("./src/routes/hospital.route");
 const { hrRoute } = require("./src/routes/hr.route");
 const { superAdminRoute } = require("./src/routes/superAdmin.route");
 const { structureRoute } = require("./src/routes/structure.route");
-const { coreProgressRoute } = require("./src/routes/coreProgress.route");
 const { moduleRoute } = require("./src/routes/module.route");
-const { seedCoreProgress } = require("./src/config/coreProgress.seed");
 
 const app = express();
 
@@ -30,8 +28,6 @@ app.use("/api/hr", hrRoute);
 app.use("/api/v1/hr", hrRoute);
 app.use("/api/super-admin", superAdminRoute);
 app.use("/api/v1/hospitals/:hospitalId", structureRoute);
-app.use("/api/v1/core-progress", coreProgressRoute);
-app.use("/api/core-progress", coreProgressRoute);
 app.use("/api/v1/modules", moduleRoute);
 app.use("/api/modules", moduleRoute);
 
@@ -45,9 +41,8 @@ mongoose
         try {
             await Floor.syncIndexes();
             await Room.syncIndexes();
-            await seedCoreProgress();
         } catch (indexErr) {
-            console.error("Error syncing structure indexes or seeding progress:", indexErr);
+            console.error("Error syncing structure indexes:", indexErr);
         }
 
         app.listen(process.env.PORT || 3000, () => {

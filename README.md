@@ -555,39 +555,6 @@ VARDHAN SaaS
 
 ---
 
-## 📊 Core Progress Implementation Tracker
-
-A persistent implementation tracking Kanban system to monitor progress across all 7 Core Platform modules and their 57 features:
-
-### Route & Navigation
-- **Frontend URL**: `/core-progress` (Strictly accessible to `super_admin`)
-- **Navigation**: Visible exclusively to Super Administrators.
-- **Interactive Views**: Kanban Board (4 status columns with quick-move arrows) and Module List views.
-
-### API Endpoints
-| Method | Path | Access | Purpose |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/core-progress` | Super Admin | Returns all 7 Core modules, constituent features, module percentages, and overall progress metrics |
-| `GET` | `/api/v1/core-progress/:featureId` | Super Admin | Retrieves details for a specific feature |
-| `PATCH` | `/api/v1/core-progress/:featureId` | Super Admin | Updates implementation status and persistent notes |
-
-### Database Model (`CoreProgress`)
-- `moduleKey`: e.g. `hospital_foundation`, `authentication`, `users`, `roles`, `permissions`, `hospital_structure`, `module_foundation`
-- `moduleName`: Human-readable module label
-- `featureKey`: Unique feature key within module
-- `featureName`: Display title of the feature
-- `description`: Technical summary of what the feature accomplishes
-- `status`: `NOT_STARTED` (⬜), `IN_PROGRESS` (🟡), `DONE` (✅), `BLOCKED` (🔴)
-- `notes`: Custom implementation notes stored in MongoDB
-- `sortOrder`: Visual ordering of modules and features
-- `updatedBy`: User ID of the last administrator who updated status/notes
-
-### Seeding Mechanism
-- Idempotent `seedCoreProgress()` runs on MongoDB connection in `backend/index.js`.
-- Utilizes `$setOnInsert` to safely populate missing features without overwriting or resetting user-modified statuses or notes.
-
----
-
 ## 📄 License
 
 This project is currently intended for internal or project-specific use and is not yet published under a public open-source license.
