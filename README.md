@@ -92,33 +92,132 @@ The platform enforces controlled ownership and access rules:
 
 ---
 
-## 📂 Folder Structure
+## 📂 Complete Folder Structure
 
-The authoritative folder structure of the repository:
 
-**Backend (`backend/src/`)**
-- `config/` (modules.config.js, permissions.js, rolePermissions.js)
-- `controllers/` (auth, employee, hospital, hr, module, structure, superAdmin)
-- `middleware/` (auth, module, permission, role)
-- `models/` (employee, floor, hospital, invitation, revokedToken, room, user)
-- `routes/` (auth, employee, hospital, hr, module, structure, superAdmin)
-- `services/` (auth, hospital, hr, structure)
-- `utils/` (jwt, mail, password, validate)
-- `validators/` (structure.validator.js)
-- `tests/` (Various Jest tests)
 
-**Frontend (`frontend/src/`)**
-- `components/` (AppLayout, AuthLayout, ConfirmDialog, DataTable, EmptyState, ErrorState, GlassCard, InfoRow, InitialsAvatar, Loading, Modal, Navbar, PageHeader, SectionCard, Sidebar, StatCard, StatusBadge, sidebar.config.js)
-- `pages/`
-  - `auth/` (AcceptEmployeeInvitation, AcceptHRInvitation, ForgotPassword, Landing, Login, Register, ResetPassword)
-  - `admin/` (AdminDashboard, FloorDetails, Hospital, HRManagement, StructurePage)
-  - `hr/` (EmployeesPage, HRDashboard, HRProfile, MyHospital)
-  - `shared/` (Profile)
-  - `super-admin/` (SuperAdminDashboard, SuperAdminHospitalDetails, SuperAdminHospitals)
-- `routes/` (index.jsx)
-- `services/` (api/, auth, employee, hospital, hr, structure, superAdmin)
-- `theme/` (theme.js)
-- `utils/` (permissions.js)
+---
+
+## 📂 Complete Folder Structure
+
+```text
+├── backend
+│   └── src
+│       ├── config
+│       │   ├── modules.config.js
+│       │   ├── permissions.js
+│       │   └── rolePermissions.js
+│       ├── controllers
+│       │   ├── auth.controller.js
+│       │   ├── employee.controller.js
+│       │   ├── hospital.controller.js
+│       │   ├── hr.controller.js
+│       │   ├── module.controller.js
+│       │   ├── structure.controller.js
+│       │   └── superAdmin.controller.js
+│       ├── middleware
+│       │   ├── auth.middleware.js
+│       │   ├── module.middleware.js
+│       │   ├── permission.middleware.js
+│       │   └── role.middleware.js
+│       ├── models
+│       │   ├── employee.model.js
+│       │   ├── floor.model.js
+│       │   ├── hospital.model.js
+│       │   ├── invitation.model.js
+│       │   ├── revokedToken.model.js
+│       │   ├── room.model.js
+│       │   └── user.model.js
+│       ├── routes
+│       │   ├── auth.route.js
+│       │   ├── employee.route.js
+│       │   ├── hospital.route.js
+│       │   ├── hr.route.js
+│       │   ├── module.route.js
+│       │   ├── structure.route.js
+│       │   └── superAdmin.route.js
+│       ├── services
+│       │   ├── auth.service.js
+│       │   ├── employee.service.js
+│       │   ├── hospital.service.js
+│       │   ├── hr.service.js
+│       │   ├── invitation.service.js
+│       │   └── structure.service.js
+│       ├── utils
+│       │   ├── jwt.js
+│       │   ├── mail.js
+│       │   ├── password.js
+│       │   └── validate.js
+│       └── validators
+│           └── structure.validator.js
+└── frontend
+    └── src
+        ├── App.jsx
+        ├── components
+        │   ├── AppLayout.jsx
+        │   ├── AuthLayout.jsx
+        │   ├── ConfirmDialog.jsx
+        │   ├── DataTable.jsx
+        │   ├── EmptyState.jsx
+        │   ├── ErrorState.jsx
+        │   ├── GlassCard.jsx
+        │   ├── InfoRow.jsx
+        │   ├── InitialsAvatar.jsx
+        │   ├── Loading.jsx
+        │   ├── Modal.jsx
+        │   ├── Navbar.jsx
+        │   ├── PageHeader.jsx
+        │   ├── SectionCard.jsx
+        │   ├── Sidebar.jsx
+        │   ├── StatCard.jsx
+        │   ├── StatusBadge.jsx
+        │   └── sidebar.config.js
+        ├── index.css
+        ├── main.jsx
+        ├── pages
+        │   ├── admin
+        │   │   ├── AdminDashboard.jsx
+        │   │   ├── FloorDetails.jsx
+        │   │   ├── HRManagement.jsx
+        │   │   ├── Hospital.jsx
+        │   │   └── StructurePage.jsx
+        │   ├── auth
+        │   │   ├── AcceptEmployeeInvitation.jsx
+        │   │   ├── AcceptHRInvitation.jsx
+        │   │   ├── ForgotPassword.jsx
+        │   │   ├── Landing.jsx
+        │   │   ├── Login.jsx
+        │   │   ├── Register.jsx
+        │   │   └── ResetPassword.jsx
+        │   ├── hr
+        │   │   ├── EmployeesPage.jsx
+        │   │   ├── HRDashboard.jsx
+        │   │   ├── HRProfile.jsx
+        │   │   └── MyHospital.jsx
+        │   ├── shared
+        │   │   └── Profile.jsx
+        │   └── super-admin
+        │       ├── SuperAdminDashboard.jsx
+        │       ├── SuperAdminHospitalDetails.jsx
+        │       └── SuperAdminHospitals.jsx
+        ├── routes
+        │   └── index.jsx
+        ├── services
+        │   ├── api
+        │   │   ├── client.js
+        │   │   └── interceptors.js
+        │   ├── auth.service.js
+        │   ├── employee.service.js
+        │   ├── hospital.service.js
+        │   ├── hr.service.js
+        │   ├── module.service.js
+        │   ├── structure.service.js
+        │   └── superAdmin.service.js
+        ├── theme
+        │   └── theme.js
+        └── utils
+            └── permissions.js
+```
 
 ---
 
