@@ -53,6 +53,24 @@ const resolveAuthorizedHospital = async (req) => {
         return { authorizedHospitalId: hospital._id };
     }
 
+    if (req.user.role === "hr") {
+        if (!req.user.hospitalId) {
+            return {
+                errorStatus: 404,
+                errorMessage: "Hospital not found for this HR",
+            };
+        }
+
+        if (req.user.hospitalId.toString() !== hospitalId) {
+            return {
+                errorStatus: 403,
+                errorMessage: "Access denied to requested hospital",
+            };
+        }
+
+        return { authorizedHospitalId: req.user.hospitalId };
+    }
+
     return { errorStatus: 403, errorMessage: "Access denied" };
 };
 

@@ -61,19 +61,54 @@ export const ROLE_PERMISSIONS = Object.freeze({
  *
  * @param {string} permission
  * @param {string} [role]
+ * @param {string[]} [userPermissions]
  * @returns {boolean}
  */
-export const hasPermission = (permission, role) => {
+export const hasPermission = (permission, role, userPermissions) => {
   const effectiveRole = role || localStorage.getItem('role');
 
-  if (!effectiveRole || !ROLE_PERMISSIONS[effectiveRole]) {
+  if (!effectiveRole) {
     return false;
   }
 
-  return ROLE_PERMISSIONS[effectiveRole].includes(permission);
+  // Admin and Super Admin always have full structure & HR access
+  if (effectiveRole === 'admin' || effectiveRole === 'super_admin') {
+    return true;
+  }
+
+  // For HR, check base role permissions + individually assigned permissions
+  if (effectiveRole === 'hr') {
+    const basePermissions = ROLE_PERMISSIONS.hr || [];
+    if (basePermissions.includes(permission)) {
+      return true;
+    }
+
+    let assigned = userPermissions;
+    if (!assigned) {
+      try {
+        const stored = localStorage.getItem('permissions');
+        assigned = stored ? JSON.parse(stored) : [];
+      } catch {
+        assigned = [];
+      }
+    }
+
+    return Array.isArray(assigned) && assigned.includes(permission);
+  }
+
+  return false;
 };
 
 export const getPermissionsForRole = (role) => {
   const effectiveRole = role || localStorage.getItem('role');
   return ROLE_PERMISSIONS[effectiveRole] || [];
+};
+
+export const getStoredPermissions = () => {
+  try {
+    const stored = localStorage.getItem('permissions');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
 };

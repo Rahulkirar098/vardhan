@@ -1,9 +1,12 @@
-const { hasPermission } = require("../config/rolePermissions");
+const { ROLE_PERMISSIONS } = require("../config/rolePermissions");
 
 /**
  * Middleware to authorize requests based on user permissions.
- * Supports a single permission or multiple permissions (user must have all or at least one).
- * Default: required permissions must be present.
+ *
+ * Rules:
+ * - super_admin: platform access
+ * - admin: full hospital, structure, and HR management access
+ * - hr: base role permissions (hospital.view, hr.view) + individually assigned permissions in req.user.permissions
  *
  * @param {...string} requiredPermissions
  */
@@ -16,21 +19,41 @@ const authorizePermission = (...requiredPermissions) => {
             });
         }
 
-        const userRole = req.user.role;
+        const { role, permissions: userPermissions = [] } = req.user;
 
-        // Verify if user's role satisfies all required permissions
-        const isAuthorized = requiredPermissions.every((permission) =>
-            hasPermission(userRole, permission)
-        );
-
-        if (!isAuthorized) {
-            return res.status(403).json({
-                success: false,
-                message: "You do not have permission to perform this action",
-            });
+        // super_admin has platform access
+        if (role === "super_admin") {
+            return next();
         }
 
-        return next();
+        // admin always has full access to hospital, structure, and HR
+        if (role === "admin") {
+            return next();
+        }
+
+        // hr checks base role permissions + individually assigned permissions
+        if (role === "hr") {
+            const hrBasePermissions = ROLE_PERMISSIONS.hr || [];
+            const isAuthorized = requiredPermissions.every(
+                (permission) =>
+                    hrBasePermissions.includes(permission) ||
+                    userPermissions.includes(permission)
+            );
+
+            if (!isAuthorized) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You do not have permission to perform this action",
+                });
+            }
+
+            return next();
+        }
+
+        return res.status(403).json({
+            success: false,
+            message: "You do not have permission to perform this action",
+        });
     };
 };
 

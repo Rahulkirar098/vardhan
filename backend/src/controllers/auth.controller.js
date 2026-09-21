@@ -33,6 +33,7 @@ const getCurrentUser = async (req, res) => {
                 role: user.role,
                 hospitalId: user.hospitalId,
                 status: user.status,
+                permissions: user.permissions || [],
             },
         });
     } catch (error) {
@@ -196,6 +197,7 @@ const loginUser = async (req, res) => {
                     role: user.role,
                     hospitalId: user.hospitalId,
                     status: user.status,
+                    permissions: user.permissions || [],
                 },
             },
         });

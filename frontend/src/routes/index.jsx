@@ -16,6 +16,7 @@ import HRProfile from '../pages/hr/HRProfile';
 import MyHospital from '../pages/hr/MyHospital';
 import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
+import HRManagement from '../pages/admin/HRManagement';
 
 const getUserRole = () => {
   const token = localStorage.getItem('token');
@@ -196,9 +197,17 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/hr-management"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <HRManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/structure"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'hr']}>
             <StructurePage />
           </ProtectedRoute>
         }
@@ -206,7 +215,7 @@ const AppRoutes = () => {
       <Route
         path="/structure/:floorId"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'hr']}>
             <FloorDetails />
           </ProtectedRoute>
         }

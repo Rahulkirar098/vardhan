@@ -23,6 +23,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authUserRoute);
 app.use("/api/hospitals", hospitalRoute);
 app.use("/api/hr", hrRoute);
+app.use("/api/v1/hr", hrRoute);
 app.use("/api/super-admin", superAdminRoute);
 app.use("/api/v1/hospitals/:hospitalId", structureRoute);
 

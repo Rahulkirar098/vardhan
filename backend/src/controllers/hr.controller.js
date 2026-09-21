@@ -724,6 +724,197 @@ const cancelInvitation = async (req, res) => {
     }
 };
 
+const getInvitations = async (req, res) => {
+    try {
+        if (!req.user || (req.user.role !== "admin" && req.user.role !== "super_admin")) {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can view invitations",
+            });
+        }
+
+        const hospital = await getAdminHospital(req.user.id);
+
+        if (!hospital) {
+            return res.status(400).json({
+                success: false,
+                message: "Please create a hospital first",
+            });
+        }
+
+        // Automatically update expired invitations
+        const now = new Date();
+        await HrInvitation.updateMany(
+            { hospitalId: hospital._id, status: "pending", expiresAt: { $lt: now } },
+            { status: "expired" }
+        );
+
+        const invitations = await HrInvitation.find({ hospitalId: hospital._id })
+            .select("-tokenHash")
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            message: "Invitations retrieved successfully",
+            data: invitations,
+        });
+    } catch (error) {
+        console.error("Get Invitations Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
+const VALID_HR_PERMISSIONS = [
+    "structure.view",
+    "structure.create",
+    "structure.update",
+    "structure.delete",
+];
+
+const getHRPermissions = async (req, res) => {
+    try {
+        if (!req.user || (req.user.role !== "admin" && req.user.role !== "super_admin")) {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can view HR permissions",
+            });
+        }
+
+        const { hrId } = req.params;
+
+        if (!isValidObjectId(hrId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid HR profile id",
+            });
+        }
+
+        const hrUser = await User.findById(hrId);
+
+        if (!hrUser || hrUser.role !== "hr") {
+            return res.status(404).json({
+                success: false,
+                message: "HR profile not found",
+            });
+        }
+
+        if (req.user.role === "admin") {
+            const hospital = await getAdminHospital(req.user.id);
+            if (!hospital || !hrUser.hospitalId || hrUser.hospitalId.toString() !== hospital._id.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You can only view permissions for HR in your hospital",
+                });
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "HR permissions retrieved successfully",
+            data: {
+                hrId: hrUser._id,
+                name: hrUser.name,
+                email: hrUser.email,
+                permissions: hrUser.permissions || [],
+            },
+        });
+    } catch (error) {
+        console.error("Get HR Permissions Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
+const updateHRPermissions = async (req, res) => {
+    try {
+        if (!req.user || (req.user.role !== "admin" && req.user.role !== "super_admin")) {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can modify HR permissions",
+            });
+        }
+
+        const { hrId } = req.params;
+
+        if (!isValidObjectId(hrId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid HR profile id",
+            });
+        }
+
+        const { permissions } = req.body;
+
+        if (!Array.isArray(permissions)) {
+            return res.status(400).json({
+                success: false,
+                message: "Permissions must be an array of strings",
+            });
+        }
+
+        // Validate permission values against whitelist
+        const invalidPermissions = permissions.filter(
+            (p) => !VALID_HR_PERMISSIONS.includes(p)
+        );
+
+        if (invalidPermissions.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid permissions: ${invalidPermissions.join(", ")}. Valid permissions are: ${VALID_HR_PERMISSIONS.join(", ")}`,
+            });
+        }
+
+        const hrUser = await User.findById(hrId);
+
+        if (!hrUser || hrUser.role !== "hr") {
+            return res.status(404).json({
+                success: false,
+                message: "HR profile not found",
+            });
+        }
+
+        if (req.user.role === "admin") {
+            const hospital = await getAdminHospital(req.user.id);
+            if (!hospital || !hrUser.hospitalId || hrUser.hospitalId.toString() !== hospital._id.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You can only modify permissions for HR in your hospital",
+                });
+            }
+        }
+
+        const uniquePermissions = [...new Set(permissions)];
+
+        hrUser.permissions = uniquePermissions;
+        await hrUser.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "HR permissions updated successfully",
+            data: {
+                hrId: hrUser._id,
+                name: hrUser.name,
+                email: hrUser.email,
+                permissions: hrUser.permissions,
+            },
+        });
+    } catch (error) {
+        console.error("Update HR Permissions Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
 module.exports = {
     createHR,
     getMyHR,
@@ -734,4 +925,7 @@ module.exports = {
     acceptInvitation,
     resendInvitation,
     cancelInvitation,
+    getInvitations,
+    getHRPermissions,
+    updateHRPermissions,
 };

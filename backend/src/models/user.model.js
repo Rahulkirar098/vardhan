@@ -60,6 +60,11 @@ const userSchema = new mongoose.Schema(
             default: null,
         },
 
+        permissions: {
+            type: [String],
+            default: [],
+        },
+
         resetPasswordToken: {
             type: String,
             default: null,
