@@ -3,7 +3,7 @@ import { ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import { LogoutRounded } from '@mui/icons-material';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import sidebarConfig, { getRoleDisplayName } from './sidebar.config';
+import { getRoleDisplayName, getSidebarSectionsForRole } from './sidebar.config';
 import InitialsAvatar from './InitialsAvatar';
 import Loading from './Loading';
 
@@ -189,7 +189,7 @@ const Sidebar = ({ role: forcedRole, onLogout, mobileOpen = false, onMobileClose
   const [loading, setLoading] = useState(true);
   const resolvedRole = forcedRole || getCurrentRole();
   const user = useMemo(() => getCurrentUser(), []);
-  const config = sidebarConfig[resolvedRole];
+  const sections = getSidebarSectionsForRole(resolvedRole);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -212,7 +212,7 @@ const Sidebar = ({ role: forcedRole, onLogout, mobileOpen = false, onMobileClose
     onMobileClose();
   };
 
-  const content = loading || !resolvedRole || !config ? (
+  const content = loading || !resolvedRole || !sections ? (
     <Box
       sx={{
         width: SIDEBAR_WIDTH,
@@ -250,7 +250,7 @@ const Sidebar = ({ role: forcedRole, onLogout, mobileOpen = false, onMobileClose
 
       <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', px: 1.5, py: 0.5 }}>
         <List disablePadding>
-          {config.sections.map((section) => (
+          {sections.map((section) => (
             <Section key={section.title || 'section'} title={section.title}>
               {section.items.map((item) => (
                 <NavItem

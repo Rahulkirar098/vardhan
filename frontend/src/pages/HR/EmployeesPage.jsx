@@ -589,7 +589,7 @@ const EmployeesPage = () => {
         <PageHeader
           title="Employees"
           subtitle="Manage your hospital's employee roster. Invite, view, and update employee records."
-          action={
+          actions={
             hasCreate && (
               <Button
                 variant="contained"

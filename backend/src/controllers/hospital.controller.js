@@ -1,13 +1,25 @@
 const hospitalService = require("../services/hospital.service");
+const Hospital = require("../models/hospital.model");
 const { isValidObjectId } = require("../utils/validate");
 
 const getMyHospital = async (req, res) => {
     try {
-        if (!req.user || req.user.role !== "admin") {
-            return res.status(403).json({ success: false, message: "Only admins can access their hospital" });
+        if (!req.user || (req.user.role !== "admin" && req.user.role !== "hr")) {
+            return res.status(403).json({ success: false, message: "Only admins or HRs can access their hospital" });
         }
 
-        const hospital = await hospitalService.getMyHospital(req.user.id);
+        let hospital;
+        if (req.user.role === "admin") {
+            hospital = await hospitalService.getMyHospital(req.user.id);
+        } else {
+            hospital = await Hospital.findById(req.user.hospitalId).populate("createdBy", "name email phone role status");
+            if (!hospital) {
+                const err = new Error("Hospital not found");
+                err.code = "NOT_FOUND";
+                throw err;
+            }
+        }
+        
         return res.status(200).json({ success: true, message: "Hospital retrieved successfully", data: hospital });
     } catch (error) {
         if (error.code === "NOT_FOUND") {

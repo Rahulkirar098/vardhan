@@ -498,8 +498,8 @@ const StructurePage = () => {
                 icon={LayersRounded}
                 title="No floors added yet"
                 description="Create your first floor to start organizing the hospital."
-                actionLabel="+ Add Floor"
-                onAction={handleOpenCreate}
+                actionLabel={hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? "+ Add Floor" : null}
+                onAction={hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? handleOpenCreate : null}
               />
             </GlassCard>
           ) : (

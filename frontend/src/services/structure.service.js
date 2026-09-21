@@ -1,5 +1,6 @@
 import client from './api/client';
 import hospitalService from './hospital.service';
+import hrService from './hr.service';
 
 let cachedHospitalId = null;
 
@@ -11,7 +12,16 @@ const resolveHospitalId = async (providedId) => {
   if (cachedHospitalId) {
     return cachedHospitalId;
   }
-  const response = await hospitalService.getMyHospital();
+  
+  const role = localStorage.getItem('role');
+  let response;
+  
+  if (role === 'hr') {
+    response = await hrService.getHospital();
+  } else {
+    response = await hospitalService.getMyHospital();
+  }
+  
   const hospital = response?.data?.data;
   const id = hospital?._id || hospital?.id;
   if (!id) {

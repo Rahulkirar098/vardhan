@@ -1,5 +1,6 @@
 const User = require("../models/user.model");
 const Invitation = require("../models/invitation.model");
+const Hospital = require("../models/hospital.model");
 const { isValidObjectId } = require("../utils/validate");
 const { VALID_MODULE_KEYS } = require("../config/modules.config");
 const hrService = require("../services/hr.service");
@@ -13,7 +14,7 @@ const getHRHospital = async (req, res) => {
             });
         }
 
-        const hospital = await hrService.getAdminHospital(req.user.hospitalId);
+        const hospital = await Hospital.findById(req.user.hospitalId);
 
         if (!hospital) {
             return res.status(404).json({

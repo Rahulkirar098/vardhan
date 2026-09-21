@@ -256,24 +256,26 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
       </Box>
 
       <Box sx={{ pt: 2, mt: 'auto', display: 'flex', gap: 1 }}>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<EditRounded />}
-          onClick={() => onEdit(room)}
-          sx={{
-            flex: 1,
-            color: '#0A0A0A',
-            borderColor: '#E5E5E5',
-            fontWeight: 600,
-            '&:hover': {
-              backgroundColor: '#F5F5F5',
-              borderColor: '#0A0A0A',
-            },
-          }}
-        >
-          Edit
-        </Button>
+        {hasPermission(PERMISSIONS.STRUCTURE_UPDATE) && (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<EditRounded />}
+            onClick={() => onEdit(room)}
+            sx={{
+              flex: 1,
+              color: '#0A0A0A',
+              borderColor: '#E5E5E5',
+              fontWeight: 600,
+              '&:hover': {
+                backgroundColor: '#F5F5F5',
+                borderColor: '#0A0A0A',
+              },
+            }}
+          >
+            Edit
+          </Button>
+        )}
       </Box>
     </GlassCard>
   );
@@ -429,8 +431,8 @@ const FloorDetails = () => {
                 icon={MeetingRoomRounded}
                 title="No rooms added yet"
                 description="Add a room to this floor to start organizing the hospital."
-                actionLabel="+ Add Room"
-                onAction={handleOpenCreate}
+                actionLabel={hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? "+ Add Room" : null}
+                onAction={hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? handleOpenCreate : null}
               />
             </GlassCard>
           ) : (
