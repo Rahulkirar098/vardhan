@@ -6,6 +6,7 @@ import {
   PeopleRounded,
   BadgeRounded,
 } from '@mui/icons-material';
+import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
 const sidebarConfig = {
   super_admin: {
@@ -63,16 +64,8 @@ export const getRoleDisplayName = (role) => {
  */
 export const getSidebarSectionsForRole = (role) => {
   if (role === 'hr') {
-    let hasStructureView = false;
+    let hasStructureView = hasPermission(PERMISSIONS.STRUCTURE_VIEW);
     let hasHrmsModule = false;
-
-    try {
-      const storedPerms = localStorage.getItem('permissions');
-      const perms = storedPerms ? JSON.parse(storedPerms) : [];
-      hasStructureView = Array.isArray(perms) && perms.includes('structure.view');
-    } catch {
-      hasStructureView = false;
-    }
 
     try {
       const storedModules = localStorage.getItem('modules');
@@ -97,14 +90,7 @@ export const getSidebarSectionsForRole = (role) => {
       const hrmsItems = [];
 
       // Only add Employees if HR has employee.view
-      let hasEmployeeView = false;
-      try {
-        const storedPerms = localStorage.getItem('permissions');
-        const perms = storedPerms ? JSON.parse(storedPerms) : [];
-        hasEmployeeView = Array.isArray(perms) && perms.includes('employee.view');
-      } catch {
-        hasEmployeeView = false;
-      }
+      let hasEmployeeView = hasPermission(PERMISSIONS.EMPLOYEE_VIEW);
 
       if (hasEmployeeView) {
         hrmsItems.push({ label: 'Employees', path: '/hr/employees', icon: BadgeRounded });
