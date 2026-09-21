@@ -25,6 +25,11 @@ const PERMISSIONS = Object.freeze({
     // Future Phase Placeholders (Roster & Shifts)
     ROSTER_VIEW: "roster.view",
     ROSTER_MANAGE: "roster.manage",
+
+    // Position Management
+    POSITION_VIEW: "position.view",
+    POSITION_CREATE: "position.create",
+    POSITION_UPDATE: "position.update",
 });
 
 module.exports = {

@@ -5,6 +5,7 @@ import {
   LocalHospitalRounded,
   PeopleRounded,
   BadgeRounded,
+  BusinessCenterRounded,
 } from '@mui/icons-material';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
@@ -29,6 +30,7 @@ const sidebarConfig = {
           { label: 'Dashboard', path: '/dashboard', icon: DashboardRounded },
           { label: 'Hospital', path: '/hospital', icon: LocalHospitalRounded },
           { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
+          { label: 'Positions', path: '/positions', icon: BusinessCenterRounded },
           { label: 'HR Management', path: '/hr-management', icon: PeopleRounded },
           { label: 'Employees', path: '/employees', icon: BadgeRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },

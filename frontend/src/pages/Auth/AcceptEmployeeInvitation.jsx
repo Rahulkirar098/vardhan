@@ -171,7 +171,7 @@ const AcceptEmployeeInvitation = () => {
             </Stack>
 
             {/* Position */}
-            {invitation?.position && (
+            {(invitation?.positionId || invitation?.position) && (
               <Stack direction="row" spacing={1} alignItems="center">
                 <BadgeRounded
                   fontSize="small"
@@ -179,7 +179,7 @@ const AcceptEmployeeInvitation = () => {
                 />
                 <Typography variant="body2" color="text.secondary">
                   <strong style={{ color: '#0A0A0A' }}>Position:</strong>{' '}
-                  {invitation.position}
+                  {invitation?.positionId?.name || invitation?.positionId || invitation?.position}
                 </Typography>
               </Stack>
             )}

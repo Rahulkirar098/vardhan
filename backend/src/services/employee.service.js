@@ -2,7 +2,10 @@ const crypto = require("crypto");
 const Employee = require("../models/employee.model");
 const Invitation = require("../models/invitation.model");
 const Hospital = require("../models/hospital.model");
+const Position = require("../models/position.model");
+const User = require("../models/user.model");
 const { sendEmail } = require("../utils/mail");
+const { hashPassword } = require("../utils/password");
 const { hashTokenValue, generateInvitationToken, getStandardExpiry, buildInvitationEmailTemplate } = require("./invitation.service");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,10 +53,17 @@ const listEmployees = async ({
     hospitalId,
     search,
     status,
+    role,
     page = 1,
     limit = 20,
 }) => {
     const filter = { hospitalId };
+
+    if (role) {
+        const usersWithRole = await User.find({ hospitalId, role }).select("_id").lean();
+        const userIds = usersWithRole.map(u => u._id);
+        filter.userId = { $in: userIds };
+    }
 
     if (status && ["ACTIVE", "INACTIVE"].includes(String(status).toUpperCase())) {
         filter.employmentStatus = String(status).toUpperCase();
@@ -79,6 +89,7 @@ const listEmployees = async ({
             .skip(skip)
             .limit(take)
             .populate("userId", "role status")
+            .populate("positionId", "name")
             .lean(),
         Employee.countDocuments(filter),
     ]);
@@ -100,6 +111,7 @@ const getEmployeeById = async ({ employeeMongoId, hospitalId }) => {
     })
         .select("-__v")
         .populate("userId", "role status")
+        .populate("positionId", "name")
         .lean();
 
     return employee || null;
@@ -115,7 +127,7 @@ const createEmployee = async ({
     email,
     phone,
     dateOfJoining,
-    position,
+    positionId,
     employeeId: providedEmployeeId,
 }) => {
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -147,6 +159,15 @@ const createEmployee = async ({
         throw err;
     }
 
+    if (positionId) {
+        const pos = await Position.findOne({ _id: positionId, hospitalId, status: 'active' });
+        if (!pos) {
+            const err = new Error("Selected position is invalid, inactive, or belongs to another hospital.");
+            err.code = "INVALID_POSITION";
+            throw err;
+        }
+    }
+
     const employee = await Employee.create({
         employeeId: resolvedEmployeeId,
         firstName: String(firstName).trim(),
@@ -154,7 +175,7 @@ const createEmployee = async ({
         email: normalizedEmail,
         phone: phone ? String(phone).trim() : null,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
-        position: position ? String(position).trim() : null,
+        positionId,
         employmentStatus: "ACTIVE",
         hospitalId,
         createdBy,
@@ -174,12 +195,15 @@ const inviteEmployee = async ({
     email,
     phone,
     dateOfJoining,
-    position,
+    positionId,
     role = "employee",
     createLogin = false,
     employeeId: providedEmployeeId,
+    modules = [],
+    permissions = [],
 }) => {
     const normalizedEmail = String(email).trim().toLowerCase();
+    const type = role === "hr" ? "HR" : "EMPLOYEE";
 
     // No duplicate active employee
     const existingEmployee = await Employee.findOne({
@@ -198,7 +222,6 @@ const inviteEmployee = async ({
     const existingInvitation = await Invitation.findOne({
         hospitalId: hospital._id,
         email: normalizedEmail,
-        type: "EMPLOYEE",
         status: "pending",
     });
 
@@ -216,18 +239,29 @@ const inviteEmployee = async ({
         ? String(providedEmployeeId).trim().toUpperCase()
         : await generateEmployeeId(hospital._id);
 
+    if (positionId) {
+        const pos = await Position.findOne({ _id: positionId, hospitalId: hospital._id, status: 'active' });
+        if (!pos) {
+            const err = new Error("Selected position is invalid, inactive, or belongs to another hospital.");
+            err.code = "INVALID_POSITION";
+            throw err;
+        }
+    }
+
     const invitation = await Invitation.create({
         hospitalId: hospital._id,
-        type: "EMPLOYEE",
+        type,
         employeeId: resolvedEmployeeId,
         firstName: String(firstName).trim(),
         lastName: String(lastName).trim(),
         email: normalizedEmail,
         phone: phone ? String(phone).trim() : null,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
-        position: position ? String(position).trim() : null,
+        positionId,
         role: createLogin ? role : null,
         createLogin,
+        modules: createLogin && modules.length > 0 ? modules : undefined,
+        permissions: createLogin && permissions.length > 0 ? permissions : undefined,
         tokenHash,
         expiresAt,
         status: "pending",
@@ -235,14 +269,14 @@ const inviteEmployee = async ({
     });
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    const invitationUrl = `${frontendUrl}/employee/invite/${rawToken}`;
+    const invitationUrl = `${frontendUrl}/invite/${rawToken}`;
     const fullName = `${invitation.firstName} ${invitation.lastName}`;
 
     const { text, html } = buildInvitationEmailTemplate({
         hospitalName: hospital.name,
         recipientName: fullName,
-        inviterName: "", // The template handles "by your HR" natively if no inviterName and role is Employee
-        role: "EMPLOYEE",
+        inviterName: "",
+        role: type,
         invitationUrl,
     });
 
@@ -263,7 +297,6 @@ const getInvitationByToken = async (rawToken) => {
 
     const invitation = await Invitation.findOne({
         tokenHash,
-        type: "EMPLOYEE",
         status: "pending",
     })
         .populate("hospitalId", "name code")
@@ -288,9 +321,10 @@ const acceptInvitation = async (rawToken, password) => {
 
     const invitation = await Invitation.findOne({
         tokenHash,
-        type: "EMPLOYEE",
         status: "pending",
-    }).populate("hospitalId", "name");
+    })
+        .populate("hospitalId", "name")
+        .populate("positionId", "name");
 
     if (!invitation) {
         const err = new Error("Invitation is invalid or has already been used.");
@@ -341,7 +375,7 @@ const acceptInvitation = async (rawToken, password) => {
         email: invitation.email,
         phone: invitation.phone,
         dateOfJoining: invitation.dateOfJoining,
-        position: invitation.position,
+        positionId: invitation.positionId?._id || invitation.positionId,
         employmentStatus: "ACTIVE",
         hospitalId: invitation.hospitalId._id,
         createdBy: invitation.invitedBy,
@@ -360,6 +394,8 @@ const acceptInvitation = async (rawToken, password) => {
             employeeId: employee._id,
             status: "active",
             createdBy: invitation.invitedBy,
+            modules: invitation.modules && invitation.modules.length > 0 ? invitation.modules : ["core"],
+            permissions: invitation.permissions || [],
         });
 
         employee.userId = user._id;
@@ -394,7 +430,7 @@ const updateEmployee = async ({
         "email",
         "phone",
         "dateOfJoining",
-        "position",
+        "positionId",
     ];
 
     for (const field of allowedFields) {
@@ -405,6 +441,14 @@ const updateEmployee = async ({
                 employee.dateOfJoining = updates.dateOfJoining
                     ? new Date(updates.dateOfJoining)
                     : null;
+            } else if (field === "positionId") {
+                const pos = await Position.findOne({ _id: updates.positionId, hospitalId, status: 'active' });
+                if (!pos) {
+                    const err = new Error("Selected position is invalid, inactive, or belongs to another hospital.");
+                    err.code = "INVALID_POSITION";
+                    throw err;
+                }
+                employee.positionId = updates.positionId;
             } else {
                 employee[field] = updates[field];
             }
@@ -459,14 +503,13 @@ const listInvitations = async (hospitalId) => {
     await Invitation.updateMany(
         {
             hospitalId,
-            type: "EMPLOYEE",
             status: "pending",
             expiresAt: { $lt: now },
         },
         { status: "expired" }
     );
 
-    return Invitation.find({ hospitalId, type: "EMPLOYEE" })
+    return Invitation.find({ hospitalId })
         .select("-tokenHash")
         .populate("invitedBy", "name email")
         .sort({ createdAt: -1 })
@@ -479,7 +522,6 @@ const cancelInvitation = async ({ invitationId, hospitalId }) => {
     const invitation = await Invitation.findOne({
         _id: invitationId,
         hospitalId,
-        type: "EMPLOYEE",
     });
 
     if (!invitation) return null;
@@ -495,6 +537,47 @@ const cancelInvitation = async ({ invitationId, hospitalId }) => {
     return invitation;
 };
 
+// ─── Resend Invitation ────────────────────────────────────────────────────────
+
+const resendInvitation = async ({ invitationId, hospitalId }) => {
+    const invitation = await Invitation.findOne({
+        _id: invitationId,
+        hospitalId,
+    }).populate("hospitalId", "name");
+
+    if (!invitation) throw new Error("Invitation not found");
+
+    if (invitation.status !== "pending") {
+        throw new Error("Only pending invitations can be resent.");
+    }
+
+    const rawToken = generateInvitationToken();
+    invitation.tokenHash = hashTokenValue(rawToken);
+    invitation.expiresAt = getStandardExpiry();
+    await invitation.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const invitationUrl = `${frontendUrl}/invite/${rawToken}`;
+    const fullName = `${invitation.firstName} ${invitation.lastName || ""}`.trim();
+
+    const { text, html } = buildInvitationEmailTemplate({
+        hospitalName: invitation.hospitalId.name,
+        recipientName: fullName,
+        inviterName: "",
+        role: invitation.type,
+        invitationUrl,
+    });
+
+    await sendEmail({
+        to: invitation.email,
+        subject: `You've been invited to join ${invitation.hospitalId.name}`,
+        text,
+        html,
+    });
+
+    return invitation;
+};
+
 // ─── Employee Stats ───────────────────────────────────────────────────────────
 
 const getEmployeeStats = async (hospitalId) => {
@@ -502,7 +585,7 @@ const getEmployeeStats = async (hospitalId) => {
         Employee.countDocuments({ hospitalId }),
         Employee.countDocuments({ hospitalId, employmentStatus: "ACTIVE" }),
         Employee.countDocuments({ hospitalId, employmentStatus: "INACTIVE" }),
-        Invitation.countDocuments({ hospitalId, type: "EMPLOYEE", status: "pending" }),
+        Invitation.countDocuments({ hospitalId, status: "pending" }),
     ]);
 
     return { total, active, inactive, pendingInvitations };
@@ -522,5 +605,6 @@ module.exports = {
     updateEmployeeStatus,
     listInvitations,
     cancelInvitation,
+    resendInvitation,
     getEmployeeStats,
 };

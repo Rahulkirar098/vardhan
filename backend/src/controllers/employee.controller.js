@@ -5,12 +5,13 @@ const employeeService = require("../services/employee.service");
 
 const listEmployees = async (req, res) => {
     try {
-        const { search, status, page, limit } = req.query;
+        const { search, status, page, limit, role } = req.query;
 
         const result = await employeeService.listEmployees({
             hospitalId: req.user.hospitalId,
             search,
             status,
+            role,
             page: page || 1,
             limit: limit || 20,
         });
@@ -69,7 +70,7 @@ const getEmployee = async (req, res) => {
 
 const inviteEmployee = async (req, res) => {
     try {
-        const { firstName, lastName, email, phone, dateOfJoining, position, employeeId, role, createLogin } = req.body;
+        const { firstName, lastName, email, phone, dateOfJoining, positionId, employeeId, role, createLogin, modules, permissions } = req.body;
 
         if (!firstName || !String(firstName).trim()) {
             return res.status(400).json({ success: false, message: "First name is required" });
@@ -102,10 +103,12 @@ const inviteEmployee = async (req, res) => {
                 email,
                 phone,
                 dateOfJoining,
-                position,
+                positionId,
                 role,
                 createLogin,
                 employeeId,
+                modules,
+                permissions,
             });
 
             return res.status(201).json({
@@ -183,7 +186,7 @@ const getInvitationByToken = async (req, res) => {
                 lastName: invitation.lastName,
                 email: invitation.email,
                 phone: invitation.phone,
-                position: invitation.position,
+                position: invitation.positionId?.name || null,
                 hospitalName: invitation.hospitalId?.name || "Hospital",
                 createLogin: invitation.createLogin,
                 expiresAt: invitation.expiresAt,
@@ -219,7 +222,7 @@ const acceptInvitation = async (req, res) => {
                     firstName: employee.firstName,
                     lastName: employee.lastName,
                     email: employee.email,
-                    position: employee.position,
+                    position: employee.positionId?.name || null,
                     employmentStatus: employee.employmentStatus,
                 },
             });
@@ -251,7 +254,7 @@ const updateEmployee = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid employee id" });
         }
 
-        const { firstName, lastName, email, phone, dateOfJoining, position } = req.body;
+        const { firstName, lastName, email, phone, dateOfJoining, positionId } = req.body;
 
         if (email && !employeeService.EMAIL_REGEX.test(String(email).trim())) {
             return res.status(400).json({
@@ -264,7 +267,7 @@ const updateEmployee = async (req, res) => {
             employeeMongoId: id,
             hospitalId: req.user.hospitalId,
             updatedBy: req.user.id,
-            updates: { firstName, lastName, email, phone, dateOfJoining, position },
+            updates: { firstName, lastName, email, phone, dateOfJoining, positionId },
         });
 
         if (!employee) {
@@ -385,6 +388,35 @@ const cancelInvitation = async (req, res) => {
     }
 };
 
+// ─── Resend Invitation ────────────────────────────────────────────────────────
+
+const resendInvitation = async (req, res) => {
+    try {
+        const { invitationId } = req.params;
+
+        if (!isValidObjectId(invitationId)) {
+            return res.status(400).json({ success: false, message: "Invalid invitation id" });
+        }
+
+        try {
+            await employeeService.resendInvitation({
+                invitationId,
+                hospitalId: req.user.hospitalId,
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Invitation resent successfully",
+            });
+        } catch (serviceError) {
+            return res.status(400).json({ success: false, message: serviceError.message });
+        }
+    } catch (error) {
+        console.error("Resend Employee Invitation Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 // ─── Employee Stats ───────────────────────────────────────────────────────────
 
 const getEmployeeStats = async (req, res) => {
@@ -412,5 +444,6 @@ module.exports = {
     updateEmployeeStatus,
     listInvitations,
     cancelInvitation,
+    resendInvitation,
     getEmployeeStats,
 };

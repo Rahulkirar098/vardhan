@@ -28,6 +28,12 @@ const employeeSchema = new mongoose.Schema(
             trim: true,
         },
 
+        positionId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Position",
+            required: true,
+        },
+
         email: {
             type: String,
             required: true,
@@ -46,11 +52,6 @@ const employeeSchema = new mongoose.Schema(
             default: null,
         },
 
-        position: {
-            type: String,
-            trim: true,
-            default: null,
-        },
 
         employmentStatus: {
             type: String,

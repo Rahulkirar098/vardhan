@@ -24,6 +24,9 @@ const employeeService = {
   listInvitations: () =>
     client.get('/v1/hrms/employees/invitations'),
 
+  resendInvitation: (invitationId) =>
+    client.post(`/v1/hrms/employees/invitations/${invitationId}/resend`),
+
   cancelInvitation: (invitationId) =>
     client.patch(`/v1/hrms/employees/invitations/${invitationId}/cancel`),
 

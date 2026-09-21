@@ -13,6 +13,7 @@ const {
     updateEmployeeStatus,
     listInvitations,
     cancelInvitation,
+    resendInvitation,
     getEmployeeStats,
 } = require("../controllers/employee.controller");
 
@@ -59,6 +60,13 @@ employeeRoute.patch(
     "/employees/invitations/:invitationId/cancel",
     authorizePermission(PERMISSIONS.EMPLOYEE_CREATE),
     cancelInvitation
+);
+
+// Resend invitation
+employeeRoute.post(
+    "/employees/invitations/:invitationId/resend",
+    authorizePermission(PERMISSIONS.EMPLOYEE_CREATE),
+    resendInvitation
 );
 
 // Invite employee

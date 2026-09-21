@@ -10,6 +10,7 @@ const app = require("../index");
 const User = require("../src/models/user.model");
 const Hospital = require("../src/models/hospital.model");
 const Invitation = require("../src/models/invitation.model");
+const Position = require("../src/models/position.model");
 const Floor = require("../src/models/floor.model");
 const Room = require("../src/models/room.model");
 const { hashPassword } = require("../src/utils/password");
@@ -30,6 +31,7 @@ let hrA;
 let tokenHrA;
 
 let testFloorA;
+let positionA;
 
 const testTimestamp = Date.now();
 
@@ -94,6 +96,12 @@ const setupTestEnvironment = async () => {
         isActive: true,
         createdBy: adminA._id,
     });
+
+    positionA = await Position.create({
+        hospitalId: hospitalA._id,
+        name: `HR Position ${testTimestamp}`,
+        status: "active",
+    });
 };
 
 const cleanupTestEnvironment = async () => {
@@ -102,6 +110,7 @@ const cleanupTestEnvironment = async () => {
             await Floor.deleteMany({ hospitalId: hospitalA._id });
             await Room.deleteMany({ hospitalId: hospitalA._id });
             await Invitation.deleteMany({ hospitalId: hospitalA._id });
+            await Position.deleteMany({ hospitalId: hospitalA._id });
             await Hospital.deleteOne({ _id: hospitalA._id });
         }
         if (hospitalB) {
@@ -189,16 +198,18 @@ const runTests = async () => {
                 phone: "9876543210",
                 hospitalId: hospitalA._id,
                 invitedBy: adminA._id,
+                positionId: positionA._id,
                 tokenHash,
                 expiresAt,
                 status: "pending",
                 role: "hr",
+                createLogin: true,
                 modules: ["core"],
             });
             invitationId = inv._id.toString();
 
             // Admin lists invitations
-            const res = await apiRequest("/api/v1/hr/invitations", {
+            const res = await apiRequest("/api/v1/hrms/employees/invitations", {
                 headers: { Authorization: `Bearer ${tokenAdminA}` },
             });
             assert.strictEqual(res.status, 200);
@@ -210,13 +221,12 @@ const runTests = async () => {
 
         // 2. HR accepts invitation
         await test("TEST 2: HR accepts invitation via token and account is created with permissions: []", async () => {
-            const res = await apiRequest(`/api/v1/hr/invite/${rawInvitationToken}/accept`, {
+            const res = await apiRequest(`/api/v1/hrms/employee-invitations/${rawInvitationToken}/accept`, {
                 method: "POST",
                 body: { password: "Password123!" },
             });
-            assert.strictEqual(res.status, 201);
+            assert.strictEqual(res.status, 200);
             assert.strictEqual(res.data.success, true);
-            assert.strictEqual(res.data.data.role, "hr");
 
             // Fetch created user
             hrA = await User.findOne({ email: `hrA_${testTimestamp}@example.com` });

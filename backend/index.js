@@ -12,6 +12,7 @@ const { superAdminRoute } = require("./src/routes/superAdmin.route");
 const { structureRoute } = require("./src/routes/structure.route");
 const { moduleRoute } = require("./src/routes/module.route");
 const { employeeRoute } = require("./src/routes/employee.route");
+const positionRoute = require("./src/routes/position.route");
 
 const app = express();
 
@@ -32,10 +33,13 @@ app.use("/api/v1/hospitals/:hospitalId", structureRoute);
 app.use("/api/v1/modules", moduleRoute);
 app.use("/api/modules", moduleRoute);
 app.use("/api/v1/hrms", employeeRoute);
+app.use("/api/positions", positionRoute);
+app.use("/api/v1/positions", positionRoute);
 
 const Floor = require("./src/models/floor.model");
 const Room = require("./src/models/room.model");
 const Invitation = require("./src/models/invitation.model");
+const Position = require("./src/models/position.model");
 
 mongoose
     .connect(process.env.MONGODB_URI)
@@ -45,6 +49,7 @@ mongoose
             await Floor.syncIndexes();
             await Room.syncIndexes();
             await Invitation.syncIndexes();
+            await Position.syncIndexes();
         } catch (indexErr) {
             console.error("Error syncing indexes:", indexErr);
         }

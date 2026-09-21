@@ -36,6 +36,8 @@ import {
   SendRounded,
 } from '@mui/icons-material';
 import hrService from '../../services/hr.service';
+import employeeService from '../../services/employee.service';
+import positionService from '../../services/position.service';
 import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -79,8 +81,8 @@ const MODULE_OPTIONS = [
 ];
 
 // ─── Invite HR Modal ────────────────────────────────────────────────────────
-const InviteHRModal = ({ open, onClose, onSuccess }) => {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', position: '' });
+const InviteHRModal = ({ open, onClose, onSuccess, positions }) => {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', positionId: '' });
   const [selectedModules, setSelectedModules] = useState([]);
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -88,7 +90,7 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
 
   useEffect(() => {
     if (open) {
-      setForm({ name: '', email: '', phone: '', position: '' });
+      setForm({ name: '', email: '', phone: '', positionId: '' });
       setSelectedModules([]);
       setSelectedPermissions([]);
       setError('');
@@ -126,11 +128,14 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
 
     try {
       setSubmitting(true);
-      await hrService.invite({
-        name: form.name.trim(),
+      await employeeService.inviteEmployee({
+        firstName: form.name.trim().split(' ')[0],
+        lastName: form.name.trim().split(' ').slice(1).join(' '),
         email: form.email.trim().toLowerCase(),
         phone: form.phone.trim() || undefined,
-        position: form.position.trim() || undefined,
+        positionId: form.positionId || undefined,
+        role: 'hr',
+        createLogin: true,
         modules: selectedModules,
         permissions: selectedPermissions,
       });
@@ -185,13 +190,21 @@ const InviteHRModal = ({ open, onClose, onSuccess }) => {
           fullWidth
         />
         <TextField
-          label="Hospital Position (optional)"
-          name="position"
-          value={form.position}
+          select
+          label="Designation/Position (optional)"
+          name="positionId"
+          value={form.positionId}
           onChange={handleChange}
-          placeholder="e.g. HR Manager, Lead Recruiter"
           fullWidth
-        />
+          SelectProps={{ native: true }}
+        >
+          <option value="">None</option>
+          {positions.map((p) => (
+            <option key={p._id} value={p._id}>
+              {p.name}
+            </option>
+          ))}
+        </TextField>
         <TextField
           label="Vardhan Access Role"
           value="HR"
@@ -628,6 +641,7 @@ const ManageModulesModal = ({ open, hrUser, onClose, onSuccess }) => {
 const HRManagement = () => {
   const [hrList, setHrList] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tabIndex, setTabIndex] = useState(0);
@@ -645,12 +659,15 @@ const HRManagement = () => {
     try {
       setLoading(true);
       setError('');
-      const [hrRes, invRes] = await Promise.all([
-        hrService.getAll().catch(() => ({ data: { data: [] } })),
-        hrService.getInvitations().catch(() => ({ data: { data: [] } })),
+      const [res, invRes, posRes] = await Promise.all([
+        employeeService.listEmployees({ role: 'hr' }),
+        employeeService.listInvitations().catch(() => ({ data: { data: [] } })),
+        positionService.getPositions({ status: 'active' }).catch(() => ({ data: [] })),
       ]);
-      setHrList(hrRes?.data?.data || []);
+      const data = Array.isArray(res.data?.data?.employees) ? res.data.data.employees : [];
+      setHrList(data);
       setInvitations(invRes?.data?.data || []);
+      setPositions(posRes?.data || []);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to load HR management data.');
     } finally {
@@ -676,7 +693,7 @@ const HRManagement = () => {
 
   const handleResendInvitation = async (invitationId) => {
     try {
-      await hrService.resendInvitation(invitationId);
+      await employeeService.resendInvitation(invitationId);
       setSnackbar({ open: true, message: 'Invitation resent successfully.', severity: 'success' });
       loadData();
     } catch (err) {
@@ -692,7 +709,7 @@ const HRManagement = () => {
     if (!cancelInviteTarget) return;
     try {
       setCancelling(true);
-      await hrService.cancelInvitation(cancelInviteTarget._id);
+      await employeeService.cancelInvitation(cancelInviteTarget._id);
       setSnackbar({ open: true, message: 'Invitation cancelled successfully.', severity: 'success' });
       setCancelInviteTarget(null);
       loadData();
@@ -710,14 +727,14 @@ const HRManagement = () => {
   const handlePermissionsUpdated = (msg, hrId, updatedPermissions) => {
     setSnackbar({ open: true, message: msg, severity: 'success' });
     setHrList((prev) =>
-      prev.map((item) => (item._id === hrId ? { ...item, permissions: updatedPermissions } : item)),
+      prev.map((item) => (item.userId?._id === hrId ? { ...item, userId: { ...item.userId, permissions: updatedPermissions } } : item)),
     );
   };
 
   const handleModulesUpdated = (msg, hrId, updatedModules) => {
     setSnackbar({ open: true, message: msg, severity: 'success' });
     setHrList((prev) =>
-      prev.map((item) => (item._id === hrId ? { ...item, modules: updatedModules } : item)),
+      prev.map((item) => (item.userId?._id === hrId ? { ...item, userId: { ...item.userId, modules: updatedModules } } : item)),
     );
   };
 
@@ -743,15 +760,16 @@ const HRManagement = () => {
   const renderHrCell = (hr, column) => {
     switch (column.key) {
       case 'name':
+        const fullName = `${hr.firstName || ''} ${hr.lastName || ''}`.trim();
         return (
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <InitialsAvatar name={hr.name} />
+            <InitialsAvatar name={fullName} />
             <Box>
               <Typography variant="body2" fontWeight={600}>
-                {hr.name}
+                {fullName}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                HR Specialist
+                {hr.positionId?.name || 'HR Specialist'}
               </Typography>
             </Box>
           </Stack>
@@ -768,9 +786,9 @@ const HRManagement = () => {
           </Box>
         );
       case 'status':
-        return <StatusBadge status={hr.status || 'active'} />;
+        return <StatusBadge status={hr.userId?.status || hr.employmentStatus || 'active'} />;
       case 'modules': {
-        const mods = (Array.isArray(hr.modules) ? hr.modules : ['core']).filter((m) => m !== 'core');
+        const mods = (Array.isArray(hr.userId?.modules) ? hr.userId.modules : ['core']).filter((m) => m !== 'core');
         if (mods.length === 0) {
           return (
             <Typography variant="caption" color="text.secondary" fontStyle="italic">
@@ -790,7 +808,7 @@ const HRManagement = () => {
         );
       }
       case 'permissions': {
-        const perms = Array.isArray(hr.permissions) ? hr.permissions : [];
+        const perms = Array.isArray(hr.userId?.permissions) ? hr.userId.permissions : [];
         if (perms.length === 0) {
           return (
             <Typography variant="caption" color="text.secondary" fontStyle="italic">
@@ -812,13 +830,13 @@ const HRManagement = () => {
   };
 
   const renderHrActions = (hr) => {
-    if (hr.status === 'inactive') return null;
+    if (hr.employmentStatus === 'INACTIVE' || hr.userId?.status === 'inactive') return null;
     return (
       <Stack direction="row" spacing={1} justifyContent="flex-end">
         <Tooltip title="Manage module access">
-          <Button variant="outlined" size="small" startIcon={<AppsRounded />} onClick={() => setModuleModalHr(hr)} sx={{ fontWeight: 600, textTransform: 'none' }}>Modules</Button>
+          <Button variant="outlined" size="small" startIcon={<AppsRounded />} onClick={() => setModuleModalHr(hr.userId)} sx={{ fontWeight: 600, textTransform: 'none' }}>Modules</Button>
         </Tooltip>
-        <Button variant="outlined" size="small" startIcon={<LockPersonRounded />} onClick={() => setPermissionModalHr(hr)} sx={{ fontWeight: 600, textTransform: 'none' }}>Permissions</Button>
+        <Button variant="outlined" size="small" startIcon={<LockPersonRounded />} onClick={() => setPermissionModalHr(hr.userId)} sx={{ fontWeight: 600, textTransform: 'none' }}>Permissions</Button>
       </Stack>
     );
   };
@@ -837,7 +855,8 @@ const HRManagement = () => {
     
     switch (column.key) {
       case 'name':
-        return <Typography variant="body2" fontWeight={600}>{inv.name}</Typography>;
+        const fullName = `${inv.firstName || ''} ${inv.lastName || ''}`.trim() || inv.name || 'Unknown';
+        return <Typography variant="body2" fontWeight={600}>{fullName}</Typography>;
       case 'email':
         return <Typography variant="body2">{inv.email}</Typography>;
       case 'status':
@@ -1039,6 +1058,7 @@ const HRManagement = () => {
           setSnackbar({ open: true, message: msg, severity: 'success' });
           loadData();
         }}
+        positions={positions}
       />
 
       <ManagePermissionsModal

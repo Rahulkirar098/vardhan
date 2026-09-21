@@ -4,7 +4,6 @@ import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
-import AcceptHRInvitation from '../pages/auth/AcceptHRInvitation';
 import AcceptEmployeeInvitation from '../pages/auth/AcceptEmployeeInvitation';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import HRDashboard from '../pages/hr/HRDashboard';
@@ -19,6 +18,7 @@ import EmployeesPage from '../pages/hr/EmployeesPage';
 import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 import HRManagement from '../pages/admin/HRManagement';
+import PositionsPage from '../pages/admin/PositionsPage';
 
 const getUserRole = () => {
   const token = localStorage.getItem('token');
@@ -143,6 +143,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/positions"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <PositionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/profile"
         element={
           <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
@@ -231,11 +239,7 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/hr/invite/:token"
-        element={<AcceptHRInvitation />}
-      />
-      <Route
-        path="/employee/invite/:token"
+        path="/invite/:token"
         element={<AcceptEmployeeInvitation />}
       />
       <Route

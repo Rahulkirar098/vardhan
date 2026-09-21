@@ -92,10 +92,10 @@ const invitationSchema = new mongoose.Schema(
             uppercase: true,
             default: null,
         },
-        position: {
-            type: String,
-            trim: true,
-            default: null,
+        positionId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Position',
+            required: true,
         },
         dateOfJoining: {
             type: Date,

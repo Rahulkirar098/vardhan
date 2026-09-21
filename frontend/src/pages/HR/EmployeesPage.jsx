@@ -31,6 +31,7 @@ import {
   ToggleOnRounded,
 } from '@mui/icons-material';
 import employeeService from '../../services/employee.service';
+import positionService from '../../services/position.service';
 import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -58,13 +59,13 @@ const formatDate = (d) => {
 };
 
 // ─── Invite Employee Modal ────────────────────────────────────────────────────
-const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
+const InviteEmployeeModal = ({ open, onClose, onSuccess, positions }) => {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
-    position: '',
+    positionId: '',
     role: 'employee',
     createLogin: false,
     dateOfJoining: '',
@@ -75,7 +76,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
 
   useEffect(() => {
     if (open) {
-      setForm({ firstName: '', lastName: '', email: '', phone: '', position: '', role: 'employee', createLogin: false, dateOfJoining: '', employeeId: '' });
+      setForm({ firstName: '', lastName: '', email: '', phone: '', positionId: '', role: 'employee', createLogin: false, dateOfJoining: '', employeeId: '' });
       setError('');
       setSubmitting(false);
     }
@@ -100,7 +101,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
-        position: form.position.trim() || undefined,
+        positionId: form.positionId || undefined,
         role: form.createLogin ? form.role : undefined,
         createLogin: form.createLogin,
         dateOfJoining: form.dateOfJoining || undefined,
@@ -179,13 +180,19 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
         </Stack>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
+            select
             label="Hospital Position (optional)"
-            name="position"
-            value={form.position}
+            name="positionId"
+            value={form.positionId}
             onChange={handleChange}
             fullWidth
-            placeholder="e.g. Nurse, Doctor"
-          />
+            SelectProps={{ native: true }}
+          >
+            <option value="">None</option>
+            {positions.map(p => (
+              <option key={p._id} value={p._id}>{p.name}</option>
+            ))}
+          </TextField>
           <TextField
             label="Date of Joining (optional)"
             name="dateOfJoining"
@@ -229,8 +236,8 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess }) => {
 };
 
 // ─── Edit Employee Modal ──────────────────────────────────────────────────────
-const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', position: '', dateOfJoining: '' });
+const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) => {
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', positionId: '', dateOfJoining: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -241,7 +248,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
         lastName: employee.lastName || '',
         email: employee.email || '',
         phone: employee.phone || '',
-        position: employee.position || '',
+        positionId: employee.positionId?._id || employee.positionId || '',
         dateOfJoining: employee.dateOfJoining ? new Date(employee.dateOfJoining).toISOString().split('T')[0] : '',
       });
       setError('');
@@ -267,7 +274,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
-        position: form.position.trim() || undefined,
+        positionId: form.positionId || undefined,
         dateOfJoining: form.dateOfJoining || undefined,
       });
       onSuccess('Employee updated successfully.');
@@ -329,12 +336,19 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess }) => {
             fullWidth
           />
           <TextField
-            label="Hospital Position"
-            name="position"
-            value={form.position}
+            select
+            label="Position"
+            name="positionId"
+            value={form.positionId}
             onChange={handleChange}
             fullWidth
-          />
+            SelectProps={{ native: true }}
+          >
+            <option value="">None</option>
+            {positions.map(p => (
+              <option key={p._id} value={p._id}>{p.name}</option>
+            ))}
+          </TextField>
         </Stack>
         <TextField
           label="Date of Joining"
@@ -377,7 +391,7 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
           { label: 'Employee ID', value: employee.employeeId },
           { label: 'Email', value: employee.email },
           { label: 'Phone', value: employee.phone || '—' },
-          { label: 'Position', value: employee.position || '—' },
+          { label: 'Position', value: employee.positionId?.name || '—' },
           { label: 'Date of Joining', value: formatDate(employee.dateOfJoining) },
           { label: 'Employment Status', value: employee.employmentStatus },
           ...(employee.employmentStatus === 'INACTIVE' ? [{ label: 'Leaving Date', value: formatDate(employee.leavingDate) }] : []),
@@ -402,6 +416,7 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [positions, setPositions] = useState([]);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, pendingInvitations: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -431,14 +446,16 @@ const EmployeesPage = () => {
     try {
       setLoading(true);
       setError('');
-      const [empRes, invRes, statRes] = await Promise.all([
+      const [empRes, invRes, statRes, posRes] = await Promise.all([
         employeeService.listEmployees({ search: search || undefined, status: statusFilter || undefined }),
         employeeService.listInvitations().catch(() => ({ data: { data: [] } })),
         employeeService.getEmployeeStats().catch(() => ({ data: { data: { total: 0, active: 0, inactive: 0, pendingInvitations: 0 } } })),
+        positionService.getPositions({ status: 'active' }).catch(() => ({ data: [] })),
       ]);
       setEmployees(empRes?.data?.data?.employees || []);
       setInvitations(invRes?.data?.data || []);
       setStats(statRes?.data?.data || { total: 0, active: 0, inactive: 0, pendingInvitations: 0 });
+      setPositions(posRes?.data || []);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to load employees.');
     } finally {
@@ -512,7 +529,7 @@ const EmployeesPage = () => {
           </>
         );
       case 'position':
-        return <Typography variant="body2">{emp.position || '—'}</Typography>;
+        return <Typography variant="body2">{emp.positionId?.name || '—'}</Typography>;
       case 'role':
         return (
           <Chip
@@ -580,7 +597,7 @@ const EmployeesPage = () => {
       case 'email':
         return <Typography variant="body2">{inv.email}</Typography>;
       case 'position':
-        return <Typography variant="body2">{inv.position || '—'}</Typography>;
+        return <Typography variant="body2">{inv.positionId?.name || '—'}</Typography>;
       case 'status':
         return <StatusBadge status={effectiveStatus} />;
       case 'expires':
@@ -744,6 +761,7 @@ const EmployeesPage = () => {
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
         onSuccess={(msg) => { showSnack(msg); loadEmployees(); }}
+        positions={positions}
       />
 
       <EditEmployeeModal
@@ -751,6 +769,7 @@ const EmployeesPage = () => {
         employee={editEmployee}
         onClose={() => setEditEmployee(null)}
         onSuccess={(msg) => { showSnack(msg); loadEmployees(); setEditEmployee(null); }}
+        positions={positions}
       />
 
       <EmployeeDetailsModal

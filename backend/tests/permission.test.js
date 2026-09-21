@@ -361,9 +361,9 @@ const runTests = async () => {
             assert(Array.isArray(data.data));
         });
 
-        // 13. HR can view HR profile (hr.view)
-        await test("TEST 13: HR can view own HR profile (hr.view)", async () => {
-            const res = await fetch(`${baseUrl}/api/hr/me`, {
+        // 13. HR can view auth profile
+        await test("TEST 13: HR can view own auth profile", async () => {
+            const res = await fetch(`${baseUrl}/api/auth/me`, {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${tokenHrA}`,
@@ -375,9 +375,9 @@ const runTests = async () => {
             assert.strictEqual(data.data.email, hrA.email);
         });
 
-        // 14. Admin can view HR records (hr.view)
-        await test("TEST 14: Admin can view HR records (hr.view)", async () => {
-            const res = await fetch(`${baseUrl}/api/hr`, {
+        // 14. Admin can view HR records (employee list with hr role)
+        await test("TEST 14: Admin can view HR records (employee.view)", async () => {
+            const res = await fetch(`${baseUrl}/api/v1/hrms/employees?role=hr`, {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${tokenAdminA}`,
@@ -386,7 +386,7 @@ const runTests = async () => {
             assert.strictEqual(res.status, 200);
             const data = await res.json();
             assert.strictEqual(data.success, true);
-            assert(Array.isArray(data.data));
+            assert(Array.isArray(data.data.employees));
         });
 
     } finally {
