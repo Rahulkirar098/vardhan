@@ -488,13 +488,15 @@ const updateEmployee = async ({
                     throw err;
                 }
 
-                const pos = await Position.findOne({ _id: updates.positionId, hospitalId, status: 'active' });
-                if (!pos) {
-                    const err = new Error("Selected position is invalid, inactive, or belongs to another hospital.");
-                    err.code = "INVALID_POSITION";
-                    throw err;
+                if (String(employee.positionId || '') !== String(updates.positionId)) {
+                    const pos = await Position.findOne({ _id: updates.positionId, hospitalId, status: 'active' });
+                    if (!pos) {
+                        const err = new Error("Selected position is invalid, inactive, or belongs to another hospital.");
+                        err.code = "INVALID_POSITION";
+                        throw err;
+                    }
+                    employee.positionId = updates.positionId;
                 }
-                employee.positionId = updates.positionId;
             } else {
                 employee[field] = updates[field];
             }

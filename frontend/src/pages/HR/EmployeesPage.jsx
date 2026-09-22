@@ -440,6 +440,11 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
+              {employee?.positionId?._id && !positions.some(p => p._id === employee.positionId?._id) && (
+                <MenuItem key={employee.positionId._id} value={employee.positionId._id}>
+                  {employee.positionId.name} (Current)
+                </MenuItem>
+              )}
               {positions.map((p) => (
                 <MenuItem key={p._id} value={p._id}>{p.name}</MenuItem>
               ))}
@@ -448,7 +453,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
             <TextField
               label="Position"
               name="positionId"
-              value={positions.find(p => p._id === form.positionId)?.name || 'None'}
+              value={positions.find(p => p._id === form.positionId)?.name || employee?.positionId?.name || 'None'}
               fullWidth
               disabled
             />
