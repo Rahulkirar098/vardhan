@@ -140,6 +140,12 @@ const inviteEmployee = async (req, res) => {
                     message: serviceError.message,
                 });
             }
+            if (serviceError.code === "INVALID_POSITION" || serviceError.code === "VALIDATION_ERROR") {
+                return res.status(400).json({
+                    success: false,
+                    message: serviceError.message,
+                });
+            }
 
             const msg = String(serviceError?.message || "");
             if (

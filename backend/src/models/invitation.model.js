@@ -61,6 +61,12 @@ const invitationSchema = new mongoose.Schema(
             required: true,
         },
 
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+
         acceptedAt: {
             type: Date,
             default: null,

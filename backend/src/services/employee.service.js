@@ -75,7 +75,7 @@ const listEmployees = async ({
     const filter = { hospitalId };
 
     if (role) {
-        const usersWithRole = await User.find({ hospitalId, role }).select("_id").lean();
+        const usersWithRole = await User.find({ role }).select("_id").lean();
         const userIds = usersWithRole.map(u => u._id);
         filter.userId = { $in: userIds };
     }
@@ -105,6 +105,7 @@ const listEmployees = async ({
             .limit(take)
             .populate("userId", "role status permissions modules")
             .populate("positionId", "name")
+            .populate("createdBy", "name email role")
             .lean(),
         Employee.countDocuments(filter),
     ]);
@@ -127,6 +128,7 @@ const getEmployeeById = async ({ employeeMongoId, hospitalId }) => {
         .select("-__v")
         .populate("userId", "role status")
         .populate("positionId", "name")
+        .populate("createdBy", "name email role")
         .lean();
 
     return employee || null;
@@ -286,6 +288,7 @@ const inviteEmployee = async ({
         expiresAt,
         status: "pending",
         invitedBy,
+        createdBy: invitedBy,
     });
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -554,7 +557,9 @@ const listInvitations = async (hospitalId) => {
 
     return Invitation.find({ hospitalId })
         .select("-tokenHash")
-        .populate("invitedBy", "name email")
+        .populate("invitedBy", "name email role")
+        .populate("createdBy", "name email role")
+        .populate("positionId", "name")
         .sort({ createdAt: -1 })
         .lean();
 };

@@ -299,6 +299,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
   const [error, setError] = useState('');
   
   const hasPositionUpdate = hasPermission(PERMISSIONS.EMPLOYEE_POSITION_UPDATE);
+  const hasHRManage = hasPermission(PERMISSIONS.HR_UPDATE);
   const isHR = employee?.userId?.role === 'hr';
 
   useEffect(() => {
@@ -340,19 +341,24 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
     try {
       setSubmitting(true);
       
+      const payload = {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || undefined,
+        dateOfJoining: form.dateOfJoining || undefined,
+      };
+
+      if (hasPositionUpdate && form.positionId) {
+        payload.positionId = form.positionId;
+      }
+
       const updatePromises = [
-        employeeService.updateEmployee(employee._id, {
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim() || undefined,
-          positionId: form.positionId || undefined,
-          dateOfJoining: form.dateOfJoining || undefined,
-        })
+        employeeService.updateEmployee(employee._id, payload)
       ];
 
-      // Update HR permissions and modules concurrently if they are HR
-      if (isHR && employee.userId?._id) {
+      // Update HR permissions and modules only if user has HR update permission and employee is HR
+      if (hasHRManage && isHR && employee.userId?._id) {
         updatePromises.push(hrService.updatePermissions(employee.userId._id, selectedPermissions));
         updatePromises.push(hrService.updateModules(employee.userId._id, selectedModules));
       }
@@ -458,7 +464,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
           slotProps={{ inputLabel: { shrink: true } }}
         />
 
-        {isHR && (
+        {hasHRManage && isHR && (
           <>
             <Divider />
             <Box>
@@ -584,6 +590,12 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
           { label: 'Role', value: employee.userId ? (employee.userId.role === 'hr' ? 'HR' : 'Employee') : '—' },
           { label: 'Modules', value: employee.userId?.modules?.length ? employee.userId.modules.join(', ') : '—' },
           { label: 'Permissions', value: employee.userId?.permissions?.length ? employee.userId.permissions.length + ' permissions' : '—' },
+          ...(employee.createdBy ? [{
+            label: 'Created By',
+            value: typeof employee.createdBy === 'object'
+              ? `${employee.createdBy.name || 'User'} (${employee.createdBy.role === 'hr' ? 'HR' : 'Admin'})`
+              : 'Admin',
+          }] : []),
           { label: 'Created', value: formatDate(employee.createdAt) },
         ].map(({ label, value }) => (
           <Stack key={label} direction="row" justifyContent="space-between" alignItems="center">

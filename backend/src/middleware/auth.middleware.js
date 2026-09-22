@@ -69,6 +69,14 @@ const authMiddleware = async (req, res, next) => {
             }
         }
 
+        if (!hospitalId && (user.role === "admin" || user.role === "super_admin")) {
+            const Hospital = require("../models/hospital.model");
+            const hospital = await Hospital.findOne({ createdBy: user._id }).select("_id").lean();
+            if (hospital) {
+                hospitalId = hospital._id;
+            }
+        }
+
         req.user = {
             id: user._id,
             role: user.role,
