@@ -47,6 +47,8 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.EMPLOYEE_VIEW,
     PERMISSIONS.POSITION_VIEW,
   ]),
+
+  employee: Object.freeze([]),
 });
 
 /**

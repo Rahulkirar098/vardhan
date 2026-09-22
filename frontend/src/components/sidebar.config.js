@@ -5,6 +5,7 @@ import {
   LocalHospitalRounded,
   BadgeRounded,
   BusinessCenterRounded,
+  VpnKeyRounded,
 } from '@mui/icons-material';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
@@ -31,6 +32,7 @@ const sidebarConfig = {
           { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
           { label: 'Positions', path: '/positions', icon: BusinessCenterRounded },
           { label: 'Employees', path: '/employees', icon: BadgeRounded },
+          { label: 'Access Management', path: '/access-management', icon: VpnKeyRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
       },

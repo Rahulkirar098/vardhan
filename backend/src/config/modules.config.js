@@ -13,7 +13,7 @@ const SYSTEM_MODULES = [
         isCore: true,
         isEnabled: true,
         description: "Fundamental multi-tenant SaaS foundation: Hospital/Tenant, Authentication, Users, Roles, and Permissions.",
-        allowedRoles: ["super_admin", "admin", "hr"],
+        allowedRoles: ["super_admin", "admin", "hr", "employee"],
         features: [
             "hospital_tenant",
             "authentication",
@@ -29,7 +29,7 @@ const SYSTEM_MODULES = [
         isCore: true,
         isEnabled: true,
         description: "Physical hospital organization including Floors and generic Rooms (ICU, Wards, OT, etc.).",
-        allowedRoles: ["super_admin", "admin", "hr"],
+        allowedRoles: ["super_admin", "admin", "hr", "employee"],
         requiredPermission: "structure.view",
         features: ["floors", "rooms"],
     },
@@ -40,7 +40,7 @@ const SYSTEM_MODULES = [
         isCore: false,
         isEnabled: true,
         description: "Business module for Employee records, Reporting Manager, Roster, Attendance, and Leave tracking.",
-        allowedRoles: ["admin", "hr"],
+        allowedRoles: ["admin", "hr", "employee"],
         features: ["employees", "roster", "attendance", "leave", "reporting_manager"],
     },
     {
@@ -66,7 +66,7 @@ const getAvailableModules = (userRole, userPermissions = [], userModules = ["cor
         let moduleGranted = true;
         let permissionAllowed = true;
 
-        if (userRole === "hr") {
+        if (userRole !== "admin" && userRole !== "super_admin") {
             // Non-core modules require explicit module access granted by Admin
             if (!mod.isCore) {
                 moduleGranted = Array.isArray(userModules) && userModules.includes(mod.key);
@@ -107,7 +107,7 @@ const canUserAccessModule = (moduleKey, userRole, userPermissions = [], userModu
     if (!mod || !mod.isEnabled) return false;
     if (!mod.allowedRoles.includes(userRole)) return false;
 
-    if (userRole === "hr") {
+    if (userRole !== "admin" && userRole !== "super_admin") {
         if (!mod.isCore && (!Array.isArray(userModules) || !userModules.includes(moduleKey))) {
             return false;
         }

@@ -1,12 +1,12 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "CloudCherry Hospital HRMS API",
+  "description": "Vardhan Hospital SaaS API",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "node tests/structure.test.js && node tests/permission.test.js && node tests/hr-permission-flow.test.js && node tests/core-platform.test.js && node tests/hr-profile-fix.test.js && node tests/unified-employees.test.js"
+    "test": "node tests/structure.test.js && node tests/permission.test.js && node tests/hr-permission-flow.test.js && node tests/core-platform.test.js && node tests/hr-profile-fix.test.js && node tests/unified-employees.test.js && node tests/access-management.test.js"
   },
   "keywords": [],
   "author": "",

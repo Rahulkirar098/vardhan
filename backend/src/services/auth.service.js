@@ -105,19 +105,19 @@ const forgotPassword = async (email) => {
     try {
         await sendEmail({
             to: normalizedEmail,
-            subject: "Reset your Krince.in password",
-            text: `Hello ${user.name},\n\nYou requested a password reset for your Krince.in account.\n\nClick the link below to reset your password (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, you can safely ignore this email.`,
+            subject: "Reset your Vardhan password",
+            text: `Hello ${user.name},\n\nYou requested a password reset for your Vardhan account.\n\nClick the link below to reset your password (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, you can safely ignore this email.`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
                     <h2>Reset your password</h2>
                     <p>Hello ${user.name},</p>
-                    <p>You requested a password reset for your Krince.in account.</p>
+                    <p>You requested a password reset for your Vardhan account.</p>
                     <p>
                         <a href="${resetUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: bold;">Reset Password</a>
                     </p>
                     <p>This link is valid for 1 hour.</p>
                     <p>If you did not request this, you can safely ignore this email.</p>
-                    <p>Regards,<br />Krince.in</p>
+                    <p>Regards,<br />Vardhan</p>
                 </div>
             `,
         });

@@ -18,6 +18,7 @@ import EmployeesPage from '../pages/hr/EmployeesPage';
 import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 import PositionsPage from '../pages/admin/PositionsPage';
+import AccessManagementPage from '../pages/admin/AccessManagementPage';
 
 const getUserRole = () => {
   const token = localStorage.getItem('token');
@@ -150,6 +151,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <PositionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/access-management"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AccessManagementPage />
           </ProtectedRoute>
         }
       />

@@ -24,11 +24,11 @@ const BrandMark = () => (
         letterSpacing: '-0.02em',
       }}
     >
-      C
+      V
     </Box>
     <Box>
       <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1.1, letterSpacing: '-0.01em' }}>
-        CLOUDCHERRY
+        VARDHAN
       </Typography>
       <Typography
         variant="caption"
@@ -89,7 +89,7 @@ const BrandPanel = () => (
     </Box>
 
     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>
-      CloudCherry Platform · © {new Date().getFullYear()}
+      Vardhan Platform · © {new Date().getFullYear()}
     </Typography>
   </Box>
 );
@@ -125,10 +125,10 @@ const AuthLayout = ({ title, subtitle, children }) => (
                 fontSize: 17,
               }}
             >
-              C
+              V
             </Box>
             <Typography sx={{ fontWeight: 800, fontSize: 18, letterSpacing: '-0.01em' }}>
-              CLOUDCHERRY
+              VARDHAN
             </Typography>
           </Stack>
         </Box>

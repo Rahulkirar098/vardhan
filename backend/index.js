@@ -13,6 +13,7 @@ const { structureRoute } = require("./src/routes/structure.route");
 const { moduleRoute } = require("./src/routes/module.route");
 const { employeeRoute } = require("./src/routes/employee.route");
 const positionRoute = require("./src/routes/position.route");
+const { accessManagementRoute } = require("./src/routes/accessManagement.route");
 
 const app = express();
 
@@ -38,6 +39,8 @@ app.use("/api/v1/hrms", employeeRoute);
 app.use("/api/hrms", employeeRoute);
 app.use("/api/positions", positionRoute);
 app.use("/api/v1/positions", positionRoute);
+app.use("/api/v1/access-management", accessManagementRoute);
+app.use("/api/access-management", accessManagementRoute);
 
 const Floor = require("./src/models/floor.model");
 const Room = require("./src/models/room.model");

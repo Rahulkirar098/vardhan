@@ -42,7 +42,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
     const transporter = createTransporter();
 
     return transporter.sendMail({
-        from: `${process.env.SMTP_FROM_NAME || "Krince.in"} <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
+        from: `${process.env.SMTP_FROM_NAME || "Vardhan"} <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
         to,
         subject,
         text,

@@ -58,11 +58,11 @@ const Brand = () => (
         fontSize: 17,
       }}
     >
-      C
+      V
     </Box>
     <Stack spacing={0}>
       <Typography sx={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.01em', lineHeight: 1.1 }}>
-        CLOUDCHERRY
+        VARDHAN
       </Typography>
       <Typography
         variant="caption"
@@ -114,7 +114,7 @@ const Landing = () => {
                   fontSize: 10.5,
                 }}
               >
-                CLOUDCHERRY · HOSPITAL WORKFORCE PLATFORM
+                VARDHAN · HOSPITAL WORKFORCE PLATFORM
               </Typography>
 
               <Typography
@@ -168,7 +168,7 @@ const Landing = () => {
               >
                 <Box>
                   <Typography sx={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.01em' }}>
-                    CLOUDCHERRY
+                    VARDHAN
                   </Typography>
                   <Typography
                     variant="caption"
@@ -296,7 +296,7 @@ const Landing = () => {
             }}
           >
             <Typography variant="caption" color="text.secondary">
-              CloudCherry Hospital Workforce Platform
+              Vardhan Hospital Workforce Platform
             </Typography>
             <Typography variant="caption" color="text.secondary">
               · © {new Date().getFullYear()}

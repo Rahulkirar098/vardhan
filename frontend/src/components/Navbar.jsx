@@ -7,9 +7,11 @@ import { getRoleDisplayName } from './sidebar.config';
 export const NAVBAR_HEIGHT = 64;
 
 const PAGE_META = [
+  { test: (path) => path === '/dashboard', title: 'Dashboard', breadcrumb: 'Workspace' },
   { test: (path) => path === '/hospital', title: 'Hospital', breadcrumb: 'Workspace' },
   { test: (path) => path === '/positions', title: 'Positions', breadcrumb: 'Workspace' },
   { test: (path) => path === '/employees', title: 'Employees', breadcrumb: 'Workspace' },
+  { test: (path) => path === '/access-management', title: 'Access Management', breadcrumb: 'Workspace' },
   { test: (path) => path === '/structure', title: 'Hospital Structure', breadcrumb: 'Workspace' },
   { test: (path) => path.startsWith('/structure/'), title: 'Floor Details', breadcrumb: 'Workspace / Hospital Structure' },
   { test: (path) => path === '/profile', title: 'My Profile', breadcrumb: 'Account' },
@@ -21,7 +23,7 @@ const PAGE_META = [
 ];
 
 const getPageMeta = (pathname) =>
-  PAGE_META.find((meta) => meta.test(pathname)) || { title: 'CloudCherry', breadcrumb: '' };
+  PAGE_META.find((meta) => meta.test(pathname)) || { title: 'Vardhan', breadcrumb: '' };
 
 const Navbar = ({ userName = 'User', userRole, showMenu = false, onMenuClick }) => {
   const { pathname } = useLocation();
