@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Grid, Stack } from '@mui/material';
-import { ArrowForwardRounded, BadgeRounded, CheckCircleOutlineRounded, GroupsRounded, PersonOffRounded } from '@mui/icons-material';
+import { ArrowForwardRounded, CheckCircleOutlineRounded, GroupsRounded, PersonOffRounded } from '@mui/icons-material';
 import { useEffect, useMemo, useState } from 'react';
 import hrService from '../../services/hr.service';
 import employeeService from '../../services/employee.service';
@@ -16,7 +16,7 @@ import AppLayout from '../../components/AppLayout';
 
 const formatStatus = (status) => {
   if (!status) return 'Active';
-  return String(status).charAt(0).toUpperCase() + String(status).slice(1);
+  return String(status).charAt(0).toUpperCase() + String(status).slice(1).toLowerCase();
 };
 
 const Dashboard = () => {
@@ -39,11 +39,25 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         const response = await hrService.getMyProfile().catch(() => ({ data: { data: null } }));
-        setHr(response?.data?.data || null);
-        setHospital(response?.data?.data?.hospitalId || null);
+        const profileData = response?.data?.data || null;
+        setHr(profileData);
+        setHospital(profileData?.hospitalId || null);
+
+        // Update stored modules/name/email if received from profile
+        if (profileData) {
+          if (profileData.modules) {
+            localStorage.setItem('modules', JSON.stringify(profileData.modules));
+          }
+          if (profileData.permissions) {
+            localStorage.setItem('permissions', JSON.stringify(profileData.permissions));
+          }
+          if (profileData.name) {
+            localStorage.setItem('userName', profileData.name);
+          }
+        }
 
         // Fetch employee stats only if HR has hrms module
-        if (hasHrmsModule()) {
+        if (hasHrmsModule() || profileData?.modules?.includes('hrms')) {
           try {
             const statRes = await employeeService.getEmployeeStats();
             setEmployeeStats(statRes?.data?.data || null);
@@ -74,25 +88,30 @@ const Dashboard = () => {
       localStorage.removeItem('role');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
+      localStorage.removeItem('permissions');
+      localStorage.removeItem('modules');
       navigate('/login');
     }
   };
 
   const activeHr = Boolean(hr);
+  const hospitalObj = hospital || hr?.hospitalId;
+  const hospitalName = hospitalObj?.name || hr?.hospitalName;
+
   const summaryCards = useMemo(
     () => [
       {
         label: 'My Profile',
         value: hr ? 'Active' : 'Pending',
-        footer: <StatusBadge status={hr ? 'active' : 'pending'} label={hr ? 'Active' : 'Pending'} />,
+        footer: <StatusBadge status={hr ? (hr.status || 'active') : 'pending'} label={hr ? (hr.status ? formatStatus(hr.status) : 'Active') : 'Pending'} />,
       },
       {
         label: 'Hospital',
-        value: hospital?.name || hr?.hospitalId?.name || 'Not Assigned',
-        footer: <StatusBadge status={hospital || hr?.hospitalId ? 'active' : 'pending'} label={hospital || hr?.hospitalId ? 'Assigned' : 'Not Set'} />,
+        value: hospitalName || 'Not Assigned',
+        footer: <StatusBadge status={hospitalName ? 'active' : 'pending'} label={hospitalName ? 'Assigned' : 'Not Set'} />,
       },
     ],
-    [hr, hospital],
+    [hr, hospitalName],
   );
 
   if (loading) {
@@ -104,6 +123,15 @@ const Dashboard = () => {
       </AppLayout>
     );
   }
+
+  const hospitalLocation = [
+    hospitalObj?.address?.city,
+    hospitalObj?.address?.state,
+  ].filter(Boolean).join(', ') || hospitalObj?.city || '—';
+
+  const positionName = typeof hr?.position === 'object'
+    ? hr?.position?.name
+    : (hr?.position || hr?.positionId?.name || '—');
 
   return (
     <AppLayout onLogout={handleLogout}>
@@ -184,7 +212,9 @@ const Dashboard = () => {
               <Box>
                 <InfoRow label="Name" value={hr?.name} />
                 <InfoRow label="Email" value={hr?.email} />
-                <InfoRow label="Phone" value={hr?.phone} />
+                <InfoRow label="Employee ID" value={hr?.employeeId || '—'} />
+                <InfoRow label="Position" value={positionName} />
+                <InfoRow label="Phone" value={hr?.phone || '—'} />
                 <InfoRow label="Status" value={formatStatus(hr?.status)} />
               </Box>
             </SectionCard>
@@ -199,10 +229,10 @@ const Dashboard = () => {
               }
             >
               <Box>
-                <InfoRow label="Hospital" value={hospital?.name || hr?.hospitalId?.name} />
-                <InfoRow label="Code" value={hospital?.code || hr?.hospitalId?.code} />
-                <InfoRow label="Location" value={[hospital?.address?.city, hospital?.address?.state].filter(Boolean).join(', ') || hr?.hospitalId?.city} />
-                <InfoRow label="Status" value={formatStatus(hospital?.status || hr?.hospitalId?.status)} />
+                <InfoRow label="Hospital" value={hospitalName || '—'} />
+                <InfoRow label="Code" value={hospitalObj?.code || '—'} />
+                <InfoRow label="Location" value={hospitalLocation} />
+                <InfoRow label="Status" value={formatStatus(hospitalObj?.status)} />
               </Box>
             </SectionCard>
           </Box>

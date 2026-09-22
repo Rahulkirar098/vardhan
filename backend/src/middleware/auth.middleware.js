@@ -55,10 +55,25 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
+        let hospitalId = user.hospitalId;
+        let employeeId = user.employeeId;
+
+        if (!hospitalId && (user.role === "hr" || user.role === "employee")) {
+            const Employee = require("../models/employee.model");
+            const employee = employeeId
+                ? await Employee.findById(employeeId).select("hospitalId").lean()
+                : await Employee.findOne({ userId: user._id }).select("hospitalId").lean();
+            if (employee) {
+                hospitalId = employee.hospitalId;
+                if (!employeeId) employeeId = employee._id;
+            }
+        }
+
         req.user = {
             id: user._id,
             role: user.role,
-            hospitalId: user.hospitalId,
+            hospitalId: hospitalId,
+            employeeId: employeeId,
             permissions: user.permissions || [],
             modules: user.modules || ["core"],
         };

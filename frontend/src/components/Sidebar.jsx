@@ -51,6 +51,14 @@ const isActivePath = (currentPath, targetPath) => {
     return currentPath.startsWith('/hr/hospital');
   }
 
+  if (targetPath === '/employees') {
+    return currentPath.startsWith('/employees');
+  }
+
+  if (targetPath === '/hr/dashboard') {
+    return currentPath === '/hr/dashboard';
+  }
+
   return false;
 };
 

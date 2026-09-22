@@ -37,12 +37,27 @@ const generateEmployeeId = async (hospitalId) => {
  * For Admin: from Hospital.createdBy.
  */
 const getHospitalForUser = async (user) => {
-    if (user.role === "hr") {
-        if (!user.hospitalId) return null;
-        return Hospital.findById(user.hospitalId).lean();
+    if (!user) return null;
+
+    if (user.role === "hr" || user.role === "employee") {
+        let hospitalId = user.hospitalId;
+        if (!hospitalId && user.employeeId) {
+            const emp = await Employee.findById(user.employeeId).select("hospitalId").lean();
+            if (emp) hospitalId = emp.hospitalId;
+        }
+        if (!hospitalId) {
+            const emp = await Employee.findOne({ userId: user.id || user._id }).select("hospitalId").lean();
+            if (emp) hospitalId = emp.hospitalId;
+        }
+        if (!hospitalId) return null;
+        return Hospital.findById(hospitalId).lean();
     }
     if (user.role === "admin" || user.role === "super_admin") {
-        return Hospital.findOne({ createdBy: user.id }).lean();
+        let hospital = await Hospital.findOne({ createdBy: user.id || user._id }).lean();
+        if (!hospital && user.hospitalId) {
+            hospital = await Hospital.findById(user.hospitalId).lean();
+        }
+        return hospital;
     }
     return null;
 };
@@ -379,9 +394,13 @@ const acceptInvitation = async (rawToken, password) => {
         resolvedEmployeeId = await generateEmployeeId(invitation.hospitalId._id);
     }
 
-    // Derive modules from Position defaults
+    // Derive modules from Position defaults and role
     const positionDefaultModules = invitation.positionId?.defaultModules || [];
-    const userModules = ["core", ...positionDefaultModules.filter(m => m !== "core")];
+    const moduleSet = new Set(["core", ...positionDefaultModules.filter(m => m !== "core")]);
+    if (invitation.role === "hr") {
+        moduleSet.add("hrms");
+    }
+    const userModules = Array.from(moduleSet);
 
     // Create User account (every employee gets a login)
     const hashedPassword = await hashPassword(password);

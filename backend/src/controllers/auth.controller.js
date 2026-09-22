@@ -1,8 +1,42 @@
 const authService = require("../services/auth.service");
+const Employee = require("../models/employee.model");
 
 const getCurrentUser = async (req, res) => {
     try {
         const user = await authService.getCurrentUser(req.user.id);
+
+        let userUpdated = false;
+        if (user.role === "hr" && (!user.modules || !user.modules.includes("hrms"))) {
+            user.modules = [...new Set([...(user.modules || ["core"]), "hrms"])];
+            userUpdated = true;
+        }
+
+        let hospitalId = user.hospitalId;
+        let employeeId = user.employeeId;
+
+        if (user.role === "hr" || user.role === "employee") {
+            let employee = employeeId ? await Employee.findById(employeeId).lean() : null;
+            if (!employee) {
+                employee = await Employee.findOne({ userId: user._id }).lean();
+                if (employee) {
+                    employeeId = employee._id;
+                    user.employeeId = employee._id;
+                    userUpdated = true;
+                }
+            }
+            if (employee && employee.hospitalId) {
+                hospitalId = employee.hospitalId;
+                if (!user.hospitalId) {
+                    user.hospitalId = employee.hospitalId;
+                    userUpdated = true;
+                }
+            }
+        }
+
+        if (userUpdated) {
+            await user.save();
+        }
+
         return res.status(200).json({
             success: true,
             message: "Current user retrieved successfully",
@@ -12,7 +46,8 @@ const getCurrentUser = async (req, res) => {
                 email: user.email,
                 phone: user.phone,
                 role: user.role,
-                hospitalId: user.hospitalId,
+                hospitalId: hospitalId,
+                employeeId: employeeId,
                 status: user.status,
                 permissions: user.permissions || [],
                 modules: user.modules || ["core"],
@@ -80,6 +115,38 @@ const loginUser = async (req, res) => {
 
         const { token, user } = await authService.loginUser({ email, password });
 
+        let userUpdated = false;
+        if (user.role === "hr" && (!user.modules || !user.modules.includes("hrms"))) {
+            user.modules = [...new Set([...(user.modules || ["core"]), "hrms"])];
+            userUpdated = true;
+        }
+
+        let hospitalId = user.hospitalId;
+        let employeeId = user.employeeId;
+
+        if (user.role === "hr" || user.role === "employee") {
+            let employee = employeeId ? await Employee.findById(employeeId).lean() : null;
+            if (!employee) {
+                employee = await Employee.findOne({ userId: user._id }).lean();
+                if (employee) {
+                    employeeId = employee._id;
+                    user.employeeId = employee._id;
+                    userUpdated = true;
+                }
+            }
+            if (employee && employee.hospitalId) {
+                hospitalId = employee.hospitalId;
+                if (!user.hospitalId) {
+                    user.hospitalId = employee.hospitalId;
+                    userUpdated = true;
+                }
+            }
+        }
+
+        if (userUpdated) {
+            await user.save();
+        }
+
         return res.status(200).json({
             success: true,
             message: "Login successful",
@@ -91,7 +158,8 @@ const loginUser = async (req, res) => {
                     email: user.email,
                     phone: user.phone,
                     role: user.role,
-                    hospitalId: user.hospitalId,
+                    hospitalId: hospitalId,
+                    employeeId: employeeId,
                     status: user.status,
                     permissions: user.permissions || [],
                     modules: user.modules || ["core"],

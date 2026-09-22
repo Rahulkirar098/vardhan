@@ -12,7 +12,7 @@ import Loading from '../../components/Loading';
 
 const formatStatus = (status) => {
   if (!status) return 'Active';
-  return String(status).charAt(0).toUpperCase() + String(status).slice(1);
+  return String(status).charAt(0).toUpperCase() + String(status).slice(1).toLowerCase();
 };
 
 const MyHospital = () => {
@@ -49,11 +49,21 @@ const MyHospital = () => {
       localStorage.removeItem('role');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
+      localStorage.removeItem('permissions');
+      localStorage.removeItem('modules');
       navigate('/login');
     }
   };
 
   const location = [hospital?.address?.city, hospital?.address?.state].filter(Boolean).join(', ') || 'Not provided';
+  const fullAddress = [
+    hospital?.address?.addressLine1,
+    hospital?.address?.addressLine2,
+    hospital?.address?.city,
+    hospital?.address?.state,
+    hospital?.address?.country,
+    hospital?.address?.pincode,
+  ].filter(Boolean).join(', ') || 'Not provided';
 
   return (
     <AppLayout onLogout={handleLogout}>
@@ -64,7 +74,7 @@ const MyHospital = () => {
 
         {loading ? (
           <Stack sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
-            <Loading label="Loading hospital…" height="auto" />
+            <Loading label="Loading your hospital…" height="auto" />
           </Stack>
         ) : !hospital ? (
           <Stack sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF', p: 3 }}>
@@ -73,20 +83,21 @@ const MyHospital = () => {
                 No hospital found
               </Typography>
               <Typography color="text.secondary">
-                You are not assigned to a hospital yet. Contact your administrator.
+                No hospital is assigned to this employee. Contact your administrator.
               </Typography>
             </Stack>
           </Stack>
         ) : (
           <SectionCard
             title={hospital.name}
-            action={<StatusBadge status={hospital.status} />}
+            action={<StatusBadge status={hospital.status || 'active'} />}
             sx={{ maxWidth: 760 }}
           >
+            <InfoRow label="Hospital Name" value={hospital.name} />
             <InfoRow label="Hospital Code" value={hospital.code} />
             <InfoRow label="Location" value={location} />
-            <InfoRow label="Registration Number" value={hospital.registrationNumber} />
-            <InfoRow label="Full Address" value={[hospital.address?.addressLine1, hospital.address?.addressLine2, hospital.address?.city, hospital.address?.state, hospital.address?.country, hospital.address?.pincode].filter(Boolean).join(', ')} />
+            <InfoRow label="Registration Number" value={hospital.registrationNumber || 'Not provided'} />
+            <InfoRow label="Full Address" value={fullAddress} />
             <InfoRow label="Status" value={formatStatus(hospital.status)} />
           </SectionCard>
         )}

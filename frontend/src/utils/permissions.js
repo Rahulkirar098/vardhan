@@ -24,6 +24,11 @@ export const PERMISSIONS = Object.freeze({
 
   ROSTER_VIEW: 'roster.view',
   ROSTER_MANAGE: 'roster.manage',
+
+  // Position Management
+  POSITION_VIEW: 'position.view',
+  POSITION_CREATE: 'position.create',
+  POSITION_UPDATE: 'position.update',
 });
 
 export const ROLE_PERMISSIONS = Object.freeze({
@@ -43,6 +48,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.EMPLOYEE_CREATE,
     PERMISSIONS.EMPLOYEE_UPDATE,
     PERMISSIONS.EMPLOYEE_DELETE,
+    PERMISSIONS.POSITION_VIEW,
   ]),
 });
 

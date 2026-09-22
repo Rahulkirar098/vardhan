@@ -26,13 +26,16 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authUserRoute);
 app.use("/api/v1/auth", authUserRoute);
 app.use("/api/hospitals", hospitalRoute);
+app.use("/api/v1/hospitals", hospitalRoute);
 app.use("/api/hr", hrRoute);
 app.use("/api/v1/hr", hrRoute);
 app.use("/api/super-admin", superAdminRoute);
+app.use("/api/v1/super-admin", superAdminRoute);
 app.use("/api/v1/hospitals/:hospitalId", structureRoute);
 app.use("/api/v1/modules", moduleRoute);
 app.use("/api/modules", moduleRoute);
 app.use("/api/v1/hrms", employeeRoute);
+app.use("/api/hrms", employeeRoute);
 app.use("/api/positions", positionRoute);
 app.use("/api/v1/positions", positionRoute);
 

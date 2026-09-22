@@ -13,11 +13,11 @@ import AppLayout from '../../components/AppLayout';
 
 const formatStatus = (status) => {
   if (!status) return 'Active';
-  return String(status).charAt(0).toUpperCase() + String(status).slice(1);
+  return String(status).charAt(0).toUpperCase() + String(status).slice(1).toLowerCase();
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return 'Today';
+  if (!dateString) return '—';
   return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
@@ -37,7 +37,7 @@ const HRProfile = () => {
         const response = id ? await hrService.getById(id) : await hrService.getMyProfile();
         setHr(response?.data?.data || null);
       } catch (err) {
-        setError(err?.response?.data?.message || 'Unable to load HR profile.');
+        setError(err?.response?.data?.message || 'Unable to load your profile.');
       } finally {
         setLoading(false);
       }
@@ -64,6 +64,8 @@ const HRProfile = () => {
       localStorage.removeItem('role');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
+      localStorage.removeItem('permissions');
+      localStorage.removeItem('modules');
       navigate('/login');
     }
   };
@@ -72,7 +74,7 @@ const HRProfile = () => {
     return (
       <AppLayout onLogout={handleLogout}>
         <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
-          <Loading label="Loading profile…" height="auto" />
+          <Loading label="Loading your profile…" height="auto" />
         </Box>
       </AppLayout>
     );
@@ -89,10 +91,14 @@ const HRProfile = () => {
   if (!hr) {
     return (
       <AppLayout onLogout={handleLogout}>
-        <Alert severity="warning">HR profile not found.</Alert>
+        <Alert severity="warning">No employee profile is associated with this account.</Alert>
       </AppLayout>
     );
   }
+
+  const positionName = typeof hr.position === 'object'
+    ? hr.position?.name
+    : (hr.position || hr.positionId?.name || '—');
 
   return (
     <AppLayout onLogout={handleLogout}>
@@ -109,7 +115,7 @@ const HRProfile = () => {
           </Button>
           <PageHeader
             title={hr.name}
-            subtitle={`${hr.role || 'HR'} · ${hr.email}`}
+            subtitle={`${hr.role ? hr.role.toUpperCase() : 'HR'} · ${hr.email}`}
             actions={<StatusBadge status={hr.status || 'active'} />}
           />
         </Box>
@@ -124,16 +130,19 @@ const HRProfile = () => {
           <SectionCard title="Personal Information">
             <InfoRow label="Name" value={hr.name} />
             <InfoRow label="Email" value={hr.email} />
-            <InfoRow label="Phone" value={hr.phone} />
+            <InfoRow label="Employee ID" value={hr.employeeId || '—'} />
+            <InfoRow label="Position" value={positionName} />
+            <InfoRow label="Phone" value={hr.phone || '—'} />
           </SectionCard>
 
           <SectionCard title="Organization">
-            <InfoRow label="Hospital" value={hr.hospitalId?.name || hr.hospitalName} />
+            <InfoRow label="Hospital" value={hr.hospitalId?.name || hr.hospitalName || 'Not Assigned'} />
           </SectionCard>
 
           <SectionCard title="Account" sx={{ gridColumn: { md: '1 / -1' } }}>
             <InfoRow label="Role" value={formatStatus(hr.role)} />
             <InfoRow label="Status" value={formatStatus(hr.status)} />
+            <InfoRow label="Date of Joining" value={formatDate(hr.dateOfJoining)} />
             <InfoRow label="Created" value={formatDate(hr.createdAt)} />
           </SectionCard>
         </Box>

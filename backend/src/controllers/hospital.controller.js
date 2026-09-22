@@ -12,7 +12,23 @@ const getMyHospital = async (req, res) => {
         if (req.user.role === "admin") {
             hospital = await hospitalService.getMyHospital(req.user.id);
         } else {
-            hospital = await Hospital.findById(req.user.hospitalId).populate("createdBy", "name email phone role status");
+            let hospitalId = req.user.hospitalId;
+            if (!hospitalId && req.user.employeeId) {
+                const Employee = require("../models/employee.model");
+                const employee = await Employee.findById(req.user.employeeId).select("hospitalId");
+                if (employee) hospitalId = employee.hospitalId;
+            }
+            if (!hospitalId) {
+                const Employee = require("../models/employee.model");
+                const employee = await Employee.findOne({ userId: req.user.id }).select("hospitalId");
+                if (employee) hospitalId = employee.hospitalId;
+            }
+            if (!hospitalId) {
+                const err = new Error("No hospital is assigned to this employee.");
+                err.code = "NOT_FOUND";
+                throw err;
+            }
+            hospital = await Hospital.findById(hospitalId).populate("createdBy", "name email phone role status");
             if (!hospital) {
                 const err = new Error("Hospital not found");
                 err.code = "NOT_FOUND";

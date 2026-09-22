@@ -3,7 +3,6 @@ import {
   DashboardRounded,
   LayersRounded,
   LocalHospitalRounded,
-  PeopleRounded,
   BadgeRounded,
   BusinessCenterRounded,
 } from '@mui/icons-material';
@@ -42,8 +41,9 @@ const sidebarConfig = {
       {
         title: '',
         items: [
-          { label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded },
+          { label: 'Dashboard', path: '/hr/dashboard', icon: DashboardRounded },
           { label: 'My Hospital', path: '/hr/hospital', icon: LocalHospitalRounded },
+          { label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded },
         ],
       },
     ],
@@ -55,6 +55,7 @@ export const getRoleDisplayName = (role) => {
     super_admin: 'Super Administrator',
     admin: 'Administrator',
     hr: 'HR',
+    employee: 'Employee',
   };
 
   return labels[role] || 'User';
@@ -77,33 +78,22 @@ export const getSidebarSectionsForRole = (role) => {
       hasHrmsModule = false;
     }
 
-    const coreItems = [
-      { label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded },
+    const items = [
+      { label: 'Dashboard', path: '/hr/dashboard', icon: DashboardRounded },
       { label: 'My Hospital', path: '/hr/hospital', icon: LocalHospitalRounded },
     ];
 
     if (hasStructureView) {
-      coreItems.unshift({ label: 'Hospital Structure', path: '/structure', icon: LayersRounded });
+      items.push({ label: 'Hospital Structure', path: '/structure', icon: LayersRounded });
     }
 
-    const sections = [{ title: '', items: coreItems }];
-
-    if (hasHrmsModule) {
-      const hrmsItems = [];
-
-      // Only add Employees if HR has employee.view
-      let hasEmployeeView = hasPermission(PERMISSIONS.EMPLOYEE_VIEW);
-
-      if (hasEmployeeView) {
-        hrmsItems.push({ label: 'Employees', path: '/employees', icon: BadgeRounded });
-      }
-
-      if (hrmsItems.length > 0) {
-        sections.push({ title: 'HRMS', items: hrmsItems });
-      }
+    if (hasHrmsModule && hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
+      items.push({ label: 'Employees', path: '/employees', icon: BadgeRounded });
     }
 
-    return sections;
+    items.push({ label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded });
+
+    return [{ title: '', items }];
   }
 
   return sidebarConfig[role]?.sections || [];
