@@ -8,6 +8,8 @@ export const NAVBAR_HEIGHT = 64;
 
 const PAGE_META = [
   { test: (path) => path === '/hospital', title: 'Hospital', breadcrumb: 'Workspace' },
+  { test: (path) => path === '/positions', title: 'Positions', breadcrumb: 'Workspace' },
+  { test: (path) => path === '/employees', title: 'Employees', breadcrumb: 'Workspace' },
   { test: (path) => path === '/structure', title: 'Hospital Structure', breadcrumb: 'Workspace' },
   { test: (path) => path.startsWith('/structure/'), title: 'Floor Details', breadcrumb: 'Workspace / Hospital Structure' },
   { test: (path) => path === '/profile', title: 'My Profile', breadcrumb: 'Account' },

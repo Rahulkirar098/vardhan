@@ -9,7 +9,6 @@ import {
   FormControlLabel,
   FormGroup,
   FormHelperText,
-  Grid,
   IconButton,
   InputAdornment,
   MenuItem,
@@ -32,10 +31,8 @@ import {
   MarkEmailReadRounded,
   PersonOffRounded,
   PersonRounded,
+  PowerSettingsNewRounded,
   SearchRounded,
-  SecurityRounded,
-  ToggleOffRounded,
-  ToggleOnRounded,
 } from '@mui/icons-material';
 import employeeService from '../../services/employee.service';
 import positionService from '../../services/position.service';
@@ -44,8 +41,10 @@ import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
+import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import DataTable from '../../components/DataTable';
@@ -175,6 +174,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
             required
             fullWidth
             placeholder="e.g. Rahul"
+            autoFocus
           />
           <TextField
             label="Last Name"
@@ -217,7 +217,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
             select
-            label="Position"
+            label="Position *"
             name="positionId"
             value={form.positionId}
             onChange={handleChange}
@@ -229,7 +229,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
                 displayEmpty: true,
                 renderValue: (selected) => {
                   if (!selected) {
-                    return <Typography component="span" variant="body1" color="text.secondary">Select Position</Typography>;
+                    return <Typography component="span" variant="body2" color="text.secondary">Select Position</Typography>;
                   }
                   const found = positions.find((p) => p._id === selected);
                   return found ? found.name : selected;
@@ -248,7 +248,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
           </TextField>
           <TextField
             select
-            label="Vardhan Role"
+            label="Vardhan Role *"
             name="role"
             value={form.role}
             onChange={handleChange}
@@ -260,7 +260,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
                 displayEmpty: true,
                 renderValue: (selected) => {
                   if (!selected) {
-                    return <Typography component="span" variant="body1" color="text.secondary">Select Role</Typography>;
+                    return <Typography component="span" variant="body2" color="text.secondary">Select Role</Typography>;
                   }
                   if (selected === 'employee') return 'Employee';
                   if (selected === 'hr') return 'HR';
@@ -289,8 +289,6 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
     </Modal>
   );
 };
-
-
 
 // ─── Edit Employee Modal ──────────────────────────────────────────────────────
 const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) => {
@@ -392,6 +390,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
             onChange={handleChange}
             required
             fullWidth
+            autoFocus
           />
           <TextField
             label="Last Name"
@@ -613,7 +612,7 @@ const EmployeesPage = () => {
 
   // Search & filter
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  const [statusFilter, setStatusFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
   // Modals
@@ -677,24 +676,24 @@ const EmployeesPage = () => {
   };
 
   const employeeColumns = [
-    { key: 'employee', label: 'Employee' },
-    { key: 'employeeId', label: 'Employee ID' },
-    { key: 'contact', label: 'Contact' },
-    { key: 'position', label: 'Position' },
-    { key: 'role', label: 'Vardhan Role' },
-    { key: 'joined', label: 'Joined' },
-    { key: 'status', label: 'Status' }
+    { key: 'employee', label: 'EMPLOYEE' },
+    { key: 'employeeId', label: 'EMPLOYEE ID' },
+    { key: 'position', label: 'POSITION' },
+    { key: 'role', label: 'VARDHAN ROLE' },
+    { key: 'joined', label: 'JOINED' },
+    { key: 'status', label: 'STATUS' }
   ];
   
   const renderEmployeeCell = (emp, column) => {
     const fullName = `${emp.firstName} ${emp.lastName}`;
     const isActive = emp.employmentStatus === 'ACTIVE';
+    const roleLabel = emp.userId ? (emp.userId.role === 'hr' ? 'HR' : 'Employee') : 'No Login';
   
     switch (column.key) {
       case 'employee':
         return (
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <InitialsAvatar name={fullName} />
+            <InitialsAvatar name={fullName} size={32} />
             <Box>
               <Typography variant="body2" fontWeight={600}>{fullName}</Typography>
               <Typography variant="caption" color="text.secondary">{emp.email}</Typography>
@@ -703,31 +702,26 @@ const EmployeesPage = () => {
         );
       case 'employeeId':
         return (
-          <Chip
-            label={emp.employeeId}
-            size="small"
-            variant="outlined"
-            sx={{ fontWeight: 600, fontFamily: 'monospace' }}
-          />
-        );
-      case 'contact':
-        return (
-          <>
-            <Typography variant="body2">{emp.email}</Typography>
-            {emp.phone && (
-              <Typography variant="caption" color="text.secondary">{emp.phone}</Typography>
-            )}
-          </>
+          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+            {emp.employeeId || '—'}
+          </Typography>
         );
       case 'position':
         return <Typography variant="body2">{emp.positionId?.name || '—'}</Typography>;
       case 'role':
         return (
           <Chip
-            label={emp.userId ? (emp.userId.role === 'hr' ? 'HR' : 'Employee') : 'No Login'}
+            label={roleLabel}
             size="small"
-            color={emp.userId ? 'primary' : 'default'}
             variant="outlined"
+            sx={{
+              fontSize: '0.75rem',
+              height: 22,
+              fontWeight: 600,
+              backgroundColor: emp.userId?.role === 'hr' ? '#F5F5F5' : 'transparent',
+              borderColor: '#E5E5E5',
+              color: '#0A0A0A'
+            }}
           />
         );
       case 'joined':
@@ -742,40 +736,40 @@ const EmployeesPage = () => {
   const renderEmployeeActions = (emp) => {
     const isActive = emp.employmentStatus === 'ACTIVE';
     return (
-      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-        <Tooltip title="View details">
-          <IconButton size="small" onClick={() => setDetailsEmployee(emp)}>
+      <Box display="flex" justifyContent="flex-end" gap={0.5}>
+        <Tooltip title="View Details">
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); setDetailsEmployee(emp); }}>
             <PersonRounded fontSize="small" />
           </IconButton>
         </Tooltip>
         {hasUpdate && isActive && (
-          <Tooltip title="Edit employee">
-            <IconButton size="small" color="primary" onClick={() => setEditEmployee(emp)}>
+          <Tooltip title="Edit Employee">
+            <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditEmployee(emp); }}>
               <EditRounded fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
         {hasDeactivate && (
-          <Tooltip title={isActive ? 'Deactivate' : 'Reactivate'}>
+          <Tooltip title={isActive ? 'Deactivate Employee' : 'Activate Employee'}>
             <IconButton
               size="small"
               color={isActive ? 'error' : 'success'}
-              onClick={() => setDeactivateTarget(emp)}
+              onClick={(e) => { e.stopPropagation(); setDeactivateTarget(emp); }}
             >
-              {isActive ? <ToggleOffRounded fontSize="small" /> : <ToggleOnRounded fontSize="small" />}
+              <PowerSettingsNewRounded fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
-      </Stack>
+      </Box>
     );
   };
 
   const invitationColumns = [
-    { key: 'name', label: 'Name' },
-    { key: 'email', label: 'Email' },
-    { key: 'position', label: 'Position' },
-    { key: 'status', label: 'Status' },
-    { key: 'expires', label: 'Expires' }
+    { key: 'name', label: 'NAME' },
+    { key: 'email', label: 'EMAIL' },
+    { key: 'position', label: 'POSITION' },
+    { key: 'status', label: 'STATUS' },
+    { key: 'expires', label: 'EXPIRES' }
   ];
   
   const renderInvitationCell = (inv, column) => {
@@ -792,7 +786,7 @@ const EmployeesPage = () => {
       case 'status':
         return <StatusBadge status={effectiveStatus} />;
       case 'expires':
-        return <Typography variant="body2">{inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString() : '—'}</Typography>;
+        return <Typography variant="body2">{inv.expiresAt ? formatDate(inv.expiresAt) : '—'}</Typography>;
       default:
         return null;
     }
@@ -802,90 +796,146 @@ const EmployeesPage = () => {
     const isExpiredByDate = inv.status === 'pending' && new Date(inv.expiresAt) < new Date();
     if (inv.status === 'pending' && !isExpiredByDate && hasCreate) {
       return (
-        <Tooltip title="Cancel invitation">
-          <IconButton
-            size="small"
-            color="error"
-            onClick={async () => {
-              try {
-                await employeeService.cancelInvitation(inv._id);
-                showSnack('Invitation cancelled.');
-                loadEmployees();
-              } catch (err) {
-                showSnack(err?.response?.data?.message || 'Failed to cancel.', 'error');
-              }
-            }}
-          >
-            <CloseRounded fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Box display="flex" justifyContent="flex-end">
+          <Tooltip title="Cancel Invitation">
+            <IconButton
+              size="small"
+              color="error"
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  await employeeService.cancelInvitation(inv._id);
+                  showSnack('Invitation cancelled.');
+                  loadEmployees();
+                } catch (err) {
+                  showSnack(err?.response?.data?.message || 'Failed to cancel.', 'error');
+                }
+              }}
+            >
+              <CloseRounded fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
       );
     }
     return null;
   };
 
+  if (error) {
+    return (
+      <AppLayout>
+        <ErrorState message={error} onRetry={loadEmployees} />
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
-      <Stack spacing={3}>
+      {/* Header */}
+      <Box mb={4}>
         <PageHeader
           title="Employees"
-          subtitle="Manage your hospital's employee roster. Invite, view, and update employee records."
-          actions={
+          subtitle="Manage your hospital's employee roster."
+          action={
             hasCreate && (
               <Button
                 variant="contained"
                 startIcon={<AddRounded />}
                 onClick={() => setInviteOpen(true)}
-                sx={{ fontWeight: 600, px: 2.5 }}
               >
                 Invite Employee
               </Button>
             )
           }
         />
+      </Box>
 
-        {/* Stats */}
-        <Grid container spacing={2.5}>
-          <Grid item xs={6} sm={3}>
-            <StatCard title="Total Employees" value={loading ? '...' : stats.total} icon={GroupsRounded} color="primary" />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard title="Active" value={loading ? '...' : stats.active} icon={CheckCircleOutlineRounded} color="success" />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard title="Inactive" value={loading ? '...' : stats.inactive} icon={PersonOffRounded} color="error" />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard title="Pending Invites" value={loading ? '...' : stats.pendingInvitations} icon={MarkEmailReadRounded} color="warning" />
-          </Grid>
-        </Grid>
+      {/* Summary StatCards */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gap: 3,
+          mb: 4,
+        }}
+      >
+        <StatCard
+          label="Total Employees"
+          value={loading ? '-' : stats.total}
+          icon={GroupsRounded}
+        />
+        <StatCard
+          label="Active"
+          value={loading ? '-' : stats.active}
+          icon={CheckCircleOutlineRounded}
+        />
+        <StatCard
+          label="Inactive"
+          value={loading ? '-' : stats.inactive}
+          icon={PersonOffRounded}
+        />
+        <StatCard
+          label="Pending Invitations"
+          value={loading ? '-' : (stats.pendingInvitations ?? invitations.length)}
+          icon={MarkEmailReadRounded}
+        />
+      </Box>
 
-        {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)} textColor="primary" indicatorColor="primary">
-            <Tab label={`Employees (${employees.length})`} icon={<GroupsRounded />} iconPosition="start" sx={{ fontWeight: 600 }} />
-            <Tab label={`Invitations (${invitations.length})`} icon={<EmailRounded />} iconPosition="start" sx={{ fontWeight: 600 }} />
+      {/* Main Container Card */}
+      <GlassCard sx={{ p: { xs: 2, sm: 3 } }}>
+        {/* Tabs for Employees vs Invitations */}
+        <Box sx={{ borderBottom: '1px solid #E5E5E5', mb: 3 }}>
+          <Tabs
+            value={tabIndex}
+            onChange={(_, v) => setTabIndex(v)}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              minHeight: 40,
+              '& .MuiTab-root': {
+                minHeight: 40,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                py: 1,
+              },
+            }}
+          >
+            <Tab
+              label={`Employees (${employees.length})`}
+              icon={<GroupsRounded fontSize="small" />}
+              iconPosition="start"
+            />
+            <Tab
+              label={`Invitations (${invitations.length})`}
+              icon={<EmailRounded fontSize="small" />}
+              iconPosition="start"
+            />
           </Tabs>
         </Box>
 
-        {error && <ErrorState message={error} onRetry={loadEmployees} />}
-
-        {/* Employees Tab */}
+        {/* Employees Tab Content */}
         {tabIndex === 0 && (
           <>
-            {/* Search + Filter */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
+            {/* Filter Row: Search + Role Filter + Status Filter */}
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={2}
+              alignItems={{ xs: 'stretch', md: 'center' }}
+              justifyContent="space-between"
+              sx={{ mb: 3 }}
+            >
               <TextField
-                placeholder="Search by name, email, or ID…"
+                placeholder="Search employees..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 size="small"
-                sx={{ flex: 1 }}
+                sx={{ flex: 1, minWidth: { xs: '100%', sm: 260 } }}
                 slotProps={{
                   input: {
                     startAdornment: (
                       <InputAdornment position="start">
-                        <SearchRounded fontSize="small" />
+                        <SearchRounded fontSize="small" sx={{ color: 'text.secondary' }} />
                       </InputAdornment>
                     ),
                     endAdornment: search ? (
@@ -898,73 +948,100 @@ const EmployeesPage = () => {
                   },
                 }}
               />
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} justifyContent="space-between">
-                <Stack direction="row" spacing={1}>
-                  {[
-                    { label: 'All Roles', value: '' },
-                    { label: 'HR', value: 'hr' },
-                    { label: 'Employee', value: 'employee' },
-                  ].map(({ label, value }) => (
-                    <Button
-                      key={label}
-                      variant={roleFilter === value ? 'contained' : 'outlined'}
-                      size="small"
-                      onClick={() => setRoleFilter(value)}
-                      sx={{ fontWeight: 600, minWidth: 80 }}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </Stack>
-                <Stack direction="row" spacing={1}>
-                  {[
-                    { label: 'All Status', value: '' },
-                    { label: 'Active', value: 'ACTIVE' },
-                    { label: 'Inactive', value: 'INACTIVE' },
-                  ].map(({ label, value }) => (
-                    <Button
-                      key={label}
-                      variant={statusFilter === value ? 'contained' : 'outlined'}
-                      size="small"
-                      onClick={() => setStatusFilter(value)}
-                      sx={{ fontWeight: 600, minWidth: 80 }}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </Stack>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <TextField
+                  select
+                  size="small"
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  sx={{ minWidth: 150 }}
+                  slotProps={{
+                    select: {
+                      displayEmpty: true,
+                    },
+                  }}
+                >
+                  <MenuItem value="">All Roles</MenuItem>
+                  <MenuItem value="hr">HR</MenuItem>
+                  <MenuItem value="employee">Employee</MenuItem>
+                </TextField>
+
+                <TextField
+                  select
+                  size="small"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  sx={{ minWidth: 150 }}
+                  slotProps={{
+                    select: {
+                      displayEmpty: true,
+                    },
+                  }}
+                >
+                  <MenuItem value="">All Status</MenuItem>
+                  <MenuItem value="ACTIVE">Active</MenuItem>
+                  <MenuItem value="INACTIVE">Inactive</MenuItem>
+                </TextField>
               </Stack>
             </Stack>
 
-            <DataTable 
-              columns={employeeColumns}
-              rows={employees}
-              getRowKey={(emp) => emp._id}
-              loading={loading}
-              emptyTitle="No employees found"
-              emptyDescription={search || statusFilter ? 'No employees match your search or filter.' : 'No employees yet. Send an invitation to onboard your first employee.'}
-              emptyIcon={GroupsRounded}
-              renderCell={renderEmployeeCell}
-              renderActions={renderEmployeeActions}
-            />
+            {/* Data Table */}
+            {loading && employees.length === 0 ? (
+              <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
+                <Typography color="text.secondary">Loading employees...</Typography>
+              </Box>
+            ) : employees.length === 0 ? (
+              <EmptyState
+                title="No employees found"
+                description={
+                  search || statusFilter || roleFilter
+                    ? 'No employees match your search or filter criteria.'
+                    : 'Start by inviting your first hospital employee.'
+                }
+                icon={GroupsRounded}
+                actionLabel={hasCreate ? 'Invite Employee' : undefined}
+                onAction={hasCreate ? () => setInviteOpen(true) : undefined}
+              />
+            ) : (
+              <DataTable
+                columns={employeeColumns}
+                rows={employees}
+                getRowKey={(emp) => emp._id}
+                renderCell={renderEmployeeCell}
+                renderActions={renderEmployeeActions}
+              />
+            )}
           </>
         )}
 
-        {/* Invitations Tab */}
+        {/* Invitations Tab Content */}
         {tabIndex === 1 && (
-          <DataTable 
-            columns={invitationColumns}
-            rows={invitations}
-            getRowKey={(inv) => inv._id}
-            loading={loading}
-            emptyTitle="No invitations"
-            emptyDescription="No employee invitations found."
-            emptyIcon={EmailRounded}
-            renderCell={renderInvitationCell}
-            renderActions={renderInvitationActions}
-          />
+          <>
+            {loading && invitations.length === 0 ? (
+              <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
+                <Typography color="text.secondary">Loading invitations...</Typography>
+              </Box>
+            ) : invitations.length === 0 ? (
+              <EmptyState
+                title="No invitations found"
+                description="There are currently no pending employee invitations."
+                icon={EmailRounded}
+                actionLabel={hasCreate ? 'Invite Employee' : undefined}
+                onAction={hasCreate ? () => setInviteOpen(true) : undefined}
+              />
+            ) : (
+              <DataTable
+                columns={invitationColumns}
+                rows={invitations}
+                getRowKey={(inv) => inv._id}
+                renderCell={renderInvitationCell}
+                renderActions={renderInvitationActions}
+              />
+            )}
+          </>
         )}
-      </Stack>
+      </GlassCard>
 
       {/* Modals */}
       <InviteEmployeeModal
@@ -990,17 +1067,18 @@ const EmployeesPage = () => {
 
       <ConfirmDialog
         open={Boolean(deactivateTarget)}
-        title={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate Employee' : 'Reactivate Employee'}
-        description={
+        title={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate Employee?' : 'Activate Employee?'}
+        message={
           deactivateTarget?.employmentStatus === 'ACTIVE'
-            ? `Are you sure you want to deactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}?\n\nThe employee will no longer be considered active.\nIf the employee has a Vardhan login, their login will also be disabled.\n\nHistorical records will be preserved.`
-            : `Are you sure you want to reactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}?\n\nThis will make the employee active again.\nIf they have an existing Vardhan account, their account may be re-enabled.`
+            ? `Are you sure you want to deactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}? Their login will also be disabled.`
+            : `Are you sure you want to reactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}?`
         }
-        confirmLabel={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}
-        confirmColor={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'error' : 'primary'}
+        confirmText={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+        cancelText="Cancel"
         loading={deactivating}
+        destructive={deactivateTarget?.employmentStatus === 'ACTIVE'}
         onConfirm={handleDeactivateConfirm}
-        onClose={() => setDeactivateTarget(null)}
+        onCancel={() => setDeactivateTarget(null)}
       />
 
       <Snackbar
@@ -1011,8 +1089,9 @@ const EmployeesPage = () => {
       >
         <Alert
           severity={snackbar.severity}
+          variant="filled"
           onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-          sx={{ width: '100%', boxShadow: 3 }}
+          sx={{ width: '100%' }}
         >
           {snackbar.message}
         </Alert>
