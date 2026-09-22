@@ -237,6 +237,8 @@ const Profile = () => {
                   <InfoRow label="Email" value={profile?.email} />
                   <InfoRow label="Phone" value={profile?.phone || 'Not provided'} />
                   <InfoRow label="Role" value={getRoleDisplayName(profile?.role)} />
+                  {profile?.positionName && <InfoRow label="Position" value={profile.positionName} />}
+                  {profile?.hospitalName && <InfoRow label="Hospital" value={profile.hospitalName} />}
                   <InfoRow
                     label="Status"
                     value={

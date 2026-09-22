@@ -1,5 +1,7 @@
 const authService = require("../services/auth.service");
 const Employee = require("../models/employee.model");
+const Hospital = require("../models/hospital.model");
+const Position = require("../models/position.model");
 
 const getCurrentUser = async (req, res) => {
     try {
@@ -13,29 +15,45 @@ const getCurrentUser = async (req, res) => {
 
         let hospitalId = user.hospitalId;
         let employeeId = user.employeeId;
+        let employeeRecord = null;
 
         if (user.role === "hr" || user.role === "employee") {
-            let employee = employeeId ? await Employee.findById(employeeId).lean() : null;
-            if (!employee) {
-                employee = await Employee.findOne({ userId: user._id }).lean();
-                if (employee) {
-                    employeeId = employee._id;
-                    user.employeeId = employee._id;
+            employeeRecord = employeeId ? await Employee.findById(employeeId).populate("positionId", "name").lean() : null;
+            if (!employeeRecord) {
+                employeeRecord = await Employee.findOne({ userId: user._id }).populate("positionId", "name").lean();
+                if (employeeRecord) {
+                    employeeId = employeeRecord._id;
+                    user.employeeId = employeeRecord._id;
                     userUpdated = true;
                 }
             }
-            if (employee && employee.hospitalId) {
-                hospitalId = employee.hospitalId;
+            if (employeeRecord && employeeRecord.hospitalId) {
+                hospitalId = employeeRecord.hospitalId;
                 if (!user.hospitalId) {
-                    user.hospitalId = employee.hospitalId;
+                    user.hospitalId = employeeRecord.hospitalId;
                     userUpdated = true;
                 }
+            }
+        }
+
+        if (!hospitalId && (user.role === "admin" || user.role === "super_admin")) {
+            const hosp = await Hospital.findOne({ createdBy: user._id }).select("_id name code").lean();
+            if (hosp) {
+                hospitalId = hosp._id;
             }
         }
 
         if (userUpdated) {
             await user.save();
         }
+
+        let hospitalName = null;
+        if (hospitalId) {
+            const hosp = await Hospital.findById(hospitalId).select("name code").lean();
+            if (hosp) hospitalName = hosp.name;
+        }
+
+        const positionName = employeeRecord?.positionId?.name || null;
 
         return res.status(200).json({
             success: true,
@@ -47,7 +65,9 @@ const getCurrentUser = async (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 hospitalId: hospitalId,
+                hospitalName: hospitalName,
                 employeeId: employeeId,
+                positionName: positionName,
                 status: user.status,
                 permissions: user.permissions || [],
                 modules: user.modules || ["core"],

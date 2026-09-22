@@ -37,6 +37,7 @@ import {
 import employeeService from '../../services/employee.service';
 import positionService from '../../services/position.service';
 import hrService from '../../services/hr.service';
+import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -55,6 +56,10 @@ const PERMISSION_OPTIONS = [
   { key: 'structure.create', label: 'Create Floors & Rooms', description: 'Allow HR to add new floors and rooms' },
   { key: 'structure.update', label: 'Edit Floors & Rooms', description: 'Allow HR to update room and floor metadata' },
   { key: 'structure.delete', label: 'Delete/Deactivate Floors & Rooms', description: 'Allow HR to deactivate rooms and floors safely' },
+  { key: 'employee.create', label: 'Invite Employees', description: 'Allow HR to invite new employees and HRs' },
+  { key: 'employee.update', label: 'Edit Employees', description: 'Allow HR to edit basic employee information' },
+  { key: 'employee.position.update', label: 'Change Position', description: 'Allow HR to change employee positions' },
+  { key: 'employee.delete', label: 'Deactivate / Reactivate Employees', description: 'Allow HR to deactivate and reactivate employees' },
 ];
 
 const MODULE_OPTIONS = [
@@ -644,9 +649,26 @@ const EmployeesPage = () => {
   const showSnack = (message, severity = 'success') =>
     setSnackbar({ open: true, message, severity });
 
-  const hasCreate = canCreate();
-  const hasUpdate = canUpdate();
-  const hasDeactivate = canDeactivate();
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    auth.me().then(res => {
+      const user = res?.data?.data;
+      if (user) {
+        setCurrentUser(user);
+        if (user.permissions) {
+          localStorage.setItem('permissions', JSON.stringify(user.permissions));
+        }
+        if (user.modules) {
+          localStorage.setItem('modules', JSON.stringify(user.modules));
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
+  const hasCreate = hasPermission(PERMISSIONS.EMPLOYEE_CREATE, currentUser?.role, currentUser?.permissions);
+  const hasUpdate = hasPermission(PERMISSIONS.EMPLOYEE_UPDATE, currentUser?.role, currentUser?.permissions);
+  const hasDeactivate = hasPermission(PERMISSIONS.EMPLOYEE_DELETE, currentUser?.role, currentUser?.permissions);
 
   const loadEmployees = useCallback(async () => {
     try {

@@ -48,6 +48,16 @@ const sidebarConfig = {
       },
     ],
   },
+  employee: {
+    sections: [
+      {
+        title: '',
+        items: [
+          { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
+        ],
+      },
+    ],
+  },
 };
 
 export const getRoleDisplayName = (role) => {

@@ -71,6 +71,11 @@ const Login = () => {
             return;
           }
 
+          if (payload.role === 'employee') {
+            navigate('/profile');
+            return;
+          }
+
           navigate('/hospital');
           return;
         } catch (decodeError) {

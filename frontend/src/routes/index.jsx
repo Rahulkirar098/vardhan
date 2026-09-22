@@ -55,7 +55,11 @@ const getDefaultRedirectForRole = (role) => {
     return '/hospital';
   }
 
-  return '/dashboard';
+  if (role === 'employee') {
+    return '/profile';
+  }
+
+  return '/login';
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -152,7 +156,7 @@ const AppRoutes = () => {
       <Route
         path="/profile"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'hr', 'employee']}>
             <Profile />
           </ProtectedRoute>
         }

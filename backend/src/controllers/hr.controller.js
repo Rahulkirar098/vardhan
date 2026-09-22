@@ -278,7 +278,8 @@ const updateHRPermissions = async (req, res) => {
             return res.status(403).json({ success: false, message: "You can only update permissions for HR in your hospital" });
         }
 
-        const VALID_HR_PERMISSIONS = ["structure.view", "structure.create", "structure.update", "structure.delete"];
+        const { PERMISSIONS } = require("../config/permissions");
+        const VALID_HR_PERMISSIONS = Object.values(PERMISSIONS);
         const invalidPermissions = permissions.filter((p) => !VALID_HR_PERMISSIONS.includes(p));
         if (invalidPermissions.length > 0) {
             return res.status(400).json({ success: false, message: `Invalid permissions provided: ${invalidPermissions.join(', ')}` });
