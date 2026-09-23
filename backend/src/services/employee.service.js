@@ -217,7 +217,6 @@ const inviteEmployee = async ({
     employeeId: providedEmployeeId,
 }) => {
     const normalizedEmail = String(email).trim().toLowerCase();
-    const type = role === "hr" ? "HR" : "EMPLOYEE";
 
     if (!positionId) {
         const err = new Error("Position is required.");
@@ -225,8 +224,8 @@ const inviteEmployee = async ({
         throw err;
     }
 
-    if (!role || !["hr", "employee"].includes(role)) {
-        const err = new Error("Valid role is required (hr or employee).");
+    if (role && role !== "employee") {
+        const err = new Error("Valid role is required (employee).");
         err.code = "VALIDATION_ERROR";
         throw err;
     }
@@ -275,7 +274,6 @@ const inviteEmployee = async ({
 
     const invitation = await Invitation.create({
         hospitalId: hospital._id,
-        type,
         employeeId: resolvedEmployeeId,
         firstName: String(firstName).trim(),
         lastName: String(lastName).trim(),
@@ -283,7 +281,7 @@ const inviteEmployee = async ({
         phone: phone ? String(phone).trim() : null,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
         positionId,
-        role,
+        role: "employee",
         tokenHash,
         expiresAt,
         status: "pending",
@@ -614,7 +612,7 @@ const resendInvitation = async ({ invitationId, hospitalId }) => {
         hospitalName: invitation.hospitalId.name,
         recipientName: fullName,
         inviterName: "",
-        role: invitation.type,
+        role: invitation.role || "employee",
         invitationUrl,
     });
 

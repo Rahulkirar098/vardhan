@@ -8,12 +8,6 @@ const invitationSchema = new mongoose.Schema(
             required: true,
         },
 
-        type: {
-            type: String,
-            enum: ["HR", "EMPLOYEE"],
-            required: true,
-        },
-
         email: {
             type: String,
             required: true,
@@ -35,7 +29,7 @@ const invitationSchema = new mongoose.Schema(
 
         lastName: {
             type: String,
-            trim: true, // Optional for backward compatibility with old HR invitations where "name" might not split perfectly
+            trim: true,
             default: null,
         },
 
@@ -75,7 +69,8 @@ const invitationSchema = new mongoose.Schema(
         // Vardhan Role for the new User account
         role: {
             type: String,
-            enum: ["hr", "employee"],
+            enum: ["employee"],
+            default: "employee",
             required: true,
         },
 
@@ -102,8 +97,7 @@ const invitationSchema = new mongoose.Schema(
 );
 
 invitationSchema.index({ hospitalId: 1, email: 1, status: 1 });
-invitationSchema.index({ tokenHash: 1, status: 1, type: 1 });
-invitationSchema.index({ type: 1 });
+invitationSchema.index({ tokenHash: 1, status: 1 });
 
 const Invitation = mongoose.model("Invitation", invitationSchema);
 

@@ -76,8 +76,8 @@ const getHospitalOverview = async (userId) => {
     }
 
     const [hrCount, pendingInvitationCount] = await Promise.all([
-        User.countDocuments({ hospitalId: hospital._id, role: "hr" }),
-        Invitation.countDocuments({ hospitalId: hospital._id, type: "HR", status: "pending" }),
+        User.countDocuments({ hospitalId: hospital._id, role: "employee" }),
+        Invitation.countDocuments({ hospitalId: hospital._id, status: "pending" }),
     ]);
 
     return { hospital, stats: { hrCount, pendingInvitationCount } };
