@@ -1006,10 +1006,117 @@ const runTests = async () => {
             body: { status: "INACTIVE" },
         });
         assert.strictEqual(g58.status, 404, "Cross-hospital employee status change rejected");
-        console.log("  ✓ 58. [TEST 12] Cross-hospital employee status manipulation (REJECT - 404)");
+        console.log("  ✓ 58. [TEST 12] Cross-hospital employee status manipulation (REJECT - 404)\n");
+
+        // ====================================================================
+        // H. EMPLOYEE SELF-EDIT RESTRICTION & AUTHORIZATION RULES (59 - 67)
+        // ====================================================================
+        console.log("--- H. EMPLOYEE SELF-EDIT RESTRICTION & AUTHORIZATION RULES ---");
+
+        // 59. [EDIT TEST 1] Admin edits another employee -> PASS
+        const h59 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: {
+                firstName: "Nancy Admin Edited",
+                phone: "+91 9876500000",
+            },
+        });
+        assert.strictEqual(h59.status, 200, "Admin can edit another employee");
+        assert.strictEqual(h59.body.data.firstName, "Nancy Admin Edited");
+        console.log("  ✓ 59. [EDIT TEST 1] Admin edits another employee (PASS)");
+
+        // 60. [EDIT TEST 2] Admin attempts to edit own employee record -> REJECT
+        const h60 = await request(`/api/v1/hrms/employees/${adminAEmp._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: {
+                firstName: "Admin Self Edit",
+            },
+        });
+        assert.strictEqual(h60.status, 403, "Admin cannot edit own employee record (403)");
+        console.log("  ✓ 60. [EDIT TEST 2] Admin attempts to edit own employee record (REJECT - 403)");
+
+        // 61. [EDIT TEST 3] HR Manager with employee.update edits another employee -> PASS
+        const h61 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: {
+                firstName: "Nancy HR Edited",
+            },
+        });
+        assert.strictEqual(h61.status, 200, "HR Manager with employee.update can edit another employee");
+        assert.strictEqual(h61.body.data.firstName, "Nancy HR Edited");
+        console.log("  ✓ 61. [EDIT TEST 3] HR Manager with employee.update edits another employee (PASS)");
+
+        // 62. [EDIT TEST 4] HR Manager attempts to edit own employee record -> REJECT
+        const h62 = await request(`/api/v1/hrms/employees/${hrManagerEmp._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: {
+                firstName: "HRM Self Edit",
+            },
+        });
+        assert.strictEqual(h62.status, 403, "HR Manager cannot edit own employee record (403)");
+        console.log("  ✓ 62. [EDIT TEST 4] HR Manager attempts to edit own employee record (REJECT - 403)");
+
+        // 63. [EDIT TEST 5] Normal employee attempts to edit another employee -> REJECT
+        const h63 = await request(`/api/v1/hrms/employees/${hrManagerEmp._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${nurseAToken}` },
+            body: {
+                firstName: "Nurse Hack",
+            },
+        });
+        assert.strictEqual(h63.status, 403, "Normal employee cannot edit other employee (403)");
+        console.log("  ✓ 63. [EDIT TEST 5] Normal employee attempts to edit another employee (REJECT - 403)");
+
+        // 64. [EDIT TEST 6] Normal employee attempts to edit own employee record -> REJECT
+        const h64 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${nurseAToken}` },
+            body: {
+                firstName: "Nancy Self Edit",
+            },
+        });
+        assert.strictEqual(h64.status, 403, "Normal employee cannot edit own record (403)");
+        console.log("  ✓ 64. [EDIT TEST 6] Normal employee attempts to edit own employee record (REJECT - 403)");
+
+        // 65. [EDIT TEST 7] Direct API self-edit attempt -> REJECT
+        const h65 = await request(`/api/v1/hrms/employees/${hrManagerUser._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: {
+                firstName: "Direct User ID Edit",
+            },
+        });
+        assert.strictEqual(h65.status, 403, "Direct user ID employee edit attempt rejected (403)");
+        console.log("  ✓ 65. [EDIT TEST 7] Direct API self-edit attempt (REJECT - 403)");
+
+        // 66. [EDIT TEST 8] Cross-hospital employee edit attempt -> REJECT
+        const h66 = await request(`/api/v1/hrms/employees/${employeeB._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: {
+                firstName: "Cross Hosp Edit",
+            },
+        });
+        assert.strictEqual(h66.status, 404, "Cross-hospital employee edit rejected (404)");
+        console.log("  ✓ 66. [EDIT TEST 8] Cross-hospital employee edit attempt (REJECT - 404)");
+
+        // 67. [EDIT TEST 9] Existing employee update permissions remain enforced
+        const h67 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: {
+                positionId: posDoctorA._id.toString(),
+            },
+        });
+        assert.strictEqual(h67.status, 403, "HR without employee.position.update cannot update position");
+        console.log("  ✓ 67. [EDIT TEST 9] Existing employee update permissions remain enforced (PASS)");
 
         console.log("\n=======================================================");
-        console.log("=== ALL 58 LIFECYCLE, AUTH & STATUS RULES TESTS PASSED 100% ===");
+        console.log("=== ALL 67 LIFECYCLE, AUTH, STATUS & EDIT RULES TESTS PASSED 100% ===");
         console.log("=======================================================\n");
     } finally {
         if (server) {

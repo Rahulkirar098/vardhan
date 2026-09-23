@@ -445,6 +445,7 @@ const updateEmployee = async ({
     employeeMongoId,
     hospitalId,
     updatedBy,
+    currentUser,
     user,
     updates,
 }) => {
@@ -454,6 +455,23 @@ const updateEmployee = async ({
     });
 
     if (!employee) return null;
+
+    // Self-edit protection
+    const authUser = currentUser || user;
+    const currentUserId = (authUser?.id || authUser?._id || updatedBy)?.toString();
+    const currentUserEmployeeId = authUser?.employeeId?.toString();
+    const targetEmployeeId = employee._id.toString();
+    const targetUserId = employee.userId ? employee.userId.toString() : null;
+
+    if (
+        (currentUserEmployeeId && currentUserEmployeeId === targetEmployeeId) ||
+        (targetUserId && currentUserId && targetUserId === currentUserId) ||
+        (currentUserId && targetEmployeeId === currentUserId)
+    ) {
+        const err = new Error("You cannot edit your own employee record.");
+        err.code = "SELF_EDIT_FORBIDDEN";
+        throw err;
+    }
 
     const allowedFields = [
         "firstName",

@@ -264,6 +264,14 @@ const updateEmployee = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid employee id" });
         }
 
+        // Direct self-edit check if id matches authenticated user ID or employee ID
+        if (req.user.id && String(req.user.id) === String(id)) {
+            return res.status(403).json({ success: false, message: "You cannot edit your own employee record." });
+        }
+        if (req.user.employeeId && String(req.user.employeeId) === String(id)) {
+            return res.status(403).json({ success: false, message: "You cannot edit your own employee record." });
+        }
+
         const { firstName, lastName, email, phone, dateOfJoining, positionId } = req.body;
 
         if (email && !employeeService.EMAIL_REGEX.test(String(email).trim())) {
@@ -277,6 +285,7 @@ const updateEmployee = async (req, res) => {
             employeeMongoId: id,
             hospitalId: req.user.hospitalId,
             updatedBy: req.user.id,
+            currentUser: req.user,
             user: req.user,
             updates: { firstName, lastName, email, phone, dateOfJoining, positionId },
         });
@@ -291,6 +300,9 @@ const updateEmployee = async (req, res) => {
             data: employee,
         });
     } catch (error) {
+        if (error.code === "SELF_EDIT_FORBIDDEN") {
+            return res.status(403).json({ success: false, message: error.message });
+        }
         if (error.code === "UNAUTHORIZED_POSITION_UPDATE") {
             return res.status(403).json({ success: false, message: error.message });
         }

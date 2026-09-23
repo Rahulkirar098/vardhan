@@ -627,7 +627,7 @@ const EmployeesPage = () => {
             <PersonRounded fontSize="small" />
           </IconButton>
         </Tooltip>
-        {hasUpdate && isActive && (
+        {hasUpdate && isActive && !isSelf && (
           <Tooltip title="Edit Employee">
             <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditEmployee(emp); }}>
               <EditRounded fontSize="small" />
