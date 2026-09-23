@@ -1,7 +1,7 @@
 const express = require("express");
 const { authMiddleware } = require("../middleware/auth.middleware");
 const { requireModule } = require("../middleware/module.middleware");
-const { authorizePermission } = require("../middleware/permission.middleware");
+const { authorizePermission, authorizeAnyPermission } = require("../middleware/permission.middleware");
 const { PERMISSIONS } = require("../config/permissions");
 const {
     applyLeave,
@@ -48,9 +48,16 @@ leaveRoute.get(
     getHospitalLeaves
 );
 
-// Get single leave
+// Get single leave (requires any leave view/apply/approve/manage permission)
 leaveRoute.get(
     "/:id",
+    authorizeAnyPermission(
+        PERMISSIONS.LEAVE_VIEW,
+        PERMISSIONS.LEAVE_VIEW_OWN,
+        PERMISSIONS.LEAVE_APPLY,
+        PERMISSIONS.LEAVE_APPROVE,
+        PERMISSIONS.LEAVE_MANAGE
+    ),
     getLeaveById
 );
 
@@ -68,10 +75,14 @@ leaveRoute.patch(
     rejectLeave
 );
 
-// Cancel leave
+// Cancel leave (requires leave.apply, leave.view_own, or leave.manage)
 leaveRoute.patch(
     "/:id/cancel",
-    authorizePermission(PERMISSIONS.LEAVE_APPLY),
+    authorizeAnyPermission(
+        PERMISSIONS.LEAVE_APPLY,
+        PERMISSIONS.LEAVE_VIEW_OWN,
+        PERMISSIONS.LEAVE_MANAGE
+    ),
     cancelLeave
 );
 

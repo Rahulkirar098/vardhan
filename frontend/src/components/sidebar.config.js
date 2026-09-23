@@ -95,8 +95,15 @@ export const getSidebarSectionsForRole = (role) => {
       items.push({ label: 'Employees', path: '/employees', icon: BadgeRounded });
     }
 
-    // Leave Management Navigation (HRMS module + leave permissions)
-    if (hasHrmsModule && (hasPermission(PERMISSIONS.LEAVE_VIEW) || hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) || hasPermission(PERMISSIONS.LEAVE_APPLY))) {
+    // Leave Management Navigation (HRMS module + at least one leave permission)
+    const hasAnyLeavePermission =
+      hasPermission(PERMISSIONS.LEAVE_APPLY) ||
+      hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) ||
+      hasPermission(PERMISSIONS.LEAVE_VIEW) ||
+      hasPermission(PERMISSIONS.LEAVE_APPROVE) ||
+      hasPermission(PERMISSIONS.LEAVE_MANAGE);
+
+    if (hasHrmsModule && hasAnyLeavePermission) {
       items.push({ label: 'Leave Management', path: '/leaves', icon: EventNoteRounded });
     }
 

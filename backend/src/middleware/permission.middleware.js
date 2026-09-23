@@ -41,6 +41,41 @@ const authorizePermission = (...requiredPermissions) => {
     };
 };
 
+/**
+ * Middleware to authorize requests if user has AT LEAST ONE of the specified permissions.
+ *
+ * @param {...string} requiredPermissions
+ */
+const authorizeAnyPermission = (...requiredPermissions) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
+
+        if (req.user.role === "super_admin" || req.user.role === "admin") {
+            return next();
+        }
+
+        const isAuthorized = requiredPermissions.some((permission) =>
+            hasPermission(req.user, permission)
+        );
+
+        if (!isAuthorized) {
+            return res.status(403).json({
+                success: false,
+                message: "You do not have permission to perform this action",
+            });
+        }
+
+        return next();
+    };
+};
+
 module.exports = {
     authorizePermission,
+    authorizeAnyPermission,
 };
+

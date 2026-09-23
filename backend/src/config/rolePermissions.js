@@ -10,10 +10,7 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     admin: Object.freeze(Object.values(PERMISSIONS)),
 
-    employee: Object.freeze([
-        PERMISSIONS.LEAVE_APPLY,
-        PERMISSIONS.LEAVE_VIEW_OWN,
-    ]),
+    employee: Object.freeze([]),
 });
 
 const hasPermission = (user, permission) => {
@@ -36,6 +33,16 @@ const hasPermission = (user, permission) => {
         PERMISSIONS.STRUCTURE_UPDATE,
         PERMISSIONS.STRUCTURE_DELETE,
         PERMISSIONS.STRUCTURE_MANAGE,
+    ].includes(permission)) {
+        return true;
+    }
+
+    if (userSpecific.includes(PERMISSIONS.LEAVE_MANAGE) && [
+        PERMISSIONS.LEAVE_APPLY,
+        PERMISSIONS.LEAVE_VIEW_OWN,
+        PERMISSIONS.LEAVE_VIEW,
+        PERMISSIONS.LEAVE_APPROVE,
+        PERMISSIONS.LEAVE_MANAGE,
     ].includes(permission)) {
         return true;
     }

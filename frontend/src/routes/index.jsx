@@ -81,7 +81,7 @@ const getDefaultRedirectForRole = (role) => {
   return '/login';
 };
 
-const ProtectedRoute = ({ children, allowedRoles, requiredModule, requiredPermission }) => {
+const ProtectedRoute = ({ children, allowedRoles, requiredModule, requiredPermission, requiredAnyPermission }) => {
   const token = localStorage.getItem('token');
 
   if (!token) {
@@ -114,6 +114,13 @@ const ProtectedRoute = ({ children, allowedRoles, requiredModule, requiredPermis
 
     if (requiredPermission && !hasPermission(requiredPermission)) {
       return <Navigate to={getDefaultRedirectForRole(role)} replace />;
+    }
+
+    if (requiredAnyPermission && Array.isArray(requiredAnyPermission)) {
+      const hasAny = requiredAnyPermission.some((perm) => hasPermission(perm));
+      if (!hasAny) {
+        return <Navigate to={getDefaultRedirectForRole(role)} replace />;
+      }
     }
   }
 
@@ -271,6 +278,13 @@ const AppRoutes = () => {
           <ProtectedRoute
             allowedRoles={['admin', 'employee']}
             requiredModule="hrms"
+            requiredAnyPermission={[
+              PERMISSIONS.LEAVE_APPLY,
+              PERMISSIONS.LEAVE_VIEW_OWN,
+              PERMISSIONS.LEAVE_VIEW,
+              PERMISSIONS.LEAVE_APPROVE,
+              PERMISSIONS.LEAVE_MANAGE,
+            ]}
           >
             <LeaveManagementPage />
           </ProtectedRoute>

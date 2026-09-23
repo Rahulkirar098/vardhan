@@ -49,10 +49,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
 
   admin: Object.freeze(Object.values(PERMISSIONS)),
 
-  employee: Object.freeze([
-    PERMISSIONS.LEAVE_APPLY,
-    PERMISSIONS.LEAVE_VIEW_OWN,
-  ]),
+  employee: Object.freeze([]),
 });
 
 /**
@@ -78,9 +75,6 @@ export const hasPermission = (permission, role, userPermissions) => {
     return true;
   }
 
-  // Super Admin currently has specific permissions defined in ROLE_PERMISSIONS, but for legacy support we leave this.
-  // We'll rely on ROLE_PERMISSIONS merge.
-  
   const basePermissions = ROLE_PERMISSIONS[effectiveRole] || [];
   if (basePermissions.includes(permission)) {
     return true;
@@ -107,6 +101,16 @@ export const hasPermission = (permission, role, userPermissions) => {
     PERMISSIONS.STRUCTURE_UPDATE,
     PERMISSIONS.STRUCTURE_DELETE,
     PERMISSIONS.STRUCTURE_MANAGE,
+  ].includes(permission)) {
+    return true;
+  }
+
+  if (Array.isArray(assigned) && assigned.includes(PERMISSIONS.LEAVE_MANAGE) && [
+    PERMISSIONS.LEAVE_APPLY,
+    PERMISSIONS.LEAVE_VIEW_OWN,
+    PERMISSIONS.LEAVE_VIEW,
+    PERMISSIONS.LEAVE_APPROVE,
+    PERMISSIONS.LEAVE_MANAGE,
   ].includes(permission)) {
     return true;
   }

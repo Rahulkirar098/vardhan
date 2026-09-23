@@ -477,10 +477,15 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
 
 // ─── Main Leave Management Page ──────────────────────────────────────────────
 const LeaveManagementPage = () => {
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const showSnack = (message, severity = 'success') => setSnackbar({ open: true, message, severity });
+  const currentUserRole = localStorage.getItem('role') || 'employee';
+  const currentUserId = localStorage.getItem('userId') || '';
+  const canApprove = hasPermission(PERMISSIONS.LEAVE_APPROVE) || currentUserRole === 'admin';
+  const canApply = hasPermission(PERMISSIONS.LEAVE_APPLY) || currentUserRole === 'admin';
+  const canViewManagement = hasPermission(PERMISSIONS.LEAVE_VIEW) || currentUserRole === 'admin';
+  const canViewOwn = hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) || currentUserRole === 'admin';
+  const canManage = hasPermission(PERMISSIONS.LEAVE_MANAGE) || currentUserRole === 'admin';
 
-  const [activeTab, setActiveTab] = useState(0); // 0: All, 1: Pending, 2: Approved, 3: Rejected, 4: My Leave
+  const [activeTab, setActiveTab] = useState(canViewManagement ? 'all' : 'my'); // 'all' | 'pending' | 'approved' | 'rejected' | 'my'
   const [leaves, setLeaves] = useState([]);
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, currentlyOnLeave: 0, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -498,11 +503,14 @@ const LeaveManagementPage = () => {
   const [cancellingLeave, setCancellingLeave] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const currentUserRole = localStorage.getItem('role') || 'employee';
-  const currentUserId = localStorage.getItem('userId') || '';
-  const canApprove = hasPermission(PERMISSIONS.LEAVE_APPROVE) || currentUserRole === 'admin';
-  const canApply = hasPermission(PERMISSIONS.LEAVE_APPLY) || currentUserRole === 'admin' || currentUserRole === 'employee';
-  const canViewManagement = hasPermission(PERMISSIONS.LEAVE_VIEW) || currentUserRole === 'admin';
+  // Initialize active tab based on view permissions
+  useEffect(() => {
+    if (!canViewManagement && canViewOwn) {
+      setActiveTab('my');
+    } else if (canViewManagement && activeTab === 'my' && !canViewOwn) {
+      setActiveTab('all');
+    }
+  }, [canViewManagement, canViewOwn]);
 
   // Load stats
   const loadStats = useCallback(async () => {
@@ -521,11 +529,11 @@ const LeaveManagementPage = () => {
     setLoading(true);
     setError('');
     try {
-      const isMyLeaveTab = activeTab === 4;
+      const isMyLeaveTab = activeTab === 'my';
       let statusParam = undefined;
-      if (activeTab === 1) statusParam = 'pending';
-      if (activeTab === 2) statusParam = 'approved';
-      if (activeTab === 3) statusParam = 'rejected';
+      if (activeTab === 'pending') statusParam = 'pending';
+      if (activeTab === 'approved') statusParam = 'approved';
+      if (activeTab === 'rejected') statusParam = 'rejected';
 
       const params = {
         status: statusParam,
@@ -534,9 +542,19 @@ const LeaveManagementPage = () => {
       };
 
       let res;
-      if (isMyLeaveTab || !canViewManagement) {
+      if (isMyLeaveTab) {
+        if (!canViewOwn) {
+          setLeaves([]);
+          setLoading(false);
+          return;
+        }
         res = await leaveService.getMyLeaves(params);
       } else {
+        if (!canViewManagement) {
+          setLeaves([]);
+          setLoading(false);
+          return;
+        }
         res = await leaveService.getHospitalLeaves(params);
       }
 
@@ -546,7 +564,7 @@ const LeaveManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, typeFilter, search, canViewManagement]);
+  }, [activeTab, typeFilter, search, canViewManagement, canViewOwn]);
 
   useEffect(() => {
     loadStats();
@@ -708,7 +726,7 @@ const LeaveManagementPage = () => {
               </Tooltip>
 
               {/* Management Actions: Approve & Reject (only for other employees when permitted) */}
-              {isPending && canApprove && !isOwn && activeTab !== 4 && (
+              {isPending && canApprove && !isOwn && activeTab !== 'my' && (
                 <>
                   <Tooltip title="Approve Request">
                     <IconButton
@@ -733,8 +751,8 @@ const LeaveManagementPage = () => {
                 </>
               )}
 
-              {/* Requester Action: Cancel own pending request */}
-              {isPending && (isOwn || activeTab === 4) && (
+              {/* Requester / Manager Action: Cancel pending request */}
+              {isPending && (isOwn || canManage || activeTab === 'my') && (
                 <Tooltip title="Cancel Request">
                   <IconButton
                     size="small"
@@ -751,7 +769,7 @@ const LeaveManagementPage = () => {
         },
       },
     ],
-    [currentUserId, canApprove, activeTab]
+    [currentUserId, canApprove, canManage, activeTab]
   );
 
   return (
@@ -840,11 +858,11 @@ const LeaveManagementPage = () => {
                 },
               }}
             >
-              {canViewManagement && <Tab label="All Requests" />}
-              {canViewManagement && <Tab label={`Pending (${stats.pending})`} />}
-              {canViewManagement && <Tab label="Approved" />}
-              {canViewManagement && <Tab label="Rejected" />}
-              <Tab label="My Leave" />
+              {canViewManagement && <Tab value="all" label="All Requests" />}
+              {canViewManagement && <Tab value="pending" label={`Pending (${stats.pending})`} />}
+              {canViewManagement && <Tab value="approved" label="Approved" />}
+              {canViewManagement && <Tab value="rejected" label="Rejected" />}
+              {canViewOwn && <Tab value="my" label="My Leave" />}
             </Tabs>
           </Box>
 
@@ -905,11 +923,11 @@ const LeaveManagementPage = () => {
             <Box sx={{ p: 6 }}>
               <EmptyState
                 icon={EventBusyRounded}
-                title={activeTab === 4 ? 'No Leave History Found' : 'No Leave Requests'}
+                title={activeTab === 'my' ? 'No Leave History Found' : 'No Leave Requests'}
                 description={
                   search || typeFilter
                     ? 'No leave requests match your search or filter criteria.'
-                    : activeTab === 4
+                    : activeTab === 'my'
                     ? 'You have not submitted any leave requests yet.'
                     : 'There are no leave requests in this category.'
                 }

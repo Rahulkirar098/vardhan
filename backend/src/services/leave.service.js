@@ -3,6 +3,8 @@ const Leave = require("../models/leave.model");
 const Employee = require("../models/employee.model");
 const User = require("../models/user.model");
 const { LEAVE_STATUSES } = require("../constants/leave.constants");
+const { PERMISSIONS } = require("../config/permissions");
+const { hasPermission } = require("../config/rolePermissions");
 
 /**
  * Calculates total calendar days inclusively between two dates
@@ -309,6 +311,27 @@ const getLeaveById = async ({ user, leaveId }) => {
         throw err;
     }
 
+    const canViewWorkforce = (
+        user.role === "admin" ||
+        user.role === "super_admin" ||
+        hasPermission(user, PERMISSIONS.LEAVE_VIEW) ||
+        hasPermission(user, PERMISSIONS.LEAVE_APPROVE) ||
+        hasPermission(user, PERMISSIONS.LEAVE_MANAGE)
+    );
+
+    const userEmployee = await getEmployeeForUser(user.id || user._id, hospitalId);
+    const isOwner = (
+        (userEmployee && String(leave.employeeId?._id || leave.employeeId) === String(userEmployee._id)) ||
+        (leave.employeeId && leave.employeeId.userId && String(leave.employeeId.userId) === String(user.id || user._id)) ||
+        (leave.appliedBy && String(leave.appliedBy._id || leave.appliedBy) === String(user.id || user._id))
+    );
+
+    if (!canViewWorkforce && !isOwner) {
+        const err = new Error("You do not have permission to view this leave request");
+        err.code = "FORBIDDEN";
+        throw err;
+    }
+
     return leave;
 };
 
@@ -418,13 +441,19 @@ const cancelLeave = async ({ user, leaveId }) => {
         throw err;
     }
 
+    const canManageAll =
+        user.role === "admin" ||
+        user.role === "super_admin" ||
+        hasPermission(user, PERMISSIONS.LEAVE_MANAGE);
+
     const userEmployee = await getEmployeeForUser(user.id || user._id, hospitalId);
     const isOwner =
         (userEmployee && String(leave.employeeId?._id || leave.employeeId) === String(userEmployee._id)) ||
-        String(leave.appliedBy) === String(user.id || user._id);
+        (leave.employeeId && leave.employeeId.userId && String(leave.employeeId.userId) === String(user.id || user._id)) ||
+        (leave.appliedBy && String(leave.appliedBy._id || leave.appliedBy) === String(user.id || user._id));
 
-    // Normal employee cannot cancel another employee's leave
-    if (user.role === "employee" && !isOwner) {
+    // Normal employee without leave.manage cannot cancel another employee's leave
+    if (user.role === "employee" && !canManageAll && !isOwner) {
         const err = new Error("You can only cancel your own leave requests");
         err.code = "FORBIDDEN";
         throw err;
