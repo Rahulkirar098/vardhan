@@ -6,6 +6,7 @@ import {
   BadgeRounded,
   BusinessCenterRounded,
   VpnKeyRounded,
+  EventNoteRounded,
 } from '@mui/icons-material';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
@@ -32,6 +33,7 @@ const sidebarConfig = {
           { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
           { label: 'Positions', path: '/positions', icon: BusinessCenterRounded },
           { label: 'Employees', path: '/employees', icon: BadgeRounded },
+          { label: 'Leave Management', path: '/leaves', icon: EventNoteRounded },
           { label: 'Access Management', path: '/access-management', icon: VpnKeyRounded },
           { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
         ],
@@ -91,6 +93,11 @@ export const getSidebarSectionsForRole = (role) => {
     // Employees Navigation (HRMS module + employee.view permission)
     if (hasHrmsModule && hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
       items.push({ label: 'Employees', path: '/employees', icon: BadgeRounded });
+    }
+
+    // Leave Management Navigation (HRMS module + leave permissions)
+    if (hasHrmsModule && (hasPermission(PERMISSIONS.LEAVE_VIEW) || hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) || hasPermission(PERMISSIONS.LEAVE_APPLY))) {
+      items.push({ label: 'Leave Management', path: '/leaves', icon: EventNoteRounded });
     }
 
     // Structure Navigation (structure module/core + structure.view permission)

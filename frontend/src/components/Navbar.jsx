@@ -11,6 +11,7 @@ const PAGE_META = [
   { test: (path) => path === '/hospital', title: 'Hospital', breadcrumb: 'Workspace' },
   { test: (path) => path === '/positions', title: 'Positions', breadcrumb: 'Workspace' },
   { test: (path) => path === '/employees', title: 'Employees', breadcrumb: 'Workspace' },
+  { test: (path) => path === '/leaves', title: 'Leave Management', breadcrumb: 'Workspace' },
   { test: (path) => path === '/access-management', title: 'Access Management', breadcrumb: 'Workspace' },
   { test: (path) => path === '/structure', title: 'Hospital Structure', breadcrumb: 'Workspace' },
   { test: (path) => path.startsWith('/structure/'), title: 'Floor Details', breadcrumb: 'Workspace / Hospital Structure' },

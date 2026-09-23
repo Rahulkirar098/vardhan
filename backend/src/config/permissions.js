@@ -25,6 +25,13 @@ const PERMISSIONS = Object.freeze({
     ROSTER_VIEW: "roster.view",
     ROSTER_MANAGE: "roster.manage",
 
+    // Leave Management (HRMS)
+    LEAVE_APPLY: "leave.apply",
+    LEAVE_VIEW_OWN: "leave.view_own",
+    LEAVE_VIEW: "leave.view",
+    LEAVE_APPROVE: "leave.approve",
+    LEAVE_MANAGE: "leave.manage",
+
     // Position Management
     POSITION_VIEW: "position.view",
     POSITION_CREATE: "position.create",

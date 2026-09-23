@@ -10,7 +10,10 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     admin: Object.freeze(Object.values(PERMISSIONS)),
 
-    employee: Object.freeze([]),
+    employee: Object.freeze([
+        PERMISSIONS.LEAVE_APPLY,
+        PERMISSIONS.LEAVE_VIEW_OWN,
+    ]),
 });
 
 const hasPermission = (user, permission) => {

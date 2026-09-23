@@ -16,6 +16,7 @@ import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 import PositionsPage from '../pages/admin/PositionsPage';
 import AccessManagementPage from '../pages/admin/AccessManagementPage';
+import LeaveManagementPage from '../pages/admin/LeaveManagementPage';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
 const getUserRole = () => {
@@ -261,6 +262,17 @@ const AppRoutes = () => {
             requiredPermission={PERMISSIONS.EMPLOYEE_VIEW}
           >
             <EmployeesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/leaves"
+        element={
+          <ProtectedRoute
+            allowedRoles={['admin', 'employee']}
+            requiredModule="hrms"
+          >
+            <LeaveManagementPage />
           </ProtectedRoute>
         }
       />

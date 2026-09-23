@@ -13,6 +13,7 @@ const { moduleRoute } = require("./src/routes/module.route");
 const { employeeRoute } = require("./src/routes/employee.route");
 const positionRoute = require("./src/routes/position.route");
 const { accessManagementRoute } = require("./src/routes/accessManagement.route");
+const { leaveRoute } = require("./src/routes/leave.route");
 
 const app = express();
 
@@ -32,6 +33,10 @@ app.use("/api/v1/super-admin", superAdminRoute);
 app.use("/api/v1/hospitals/:hospitalId", structureRoute);
 app.use("/api/v1/modules", moduleRoute);
 app.use("/api/modules", moduleRoute);
+app.use("/api/v1/hrms/leaves", leaveRoute);
+app.use("/api/hrms/leaves", leaveRoute);
+app.use("/api/v1/leaves", leaveRoute);
+app.use("/api/leaves", leaveRoute);
 app.use("/api/v1/hrms", employeeRoute);
 app.use("/api/hrms", employeeRoute);
 app.use("/api/positions", positionRoute);
@@ -43,6 +48,7 @@ const Floor = require("./src/models/floor.model");
 const Room = require("./src/models/room.model");
 const Invitation = require("./src/models/invitation.model");
 const Position = require("./src/models/position.model");
+const Leave = require("./src/models/leave.model");
 
 if (require.main === module) {
     mongoose
@@ -54,6 +60,7 @@ if (require.main === module) {
                 await Room.syncIndexes();
                 await Invitation.syncIndexes();
                 await Position.syncIndexes();
+                await Leave.syncIndexes();
             } catch (indexErr) {
                 console.error("Error syncing indexes:", indexErr);
             }

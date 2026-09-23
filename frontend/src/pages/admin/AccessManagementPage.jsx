@@ -78,6 +78,17 @@ const PERMISSION_GROUPS = [
       { key: 'position.update', label: 'Edit / Deactivate Positions', description: 'Update position details and status' },
     ],
   },
+  {
+    title: 'Leave Management',
+    description: 'Permissions for submitting, inspecting, approving, and managing employee leaves.',
+    permissions: [
+      { key: 'leave.apply', label: 'Apply Leave', description: 'Submit leave applications for self' },
+      { key: 'leave.view_own', label: 'View Own Leaves', description: 'View personal leave history and status' },
+      { key: 'leave.view', label: 'View Workforce Leaves', description: 'View leave requests across hospital workforce' },
+      { key: 'leave.approve', label: 'Approve / Reject Leave', description: 'Approve or reject pending leave requests' },
+      { key: 'leave.manage', label: 'Manage Leaves', description: 'Broader management and cancellation of hospital leaves' },
+    ],
+  },
 ];
 
 const MODULE_OPTIONS = [
