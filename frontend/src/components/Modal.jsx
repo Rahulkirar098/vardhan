@@ -31,6 +31,9 @@ const Modal = forwardRef(
       maxWidth = 'sm',
       fullWidth = true,
       cancelLabel = 'Cancel',
+      closeLabel = 'Close',
+      hideSubmit = false,
+      hideCancel = false,
       disableSubmit = false,
       resetKey = 0,
       actions,
@@ -118,11 +121,17 @@ const Modal = forwardRef(
           <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
             {actions ? (
               actions
+            ) : hideSubmit ? (
+              <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
+                {closeLabel || 'Close'}
+              </Button>
             ) : (
               <>
-                <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
-                  {cancelLabel}
-                </Button>
+                {!hideCancel && (
+                  <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
+                    {cancelLabel}
+                  </Button>
+                )}
                 <Button
                   type="submit"
                   variant="contained"
