@@ -842,10 +842,174 @@ const runTests = async () => {
         assert.strictEqual(f46.status, 201);
         const inv46 = await Invitation.findById(f46.body.data.id).lean();
         assert.strictEqual(inv46.createdBy.toString(), hrUserA._id.toString());
-        console.log("  ✓ 46. User cannot spoof createdBy");
+        console.log("  ✓ 46. User cannot spoof createdBy\n");
+
+        // ====================================================================
+        // G. EMPLOYEE STATUS MANAGEMENT & SELF-PROTECTION RULES (47 - 58)
+        // ====================================================================
+        console.log("--- G. EMPLOYEE STATUS MANAGEMENT & SELF-PROTECTION RULES ---");
+
+        // Create an authorized HR Manager user with employee.delete permission
+        const hrManagerUser = await User.create({
+            name: `HR Manager Delete ${testTimestamp}`,
+            email: `hrmanager_del_${testTimestamp}@hospital.com`,
+            password: passwordHash,
+            role: "employee",
+            hospitalId: hospitalA._id,
+            status: "active",
+            modules: ["core", "hrms"],
+            permissions: [PERMISSIONS.EMPLOYEE_VIEW, PERMISSIONS.EMPLOYEE_UPDATE, PERMISSIONS.EMPLOYEE_DELETE],
+        });
+        const hrManagerEmp = await Employee.create({
+            employeeId: `EMP_HRM_DEL_${testTimestamp}`,
+            firstName: "HRM",
+            lastName: "DeleteAuth",
+            email: `hrmanager_del_${testTimestamp}@hospital.com`,
+            positionId: posHRA._id,
+            hospitalId: hospitalA._id,
+            employmentStatus: "ACTIVE",
+            userId: hrManagerUser._id,
+            createdBy: adminA._id,
+        });
+        hrManagerUser.employeeId = hrManagerEmp._id;
+        await hrManagerUser.save();
+        const hrManagerToken = generateToken({ id: hrManagerUser._id.toString(), role: "employee", hospitalId: hospitalA._id, employeeId: hrManagerEmp._id.toString() });
+
+        // Admin A employee record for self-check
+        const adminAEmp = await Employee.create({
+            employeeId: `EMP_ADMINA_${testTimestamp}`,
+            firstName: "Admin",
+            lastName: "A-Record",
+            email: `adminA_${testTimestamp}@hospital.com`,
+            positionId: posHRA._id,
+            hospitalId: hospitalA._id,
+            employmentStatus: "ACTIVE",
+            userId: adminA._id,
+            createdBy: adminA._id,
+        });
+        adminA.employeeId = adminAEmp._id;
+        await adminA.save();
+
+        // 47. TEST 1: Admin deactivates another employee -> PASS
+        const g47 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g47.status, 200, "Admin can deactivate another employee");
+        assert.strictEqual(g47.body.data.employmentStatus, "INACTIVE");
+        console.log("  ✓ 47. [TEST 1] Admin deactivates another employee (PASS)");
+
+        // 48. TEST 2: Admin reactivates another employee -> PASS
+        const g48 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: { status: "ACTIVE" },
+        });
+        assert.strictEqual(g48.status, 200, "Admin can reactivate another employee");
+        assert.strictEqual(g48.body.data.employmentStatus, "ACTIVE");
+        console.log("  ✓ 48. [TEST 2] Admin reactivates another employee (PASS)");
+
+        // 49. TEST 3: Admin attempts to deactivate self -> REJECT
+        const g49a = await request(`/api/v1/hrms/employees/${adminAEmp._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g49a.status, 403, "Admin cannot deactivate own linked employee record");
+        const g49b = await request(`/api/v1/hrms/employees/${adminA._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g49b.status, 403, "Admin cannot deactivate own user ID directly");
+        console.log("  ✓ 49. [TEST 3] Admin attempts to deactivate self (REJECT - 403)");
+
+        // 50. TEST 4: Admin attempts to reactivate/change self -> REJECT
+        const g50 = await request(`/api/v1/hrms/employees/${adminAEmp._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: { status: "ACTIVE" },
+        });
+        assert.strictEqual(g50.status, 403, "Admin cannot change own status");
+        console.log("  ✓ 50. [TEST 4] Admin attempts to reactivate/change self (REJECT - 403)");
+
+        // 51. TEST 5: Authorized HR Manager deactivates another employee -> PASS
+        const g51 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g51.status, 200, "Authorized HR Manager can deactivate another employee");
+        assert.strictEqual(g51.body.data.employmentStatus, "INACTIVE");
+        console.log("  ✓ 51. [TEST 5] Authorized HR Manager deactivates another employee (PASS)");
+
+        // 52. TEST 6: Authorized HR Manager reactivates another employee -> PASS
+        const g52 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: { status: "ACTIVE" },
+        });
+        assert.strictEqual(g52.status, 200, "Authorized HR Manager can reactivate another employee");
+        assert.strictEqual(g52.body.data.employmentStatus, "ACTIVE");
+        console.log("  ✓ 52. [TEST 6] Authorized HR Manager reactivates another employee (PASS)");
+
+        // 53. TEST 7: HR Manager attempts to deactivate self -> REJECT
+        const g53 = await request(`/api/v1/hrms/employees/${hrManagerEmp._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g53.status, 403, "HR Manager cannot deactivate self");
+        console.log("  ✓ 53. [TEST 7] HR Manager attempts to deactivate self (REJECT - 403)");
+
+        // 54. TEST 8: HR Manager attempts to reactivate/change self -> REJECT
+        const g54 = await request(`/api/v1/hrms/employees/${hrManagerEmp._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: { status: "ACTIVE" },
+        });
+        assert.strictEqual(g54.status, 403, "HR Manager cannot change own status");
+        console.log("  ✓ 54. [TEST 8] HR Manager attempts to reactivate/change self (REJECT - 403)");
+
+        // 55. TEST 9: Normal employee attempts to deactivate another employee -> REJECT
+        const g55 = await request(`/api/v1/hrms/employees/${hrManagerEmp._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${nurseAToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g55.status, 403, "Normal employee cannot deactivate other employee");
+        console.log("  ✓ 55. [TEST 9] Normal employee attempts to deactivate another employee (REJECT - 403)");
+
+        // 56. TEST 10: Normal employee attempts to change their own status -> REJECT
+        const g56 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${nurseAToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g56.status, 403, "Normal employee cannot change own status");
+        console.log("  ✓ 56. [TEST 10] Normal employee attempts to change their own status (REJECT - 403)");
+
+        // 57. TEST 11: Direct API request cannot bypass the self-status restriction -> REJECT
+        const g57 = await request(`/api/v1/hrms/employees/${hrManagerUser._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g57.status, 403, "Direct user ID status API call is rejected");
+        console.log("  ✓ 57. [TEST 11] Direct API request cannot bypass the self-status restriction (REJECT - 403)");
+
+        // 58. TEST 12: Cross-hospital employee status manipulation -> REJECT
+        const g58 = await request(`/api/v1/hrms/employees/${employeeB._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${hrManagerToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(g58.status, 404, "Cross-hospital employee status change rejected");
+        console.log("  ✓ 58. [TEST 12] Cross-hospital employee status manipulation (REJECT - 404)");
 
         console.log("\n=======================================================");
-        console.log("=== ALL 46 LIFECYCLE & AUTH TESTS PASSED 100% ===");
+        console.log("=== ALL 58 LIFECYCLE, AUTH & STATUS RULES TESTS PASSED 100% ===");
         console.log("=======================================================\n");
     } finally {
         if (server) {

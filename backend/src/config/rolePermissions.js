@@ -21,9 +21,23 @@ const hasPermission = (user, permission) => {
     }
 
     const roleDefaults = ROLE_PERMISSIONS[user.role] || [];
-    const userSpecific = Array.isArray(user.permissions) ? user.permissions : [];
+    const userSpecific = user.permissions || [];
 
-    return roleDefaults.includes(permission) || userSpecific.includes(permission);
+    if (roleDefaults.includes(permission) || userSpecific.includes(permission)) {
+        return true;
+    }
+
+    if (userSpecific.includes(PERMISSIONS.STRUCTURE_MANAGE) && [
+        PERMISSIONS.STRUCTURE_VIEW,
+        PERMISSIONS.STRUCTURE_CREATE,
+        PERMISSIONS.STRUCTURE_UPDATE,
+        PERMISSIONS.STRUCTURE_DELETE,
+        PERMISSIONS.STRUCTURE_MANAGE,
+    ].includes(permission)) {
+        return true;
+    }
+
+    return false;
 };
 
 module.exports = {

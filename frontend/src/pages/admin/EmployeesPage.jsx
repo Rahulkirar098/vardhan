@@ -73,7 +73,6 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
     email: '',
     phone: '',
     positionId: '',
-    role: '',
     dateOfJoining: '',
     employeeId: '',
   });
@@ -87,7 +86,6 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
       email: '',
       phone: '',
       positionId: '',
-      role: '',
       dateOfJoining: '',
       employeeId: '',
     });
@@ -117,7 +115,6 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
     if (!form.lastName.trim()) { setError('Last name is required.'); return; }
     if (!form.email.trim()) { setError('Email is required.'); return; }
     if (!form.positionId) { setError('Position is required.'); return; }
-    if (!form.role) { setError('Vardhan Role is required.'); return; }
 
     try {
       setSubmitting(true);
@@ -127,7 +124,6 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
         positionId: form.positionId,
-        role: form.role,
         dateOfJoining: form.dateOfJoining || undefined,
         employeeId: form.employeeId.trim() || undefined,
       });
@@ -562,7 +558,7 @@ const EmployeesPage = () => {
     { key: 'employee', label: 'EMPLOYEE' },
     { key: 'employeeId', label: 'EMPLOYEE ID' },
     { key: 'position', label: 'POSITION' },
-    { key: 'role', label: 'VARDHAN ROLE' },
+    { key: 'role', label: 'ROLE' },
     { key: 'joined', label: 'JOINED' },
     { key: 'status', label: 'STATUS' }
   ];
@@ -618,6 +614,12 @@ const EmployeesPage = () => {
   
   const renderEmployeeActions = (emp) => {
     const isActive = emp.employmentStatus === 'ACTIVE';
+    const isSelf = Boolean(
+      (currentUser?.employeeId && String(currentUser.employeeId) === String(emp._id)) ||
+      (currentUser?.id && emp.userId && String(currentUser.id) === String(emp.userId?._id || emp.userId)) ||
+      (currentUser?.email && emp.email && currentUser.email.toLowerCase() === emp.email.toLowerCase())
+    );
+
     return (
       <Box display="flex" justifyContent="flex-end" gap={0.5}>
         <Tooltip title="View Details">
@@ -632,7 +634,7 @@ const EmployeesPage = () => {
             </IconButton>
           </Tooltip>
         )}
-        {hasDeactivate && (
+        {hasDeactivate && !isSelf && (
           <Tooltip title={isActive ? 'Deactivate Employee' : 'Activate Employee'}>
             <IconButton
               size="small"

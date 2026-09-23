@@ -321,10 +321,19 @@ const updateEmployeeStatus = async (req, res) => {
             });
         }
 
+        // Direct self-status check if id matches authenticated user ID or employee ID
+        if (req.user.id && String(req.user.id) === String(id)) {
+            return res.status(403).json({ success: false, message: "You cannot change your own employment status." });
+        }
+        if (req.user.employeeId && String(req.user.employeeId) === String(id)) {
+            return res.status(403).json({ success: false, message: "You cannot change your own employment status." });
+        }
+
         const employee = await employeeService.updateEmployeeStatus({
             employeeMongoId: id,
             hospitalId: req.user.hospitalId,
             updatedBy: req.user.id,
+            currentUser: req.user,
             status: String(status).toUpperCase(),
         });
 
@@ -347,6 +356,9 @@ const updateEmployeeStatus = async (req, res) => {
             },
         });
     } catch (error) {
+        if (error.code === "SELF_STATUS_CHANGE_FORBIDDEN") {
+            return res.status(403).json({ success: false, message: error.message });
+        }
         console.error("Update Employee Status Error:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }

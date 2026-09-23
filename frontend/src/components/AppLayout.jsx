@@ -1,7 +1,8 @@
 import { Box, useMediaQuery, useTheme } from '@mui/material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppNavbar, { NAVBAR_HEIGHT } from './Navbar';
 import AppSidebar, { SIDEBAR_WIDTH } from './Sidebar';
+import auth from '../services/auth.service';
 
 const getCurrentRole = () => {
   const token = localStorage.getItem('token');
@@ -22,7 +23,27 @@ const AppLayout = ({ children, onLogout }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const role = getCurrentRole();
-  const userName = localStorage.getItem('userName') || 'User';
+  const [userName, setUserName] = useState(localStorage.getItem('userName') || 'User');
+  const [positionName, setPositionName] = useState(localStorage.getItem('positionName') || '');
+
+  useEffect(() => {
+    auth.me().then((res) => {
+      const u = res?.data?.data;
+      if (u) {
+        if (u.name) {
+          localStorage.setItem('userName', u.name);
+          setUserName(u.name);
+        }
+        if (u.positionName) {
+          localStorage.setItem('positionName', u.positionName);
+          setPositionName(u.positionName);
+        } else if (u.role !== 'employee') {
+          localStorage.removeItem('positionName');
+          setPositionName('');
+        }
+      }
+    }).catch(() => {});
+  }, []);
 
   return (
     <Box
@@ -37,6 +58,7 @@ const AppLayout = ({ children, onLogout }) => {
       <AppNavbar
         userName={userName}
         userRole={role}
+        userPosition={positionName}
         showMenu={isMobile}
         onMenuClick={() => setMobileOpen(true)}
       />

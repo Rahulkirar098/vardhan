@@ -58,6 +58,7 @@ const Login = () => {
           localStorage.setItem('role', payload.role || 'admin');
           localStorage.setItem('userName', response?.data?.data?.user?.name || 'User');
           localStorage.setItem('userEmail', response?.data?.data?.user?.email || '');
+          localStorage.setItem('positionName', response?.data?.data?.user?.positionName || '');
           localStorage.setItem('permissions', JSON.stringify(response?.data?.data?.user?.permissions || []));
           localStorage.setItem('modules', JSON.stringify(response?.data?.data?.user?.modules || ['core']));
 

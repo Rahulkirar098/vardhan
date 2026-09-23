@@ -87,7 +87,21 @@ export const hasPermission = (permission, role, userPermissions) => {
     }
   }
 
-  return Array.isArray(assigned) && assigned.includes(permission);
+  if (Array.isArray(assigned) && assigned.includes(permission)) {
+    return true;
+  }
+
+  if (Array.isArray(assigned) && assigned.includes(PERMISSIONS.STRUCTURE_MANAGE) && [
+    PERMISSIONS.STRUCTURE_VIEW,
+    PERMISSIONS.STRUCTURE_CREATE,
+    PERMISSIONS.STRUCTURE_UPDATE,
+    PERMISSIONS.STRUCTURE_DELETE,
+    PERMISSIONS.STRUCTURE_MANAGE,
+  ].includes(permission)) {
+    return true;
+  }
+
+  return false;
 };
 
 export const getPermissionsForRole = (role) => {

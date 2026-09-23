@@ -134,10 +134,11 @@ const loginUser = async (req, res) => {
         let hospitalId = user.hospitalId;
         let employeeId = user.employeeId;
 
+        let positionName = null;
         if (user.role === "employee") {
-            let employee = employeeId ? await Employee.findById(employeeId).lean() : null;
+            let employee = employeeId ? await Employee.findById(employeeId).populate("positionId", "name").lean() : null;
             if (!employee) {
-                employee = await Employee.findOne({ userId: user._id }).lean();
+                employee = await Employee.findOne({ userId: user._id }).populate("positionId", "name").lean();
                 if (employee) {
                     employeeId = employee._id;
                     user.employeeId = employee._id;
@@ -151,6 +152,7 @@ const loginUser = async (req, res) => {
                     userUpdated = true;
                 }
             }
+            positionName = employee?.positionId?.name || null;
         }
 
         if (userUpdated) {
@@ -170,6 +172,7 @@ const loginUser = async (req, res) => {
                     role: user.role,
                     hospitalId: hospitalId,
                     employeeId: employeeId,
+                    positionName: positionName,
                     status: user.status,
                     permissions: user.permissions || [],
                     modules: user.modules || ["core"],

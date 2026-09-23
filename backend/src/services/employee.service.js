@@ -509,6 +509,7 @@ const updateEmployeeStatus = async ({
     employeeMongoId,
     hospitalId,
     updatedBy,
+    currentUser,
     status,
 }) => {
     const employee = await Employee.findOne({
@@ -517,6 +518,22 @@ const updateEmployeeStatus = async ({
     });
 
     if (!employee) return null;
+
+    // Self-status protection
+    const currentUserId = (currentUser?.id || currentUser?._id || updatedBy)?.toString();
+    const currentUserEmployeeId = currentUser?.employeeId?.toString();
+    const targetEmployeeId = employee._id.toString();
+    const targetUserId = employee.userId ? employee.userId.toString() : null;
+
+    if (
+        (currentUserEmployeeId && currentUserEmployeeId === targetEmployeeId) ||
+        (targetUserId && currentUserId && targetUserId === currentUserId) ||
+        (currentUserId && targetEmployeeId === currentUserId)
+    ) {
+        const err = new Error("You cannot change your own employment status.");
+        err.code = "SELF_STATUS_CHANGE_FORBIDDEN";
+        throw err;
+    }
 
     employee.employmentStatus = status;
     if (status === "INACTIVE") {

@@ -24,6 +24,15 @@ let adminB;
 let tokenB;
 let hospitalB;
 
+let empViewOnly;
+let tokenEmpViewOnly;
+
+let empManage;
+let tokenEmpManage;
+
+let empNoPerm;
+let tokenEmpNoPerm;
+
 const testTimestamp = Date.now();
 
 const setupTestEnvironment = async () => {
@@ -74,6 +83,45 @@ const setupTestEnvironment = async () => {
 
     await User.findByIdAndUpdate(adminB._id, { hospitalId: hospitalB._id });
     tokenB = generateToken({ id: adminB._id, role: adminB.role, hospitalId: hospitalB._id });
+
+    // Create Employee with structure.view only
+    empViewOnly = await User.create({
+        name: `Emp ViewOnly ${testTimestamp}`,
+        email: `emp_view_${testTimestamp}@example.com`,
+        password: passwordHash,
+        role: "employee",
+        hospitalId: hospitalA._id,
+        status: "active",
+        permissions: ["structure.view"],
+        modules: ["core", "hospital_structure"],
+    });
+    tokenEmpViewOnly = generateToken({ id: empViewOnly._id, role: "employee", hospitalId: hospitalA._id });
+
+    // Create Employee with structure.manage
+    empManage = await User.create({
+        name: `Emp Manage ${testTimestamp}`,
+        email: `emp_manage_${testTimestamp}@example.com`,
+        password: passwordHash,
+        role: "employee",
+        hospitalId: hospitalA._id,
+        status: "active",
+        permissions: ["structure.manage"],
+        modules: ["core", "hospital_structure"],
+    });
+    tokenEmpManage = generateToken({ id: empManage._id, role: "employee", hospitalId: hospitalA._id });
+
+    // Create Employee with no permissions
+    empNoPerm = await User.create({
+        name: `Emp NoPerm ${testTimestamp}`,
+        email: `emp_noperm_${testTimestamp}@example.com`,
+        password: passwordHash,
+        role: "employee",
+        hospitalId: hospitalA._id,
+        status: "active",
+        permissions: [],
+        modules: ["core"],
+    });
+    tokenEmpNoPerm = generateToken({ id: empNoPerm._id, role: "employee", hospitalId: hospitalA._id });
 };
 
 const cleanupTestEnvironment = async () => {
@@ -93,6 +141,15 @@ const cleanupTestEnvironment = async () => {
         }
         if (adminB) {
             await User.findByIdAndDelete(adminB._id);
+        }
+        if (empViewOnly) {
+            await User.findByIdAndDelete(empViewOnly._id);
+        }
+        if (empManage) {
+            await User.findByIdAndDelete(empManage._id);
+        }
+        if (empNoPerm) {
+            await User.findByIdAndDelete(empNoPerm._id);
         }
     } catch (err) {
         console.error("Cleanup error:", err);
@@ -548,6 +605,96 @@ const runTests = async () => {
             const body = await res.json();
             assert.strictEqual(body.success, true);
             assert.strictEqual(body.data._id.toString(), hospitalA._id.toString());
+        });
+
+        // TEST 17: Employee with structure.view can view structure
+        await test("TEST 17: Employee with structure.view can list floors and rooms in own hospital", async () => {
+            const resFloors = await fetch(`${baseUrl}/api/v1/hospitals/${hospitalA._id}/floors`, {
+                headers: { Authorization: `Bearer ${tokenEmpViewOnly}` },
+            });
+            assert.strictEqual(resFloors.status, 200);
+            const floorData = await resFloors.json();
+            assert.strictEqual(floorData.success, true);
+            assert.ok(Array.isArray(floorData.data));
+
+            const resRooms = await fetch(`${baseUrl}/api/v1/hospitals/${hospitalA._id}/floors/${createdFloor2._id}/rooms`, {
+                headers: { Authorization: `Bearer ${tokenEmpViewOnly}` },
+            });
+            assert.strictEqual(resRooms.status, 200);
+            const roomData = await resRooms.json();
+            assert.strictEqual(roomData.success, true);
+        });
+
+        // TEST 18: Employee without structure.view cannot view structure (403 Forbidden)
+        await test("TEST 18: Employee without structure.view cannot view structure (403 Forbidden)", async () => {
+            const res = await fetch(`${baseUrl}/api/v1/hospitals/${hospitalA._id}/floors`, {
+                headers: { Authorization: `Bearer ${tokenEmpNoPerm}` },
+            });
+            assert.strictEqual(res.status, 403);
+            const body = await res.json();
+            assert.strictEqual(body.success, false);
+        });
+
+        // TEST 19: Employee with structure.manage can create/update floors and rooms
+        await test("TEST 19: Employee with structure.manage can create floors and rooms", async () => {
+            const resCreateFloor = await fetch(`${baseUrl}/api/v1/hospitals/${hospitalA._id}/floors`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${tokenEmpManage}`,
+                },
+                body: JSON.stringify({
+                    name: "3rd Floor Managed",
+                    floorNumber: 3,
+                    code: "F3M",
+                }),
+            });
+            assert.strictEqual(resCreateFloor.status, 201);
+            const floorBody = await resCreateFloor.json();
+            assert.strictEqual(floorBody.success, true);
+
+            const resCreateRoom = await fetch(`${baseUrl}/api/v1/hospitals/${hospitalA._id}/floors/${floorBody.data._id}/rooms`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${tokenEmpManage}`,
+                },
+                body: JSON.stringify({
+                    name: "Room 301 Managed",
+                    code: "R301M",
+                }),
+            });
+            assert.strictEqual(resCreateRoom.status, 201);
+            const roomBody = await resCreateRoom.json();
+            assert.strictEqual(roomBody.success, true);
+        });
+
+        // TEST 20: Employee without structure.manage cannot create floors (403 Forbidden)
+        await test("TEST 20: Employee without structure.manage cannot create floors (403 Forbidden)", async () => {
+            const res = await fetch(`${baseUrl}/api/v1/hospitals/${hospitalA._id}/floors`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${tokenEmpViewOnly}`,
+                },
+                body: JSON.stringify({
+                    name: "Unauthorized Floor",
+                    floorNumber: 99,
+                }),
+            });
+            assert.strictEqual(res.status, 403);
+            const body = await res.json();
+            assert.strictEqual(body.success, false);
+        });
+
+        // TEST 21: Employee from Hospital A cannot access Hospital B structure
+        await test("TEST 21: Employee from Hospital A cannot access Hospital B structure (403 Forbidden)", async () => {
+            const res = await fetch(`${baseUrl}/api/v1/hospitals/${hospitalB._id}/floors`, {
+                headers: { Authorization: `Bearer ${tokenEmpManage}` },
+            });
+            assert.strictEqual(res.status, 403);
+            const body = await res.json();
+            assert.strictEqual(body.success, false);
         });
     } finally {
         await cleanupTestEnvironment();

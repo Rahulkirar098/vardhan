@@ -22,9 +22,11 @@ const PAGE_META = [
 const getPageMeta = (pathname) =>
   PAGE_META.find((meta) => meta.test(pathname)) || { title: 'Vardhan', breadcrumb: '' };
 
-const Navbar = ({ userName = 'User', userRole, showMenu = false, onMenuClick }) => {
+const Navbar = ({ userName = 'User', userRole, userPosition, showMenu = false, onMenuClick }) => {
   const { pathname } = useLocation();
   const meta = getPageMeta(pathname);
+
+  const displaySubtitle = userPosition || getRoleDisplayName(userRole);
 
   return (
     <AppBar
@@ -68,7 +70,7 @@ const Navbar = ({ userName = 'User', userRole, showMenu = false, onMenuClick }) 
               {userName}
             </Typography>
             <Typography variant="caption" color="text.secondary" noWrap sx={{ lineHeight: 1.3, display: 'block' }}>
-              {getRoleDisplayName(userRole)}
+              {displaySubtitle}
             </Typography>
           </Box>
           <InitialsAvatar name={userName} size={36} />
