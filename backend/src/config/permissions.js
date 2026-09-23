@@ -8,20 +8,25 @@ const PERMISSIONS = Object.freeze({
     STRUCTURE_CREATE: "structure.create",
     STRUCTURE_UPDATE: "structure.update",
     STRUCTURE_DELETE: "structure.delete",
+    STRUCTURE_MANAGE: "structure.manage",
 
-    // HR Management & Invitations
+    // HR Management & Invitations (Retained for backward compatibility with legacy HR routes)
     HR_VIEW: "hr.view",
     HR_INVITE: "hr.invite",
     HR_UPDATE: "hr.update",
     HR_INVITATION_MANAGE: "hr.invitation.manage",
 
-    // Employee Management (HRMS Phase 2)
+    // Employee Management (HRMS)
     EMPLOYEE_VIEW: "employee.view",
     EMPLOYEE_CREATE: "employee.create",
     EMPLOYEE_UPDATE: "employee.update",
     EMPLOYEE_POSITION_UPDATE: "employee.position.update",
     EMPLOYEE_DELETE: "employee.delete",       // used for deactivate/activate action
     EMPLOYEE_DEACTIVATE: "employee.delete",   // alias — same permission value
+
+    // Access Management
+    ACCESS_VIEW: "access.view",
+    ACCESS_MANAGE: "access.manage",
 
     // Future Phase Placeholders (Roster & Shifts)
     ROSTER_VIEW: "roster.view",

@@ -10,13 +10,6 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     admin: Object.freeze(Object.values(PERMISSIONS)),
 
-    hr: Object.freeze([
-        PERMISSIONS.HOSPITAL_VIEW,
-        PERMISSIONS.HR_VIEW,
-        PERMISSIONS.EMPLOYEE_VIEW,
-        PERMISSIONS.POSITION_VIEW,
-    ]),
-
     employee: Object.freeze([]),
 });
 

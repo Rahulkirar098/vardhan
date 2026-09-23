@@ -45,28 +45,28 @@ const resolveAuthorizedHospital = async (user, hospitalId) => {
         return { authorizedHospitalId: hospital._id };
     }
 
-    if (user.role === "hr") {
-        let hrHospitalId = user.hospitalId;
-        if (!hrHospitalId && user.employeeId) {
+    if (user.role === "employee" || user.role === "hr") {
+        let authorizedHospitalId = user.hospitalId;
+        if (!authorizedHospitalId && user.employeeId) {
             const Employee = require("../models/employee.model");
             const emp = await Employee.findById(user.employeeId).select("hospitalId").lean();
-            if (emp) hrHospitalId = emp.hospitalId;
+            if (emp) authorizedHospitalId = emp.hospitalId;
         }
-        if (!hrHospitalId) {
+        if (!authorizedHospitalId) {
             const Employee = require("../models/employee.model");
             const emp = await Employee.findOne({ userId: user.id || user._id }).select("hospitalId").lean();
-            if (emp) hrHospitalId = emp.hospitalId;
+            if (emp) authorizedHospitalId = emp.hospitalId;
         }
 
-        if (!hrHospitalId) {
-            return { errorStatus: 404, errorMessage: "Hospital not found for this HR" };
+        if (!authorizedHospitalId) {
+            return { errorStatus: 404, errorMessage: "Hospital not found for this user" };
         }
 
-        if (hrHospitalId.toString() !== hospitalId) {
+        if (authorizedHospitalId.toString() !== hospitalId) {
             return { errorStatus: 403, errorMessage: "Access denied to requested hospital" };
         }
 
-        return { authorizedHospitalId: hrHospitalId };
+        return { authorizedHospitalId };
     }
 
     return { errorStatus: 403, errorMessage: "Access denied" };
