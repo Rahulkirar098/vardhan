@@ -4,8 +4,8 @@ const { isValidObjectId } = require("../utils/validate");
 
 const getMyHospital = async (req, res) => {
     try {
-        if (!req.user || (req.user.role !== "admin" && req.user.role !== "hr")) {
-            return res.status(403).json({ success: false, message: "Only admins or HRs can access their hospital" });
+        if (!req.user || (req.user.role !== "admin" && req.user.role !== "employee")) {
+            return res.status(403).json({ success: false, message: "Only admins or employees can access their hospital" });
         }
 
         let hospital;

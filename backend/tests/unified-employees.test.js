@@ -183,7 +183,7 @@ const runTests = async () => {
             name: `Shalu Jain HR ${testTimestamp}`,
             email: `shalu_${testTimestamp}@hospital.com`,
             password: passwordHash,
-            role: "hr",
+            role: "employee",
             hospitalId: hospitalA._id,
             status: "active",
             modules: ["core", "hrms"],
@@ -204,7 +204,7 @@ const runTests = async () => {
         hrUserA.employeeId = hrEmployeeA._id;
         await hrUserA.save();
 
-        const hrAToken = generateToken({ id: hrUserA._id.toString(), role: "hr", hospitalId: hospitalA._id });
+        const hrAToken = generateToken({ id: hrUserA._id.toString(), role: "employee", hospitalId: hospitalA._id });
 
         // Normal Employee in Hospital A
         const nurseUserA = await User.create({
@@ -278,7 +278,7 @@ const runTests = async () => {
         assert.strictEqual(a2.status, 201, "Admin can invite Employee");
         console.log("  ✓ 2. Admin can invite Employee");
 
-        // 3. Admin can invite HR
+        // 3. Admin can invite staff with HR Manager position
         const a3 = await request("/api/v1/hrms/employees/invite", {
             method: "POST",
             headers: { Authorization: `Bearer ${adminAToken}` },
@@ -287,11 +287,10 @@ const runTests = async () => {
                 lastName: "HR",
                 email: `admin_inv_hr_${testTimestamp}@hospital.com`,
                 positionId: posHRA._id.toString(),
-                role: "hr",
             },
         });
-        assert.strictEqual(a3.status, 201, "Admin can invite HR");
-        console.log("  ✓ 3. Admin can invite HR");
+        assert.strictEqual(a3.status, 201, "Admin can invite staff with HR Manager position");
+        console.log("  ✓ 3. Admin can invite staff with HR Manager position");
 
         // 4. Admin can edit employee basic data
         const a4 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}`, {
@@ -449,7 +448,7 @@ const runTests = async () => {
             name: `HR With Pos Perm ${testTimestamp}`,
             email: `hrposperm_${testTimestamp}@hospital.com`,
             password: passwordHash,
-            role: "hr",
+            role: "employee",
             hospitalId: hospitalA._id,
             status: "active",
             modules: ["core", "hrms"],
@@ -468,7 +467,7 @@ const runTests = async () => {
         });
         hrWithPosUser.employeeId = hrWithPosEmp._id;
         await hrWithPosUser.save();
-        const hrWithPosToken = generateToken({ id: hrWithPosUser._id.toString(), role: "hr", hospitalId: hospitalA._id });
+        const hrWithPosToken = generateToken({ id: hrWithPosUser._id.toString(), role: "employee", hospitalId: hospitalA._id });
 
         const b16 = await request(`/api/v1/hrms/employees/${nurseEmployeeA._id}`, {
             method: "PATCH",

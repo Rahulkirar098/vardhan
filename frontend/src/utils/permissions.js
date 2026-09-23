@@ -10,12 +10,6 @@ export const PERMISSIONS = Object.freeze({
   STRUCTURE_DELETE: 'structure.delete',
   STRUCTURE_MANAGE: 'structure.manage',
 
-  // HR Management & Invitations (Retained for backward compatibility with legacy HR views)
-  HR_VIEW: 'hr.view',
-  HR_INVITE: 'hr.invite',
-  HR_UPDATE: 'hr.update',
-  HR_INVITATION_MANAGE: 'hr.invitation.manage',
-
   // Employee Management (HRMS)
   EMPLOYEE_VIEW: 'employee.view',
   EMPLOYEE_CREATE: 'employee.create',
@@ -43,7 +37,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.HOSPITAL_VIEW,
     PERMISSIONS.HOSPITAL_UPDATE,
     PERMISSIONS.STRUCTURE_VIEW,
-    PERMISSIONS.HR_VIEW,
+    PERMISSIONS.EMPLOYEE_VIEW,
   ]),
 
   admin: Object.freeze(Object.values(PERMISSIONS)),

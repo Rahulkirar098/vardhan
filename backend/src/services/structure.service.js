@@ -45,7 +45,7 @@ const resolveAuthorizedHospital = async (user, hospitalId) => {
         return { authorizedHospitalId: hospital._id };
     }
 
-    if (user.role === "employee" || user.role === "hr") {
+    if (user.role === "employee") {
         let authorizedHospitalId = user.hospitalId;
         if (!authorizedHospitalId && user.employeeId) {
             const Employee = require("../models/employee.model");

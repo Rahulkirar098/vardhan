@@ -167,7 +167,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
               </Typography>
             </Box>
             <Chip
-              label={user.role === 'hr' ? 'HR' : 'Employee'}
+              label="Employee"
               size="small"
               sx={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem' }}
             />
@@ -355,8 +355,8 @@ const AccessManagementPage = () => {
 
   const stats = {
     total: users.length,
-    hr: users.filter((u) => u.role === 'hr').length,
-    employees: users.filter((u) => u.role === 'employee').length,
+    hrms: users.filter((u) => u.modules?.includes('hrms')).length,
+    active: users.filter((u) => u.status === 'active').length,
   };
 
   const columns = [
@@ -387,14 +387,14 @@ const AccessManagementPage = () => {
       case 'role':
         return (
           <Chip
-            label={u.role === 'hr' ? 'HR' : 'Employee'}
+            label="Employee"
             size="small"
             variant="outlined"
             sx={{
               fontSize: '0.75rem',
               height: 22,
               fontWeight: 600,
-              backgroundColor: u.role === 'hr' ? '#F5F5F5' : 'transparent',
+              backgroundColor: 'transparent',
               borderColor: '#E5E5E5',
               color: '#0A0A0A',
             }}
@@ -478,13 +478,13 @@ const AccessManagementPage = () => {
           icon={PeopleOutlineRounded}
         />
         <StatCard
-          label="HR Accounts"
-          value={loading ? '-' : stats.hr}
+          label="HRMS Module Enabled"
+          value={loading ? '-' : stats.hrms}
           icon={SecurityRounded}
         />
         <StatCard
-          label="Standard Employees"
-          value={loading ? '-' : stats.employees}
+          label="Active Accounts"
+          value={loading ? '-' : stats.active}
           icon={CheckCircleOutlineRounded}
         />
       </Box>
@@ -522,22 +522,6 @@ const AccessManagementPage = () => {
             }}
           />
 
-          <TextField
-            select
-            size="small"
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            sx={{ minWidth: 150 }}
-            slotProps={{
-              select: {
-                displayEmpty: true,
-              },
-            }}
-          >
-            <MenuItem value="">All Roles</MenuItem>
-            <MenuItem value="hr">HR</MenuItem>
-            <MenuItem value="employee">Employee</MenuItem>
-          </TextField>
         </Stack>
 
         {loading && users.length === 0 ? (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -19,7 +19,7 @@ import employeeService from '../../services/employee.service';
 import AuthLayout from '../../components/AuthLayout';
 import StatusBadge from '../../components/StatusBadge';
 
-const AcceptEmployeeInvitation = () => {
+const AcceptInvitation = () => {
   const { token } = useParams();
   const [invitation, setInvitation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +54,10 @@ const AcceptEmployeeInvitation = () => {
       setError('Please set a password for your Vardhan login account.');
       return;
     }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
     try {
       setSubmitting(true);
       await employeeService.acceptInvitation(token, password);
@@ -71,7 +75,7 @@ const AcceptEmployeeInvitation = () => {
   if (loading) {
     return (
       <AuthLayout
-        title="Employee Onboarding"
+        title="Staff Onboarding"
         subtitle="We are verifying your invitation…"
       >
         <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
@@ -96,7 +100,7 @@ const AcceptEmployeeInvitation = () => {
     return (
       <AuthLayout
         title="Welcome Aboard! 🎉"
-        subtitle="Your employee profile is now active."
+        subtitle="Your staff profile is now active."
       >
         <Stack spacing={2.5}>
           <Box
@@ -122,8 +126,9 @@ const AcceptEmployeeInvitation = () => {
             <Button
               variant="contained"
               fullWidth
-              href="/login"
-              sx={{ fontWeight: 700, py: 1.2 }}
+              component={Link}
+              to="/login"
+              size="large"
             >
               Go to Login
             </Button>
@@ -135,92 +140,121 @@ const AcceptEmployeeInvitation = () => {
 
   return (
     <AuthLayout
-      title="Employee Onboarding"
-      subtitle="Confirm your invitation and set your login password."
+      title="Complete Your Onboarding"
+      subtitle="Set your account password to get started."
     >
       <Stack spacing={2.5}>
-        {/* Invitation Card */}
-        <Box
-          sx={{
-            border: '1px solid #E5E5E5',
-            borderRadius: '12px',
-            backgroundColor: '#FFFFFF',
-            p: 2.5,
-          }}
-        >
-          <Stack spacing={2}>
-            {/* Name + Status */}
-            <Stack
-              direction="row"
-              spacing={1.5}
-              alignItems="center"
-              justifyContent="space-between"
-              flexWrap="wrap"
-            >
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="h6" fontWeight={700}>
-                  {invitation?.firstName} {invitation?.lastName}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {invitation?.email}
-                </Typography>
-              </Box>
-              <StatusBadge status="pending" label="Invited" />
-            </Stack>
+        {error && <Alert severity="error">{error}</Alert>}
 
-            <Divider sx={{ borderColor: '#F0F0F0' }} />
-
-            {/* Hospital */}
-            <Stack direction="row" spacing={1} alignItems="center">
-              <LocalHospitalRounded
-                fontSize="small"
-                sx={{ color: 'text.secondary' }}
-              />
-              <Typography variant="body2" color="text.secondary">
-                <strong style={{ color: '#0A0A0A' }}>Hospital:</strong>{' '}
-                {invitation?.hospitalName || 'Hospital'}
-              </Typography>
-            </Stack>
-
-            {/* Position */}
-            {(invitation?.positionId || invitation?.position) && (
+        {invitation && (
+          <Box
+            sx={{
+              border: '1px solid #E5E5E5',
+              borderRadius: '12px',
+              backgroundColor: '#FAFAFA',
+              p: 2.5,
+            }}
+          >
+            <Stack spacing={1.5}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <BadgeRounded
+                <LocalHospitalRounded
                   fontSize="small"
                   sx={{ color: 'text.secondary' }}
                 />
-                <Typography variant="body2" color="text.secondary">
-                  <strong style={{ color: '#0A0A0A' }}>Position:</strong>{' '}
-                  {invitation?.position || invitation?.positionId?.name || invitation?.positionId}
+                <Typography variant="body2" fontWeight={600}>
+                  {invitation.hospitalName || 'Hospital'}
                 </Typography>
               </Stack>
-            )}
 
-            {/* Expiry */}
-            {invitation?.expiresAt && (
-              <Typography variant="caption" color="text.secondary">
-                This invitation expires on{' '}
-                {new Date(invitation.expiresAt).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </Typography>
-            )}
-          </Stack>
-        </Box>
+              <Divider />
+
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Typography variant="caption" color="text.secondary">
+                  Staff Member
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {invitation.firstName} {invitation.lastName}
+                </Typography>
+              </Stack>
+
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Typography variant="caption" color="text.secondary">
+                  Email
+                </Typography>
+                <Typography variant="body2">{invitation.email}</Typography>
+              </Stack>
+
+              {invitation.positionName && (
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    Designation / Position
+                  </Typography>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <BadgeRounded
+                      fontSize="small"
+                      sx={{ color: 'text.secondary' }}
+                    />
+                    <Typography variant="body2" fontWeight={600}>
+                      {invitation.positionName}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              )}
+
+              {invitation.employeeId && (
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    Staff Code
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                  >
+                    {invitation.employeeId}
+                  </Typography>
+                </Stack>
+              )}
+
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Typography variant="caption" color="text.secondary">
+                  Account Status
+                </Typography>
+                <StatusBadge status="pending" label="Pending Activation" />
+              </Stack>
+            </Stack>
+          </Box>
+        )}
 
         <TextField
-          label="Create Password"
+          label="Create Login Password *"
           type="password"
+          placeholder="At least 6 characters"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           fullWidth
           required
-          helperText="Create a password to access Vardhan"
+          autoFocus
         />
-
-        {error && <Alert severity="error">{error}</Alert>}
 
         <Button
           variant="contained"
@@ -228,27 +262,16 @@ const AcceptEmployeeInvitation = () => {
           onClick={handleAccept}
           disabled={submitting || !password}
           fullWidth
-          sx={{ fontWeight: 700, py: 1.5 }}
         >
           {submitting ? (
             <CircularProgress size={22} color="inherit" />
           ) : (
-            'Accept & Complete Onboarding'
+            'Complete Onboarding & Activate'
           )}
         </Button>
-
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          align="center"
-          sx={{ display: 'block' }}
-        >
-          By accepting, your employee profile and Vardhan login account will be activated at{' '}
-          <strong>{invitation?.hospitalName || 'this hospital'}</strong>.
-        </Typography>
       </Stack>
     </AuthLayout>
   );
 };
 
-export default AcceptEmployeeInvitation;
+export default AcceptInvitation;

@@ -9,13 +9,6 @@ const PERMISSIONS = Object.freeze({
     STRUCTURE_UPDATE: "structure.update",
     STRUCTURE_DELETE: "structure.delete",
     STRUCTURE_MANAGE: "structure.manage",
-
-    // HR Management & Invitations (Retained for backward compatibility with legacy HR routes)
-    HR_VIEW: "hr.view",
-    HR_INVITE: "hr.invite",
-    HR_UPDATE: "hr.update",
-    HR_INVITATION_MANAGE: "hr.invitation.manage",
-
     // Employee Management (HRMS)
     EMPLOYEE_VIEW: "employee.view",
     EMPLOYEE_CREATE: "employee.create",

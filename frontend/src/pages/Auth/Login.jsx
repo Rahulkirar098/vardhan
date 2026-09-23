@@ -66,12 +66,17 @@ const Login = () => {
             return;
           }
 
-          if (payload.role === 'hr') {
-            navigate('/hr/dashboard');
-            return;
-          }
-
           if (payload.role === 'employee') {
+            const userMods = response?.data?.data?.user?.modules || ['core'];
+            const userPerms = response?.data?.data?.user?.permissions || [];
+            if (userMods.includes('hrms') && userPerms.includes('employee.view')) {
+              navigate('/employees');
+              return;
+            }
+            if ((userMods.includes('hospital_structure') || userMods.includes('core')) && userPerms.includes('structure.view')) {
+              navigate('/structure');
+              return;
+            }
             navigate('/profile');
             return;
           }

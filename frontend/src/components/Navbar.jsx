@@ -17,9 +17,6 @@ const PAGE_META = [
   { test: (path) => path === '/profile', title: 'My Profile', breadcrumb: 'Account' },
   { test: (path) => path === '/super-admin/dashboard', title: 'Hospitals', breadcrumb: 'Platform' },
   { test: (path) => path.startsWith('/super-admin/hospitals/'), title: 'Hospital Details', breadcrumb: 'Platform / Hospitals' },
-  { test: (path) => path === '/hr/dashboard', title: 'Dashboard', breadcrumb: 'My Workspace' },
-  { test: (path) => path === '/hr/profile', title: 'My Profile', breadcrumb: 'My Workspace' },
-  { test: (path) => path === '/hr/hospital', title: 'My Hospital', breadcrumb: 'My Workspace' },
 ];
 
 const getPageMeta = (pathname) =>

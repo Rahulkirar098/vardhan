@@ -44,16 +44,16 @@ const setupTestEnvironment = async () => {
     });
     tokenAdmin = generateToken({ id: adminUser._id.toString(), role: "admin" });
 
-    // HR user
+    // Employee user
     hrUser = await User.create({
-        name: `Platform HR ${testTimestamp}`,
-        email: `platform_hr_${testTimestamp}@example.com`,
+        name: `Platform Employee ${testTimestamp}`,
+        email: `platform_emp_${testTimestamp}@example.com`,
         password: passwordHash,
-        role: "hr",
+        role: "employee",
         status: "active",
         permissions: ["structure.view"],
     });
-    tokenHr = generateToken({ id: hrUser._id.toString(), role: "hr" });
+    tokenHr = generateToken({ id: hrUser._id.toString(), role: "employee" });
 };
 
 const cleanupTestEnvironment = async () => {

@@ -63,12 +63,12 @@ const setupTestEnvironment = async () => {
     await User.findByIdAndUpdate(adminA._id, { hospitalId: hospitalA._id });
     tokenAdminA = generateToken({ id: adminA._id, role: adminA.role, hospitalId: hospitalA._id });
 
-    // 2. Create HR for Hospital A
+    // 2. Create Employee for Hospital A
     hrA = await User.create({
-        name: `HR A ${testTimestamp}`,
-        email: `hrA_perm_${testTimestamp}@example.com`,
+        name: `Employee A ${testTimestamp}`,
+        email: `empA_perm_${testTimestamp}@example.com`,
         password: passwordHash,
-        role: "hr",
+        role: "employee",
         status: "active",
         hospitalId: hospitalA._id,
         createdBy: adminA._id,
@@ -375,9 +375,9 @@ const runTests = async () => {
             assert.strictEqual(data.data.email, hrA.email);
         });
 
-        // 14. Admin can view HR records (employee list with hr role)
-        await test("TEST 14: Admin can view HR records (employee.view)", async () => {
-            const res = await fetch(`${baseUrl}/api/v1/hrms/employees?role=hr`, {
+        // 14. Admin can view employee records (employee.view)
+        await test("TEST 14: Admin can view employee records (employee.view)", async () => {
+            const res = await fetch(`${baseUrl}/api/v1/hrms/employees`, {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${tokenAdminA}`,

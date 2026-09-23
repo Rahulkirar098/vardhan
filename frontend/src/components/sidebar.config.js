@@ -38,18 +38,6 @@ const sidebarConfig = {
       },
     ],
   },
-  hr: {
-    sections: [
-      {
-        title: '',
-        items: [
-          { label: 'Dashboard', path: '/hr/dashboard', icon: DashboardRounded },
-          { label: 'My Hospital', path: '/hr/hospital', icon: LocalHospitalRounded },
-          { label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded },
-        ],
-      },
-    ],
-  },
   employee: {
     sections: [
       {
@@ -66,7 +54,6 @@ export const getRoleDisplayName = (role) => {
   const labels = {
     super_admin: 'Super Administrator',
     admin: 'Administrator',
-    hr: 'HR',
     employee: 'Employee',
   };
 
@@ -74,41 +61,50 @@ export const getRoleDisplayName = (role) => {
 };
 
 /**
- * Returns sidebar sections for the given role, dynamically adjusting
- * based on stored user permissions and module access.
+ * Returns sidebar sections dynamically based on role, assigned modules, and user permissions.
  */
 export const getSidebarSectionsForRole = (role) => {
-  if (role === 'hr') {
-    let hasStructureView = hasPermission(PERMISSIONS.STRUCTURE_VIEW);
+  if (role === 'super_admin') {
+    return sidebarConfig.super_admin.sections;
+  }
+
+  if (role === 'admin') {
+    return sidebarConfig.admin.sections;
+  }
+
+  if (role === 'employee') {
     let hasHrmsModule = false;
+    let hasStructureModule = false;
 
     try {
       const storedModules = localStorage.getItem('modules');
       const mods = storedModules ? JSON.parse(storedModules) : [];
       hasHrmsModule = Array.isArray(mods) && mods.includes('hrms');
+      hasStructureModule = Array.isArray(mods) && (mods.includes('hospital_structure') || mods.includes('core'));
     } catch {
       hasHrmsModule = false;
+      hasStructureModule = false;
     }
 
-    const items = [
-      { label: 'Dashboard', path: '/hr/dashboard', icon: DashboardRounded },
-      { label: 'My Hospital', path: '/hr/hospital', icon: LocalHospitalRounded },
-    ];
+    const items = [];
 
-    if (hasStructureView) {
-      items.push({ label: 'Hospital Structure', path: '/structure', icon: LayersRounded });
-    }
-
+    // Employees Navigation (HRMS module + employee.view permission)
     if (hasHrmsModule && hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
       items.push({ label: 'Employees', path: '/employees', icon: BadgeRounded });
     }
 
-    items.push({ label: 'My Profile', path: '/hr/profile', icon: AccountCircleRounded });
+    // Structure Navigation (structure module/core + structure.view permission)
+    if (hasStructureModule && hasPermission(PERMISSIONS.STRUCTURE_VIEW)) {
+      items.push({ label: 'Hospital Structure', path: '/structure', icon: LayersRounded });
+    }
+
+    // My Profile is always available for all authenticated employees
+    items.push({ label: 'My Profile', path: '/profile', icon: AccountCircleRounded });
 
     return [{ title: '', items }];
   }
 
-  return sidebarConfig[role]?.sections || [];
+  return [];
 };
 
 export default sidebarConfig;

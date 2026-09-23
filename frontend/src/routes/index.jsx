@@ -4,21 +4,19 @@ import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
-import AcceptEmployeeInvitation from '../pages/auth/AcceptEmployeeInvitation';
+import AcceptInvitation from '../pages/auth/AcceptInvitation';
 import AdminDashboard from '../pages/admin/AdminDashboard';
-import HRDashboard from '../pages/hr/HRDashboard';
 import SuperAdminDashboard from '../pages/super-admin/SuperAdminDashboard';
 import Hospital from '../pages/admin/Hospital';
 import Profile from '../pages/shared/Profile';
 import StructurePage from '../pages/admin/StructurePage';
 import FloorDetails from '../pages/admin/FloorDetails';
-import HRProfile from '../pages/hr/HRProfile';
-import MyHospital from '../pages/hr/MyHospital';
-import EmployeesPage from '../pages/hr/EmployeesPage';
+import EmployeesPage from '../pages/admin/EmployeesPage';
 import Hospitals from '../pages/super-admin/SuperAdminHospitals';
 import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 import PositionsPage from '../pages/admin/PositionsPage';
 import AccessManagementPage from '../pages/admin/AccessManagementPage';
+import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
 const getUserRole = () => {
   const token = localStorage.getItem('token');
@@ -34,6 +32,8 @@ const getUserRole = () => {
       localStorage.removeItem('role');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
+      localStorage.removeItem('modules');
+      localStorage.removeItem('permissions');
       return null;
     }
 
@@ -48,22 +48,39 @@ const getDefaultRedirectForRole = (role) => {
     return '/super-admin/dashboard';
   }
 
-  if (role === 'hr') {
-    return '/hr/dashboard';
-  }
-
   if (role === 'admin') {
     return '/hospital';
   }
 
   if (role === 'employee') {
+    let hasHrmsModule = false;
+    let hasStructureModule = false;
+
+    try {
+      const storedModules = localStorage.getItem('modules');
+      const mods = storedModules ? JSON.parse(storedModules) : [];
+      hasHrmsModule = Array.isArray(mods) && mods.includes('hrms');
+      hasStructureModule = Array.isArray(mods) && (mods.includes('hospital_structure') || mods.includes('core'));
+    } catch {
+      hasHrmsModule = false;
+      hasStructureModule = false;
+    }
+
+    if (hasHrmsModule && hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
+      return '/employees';
+    }
+
+    if (hasStructureModule && hasPermission(PERMISSIONS.STRUCTURE_VIEW)) {
+      return '/structure';
+    }
+
     return '/profile';
   }
 
   return '/login';
 };
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, requiredModule, requiredPermission }) => {
   const token = localStorage.getItem('token');
 
   if (!token) {
@@ -78,6 +95,25 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (allowedRoles && !allowedRoles.includes(role)) {
     return <Navigate to={getDefaultRedirectForRole(role)} replace />;
+  }
+
+  // If user is employee, verify granular module/permission requirements
+  if (role === 'employee') {
+    if (requiredModule) {
+      try {
+        const storedModules = localStorage.getItem('modules');
+        const mods = storedModules ? JSON.parse(storedModules) : [];
+        if (!Array.isArray(mods) || !mods.includes(requiredModule)) {
+          return <Navigate to={getDefaultRedirectForRole(role)} replace />;
+        }
+      } catch {
+        return <Navigate to={getDefaultRedirectForRole(role)} replace />;
+      }
+    }
+
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+      return <Navigate to={getDefaultRedirectForRole(role)} replace />;
+    }
   }
 
   return children;
@@ -165,7 +201,7 @@ const AppRoutes = () => {
       <Route
         path="/profile"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'hr', 'employee']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'employee']}>
             <Profile />
           </ProtectedRoute>
         }
@@ -195,33 +231,12 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/hr/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['hr']}>
-            <HRDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/hr/profile"
-        element={
-          <ProtectedRoute allowedRoles={['hr']}>
-            <HRProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/hr/hospital"
-        element={
-          <ProtectedRoute allowedRoles={['hr']}>
-            <MyHospital />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/structure"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'hr']}>
+          <ProtectedRoute
+            allowedRoles={['admin', 'super_admin', 'employee']}
+            requiredPermission={PERMISSIONS.STRUCTURE_VIEW}
+          >
             <StructurePage />
           </ProtectedRoute>
         }
@@ -229,7 +244,10 @@ const AppRoutes = () => {
       <Route
         path="/structure/:floorId"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'hr']}>
+          <ProtectedRoute
+            allowedRoles={['admin', 'super_admin', 'employee']}
+            requiredPermission={PERMISSIONS.STRUCTURE_VIEW}
+          >
             <FloorDetails />
           </ProtectedRoute>
         }
@@ -237,22 +255,18 @@ const AppRoutes = () => {
       <Route
         path="/employees"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'hr']}>
+          <ProtectedRoute
+            allowedRoles={['admin', 'employee']}
+            requiredModule="hrms"
+            requiredPermission={PERMISSIONS.EMPLOYEE_VIEW}
+          >
             <EmployeesPage />
           </ProtectedRoute>
         }
       />
       <Route
         path="/invite/:token"
-        element={<AcceptEmployeeInvitation />}
-      />
-      <Route
-        path="/hr/:id"
-        element={
-          <ProtectedRoute>
-            <HRProfile />
-          </ProtectedRoute>
-        }
+        element={<AcceptInvitation />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

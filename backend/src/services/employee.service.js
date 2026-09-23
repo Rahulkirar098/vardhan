@@ -39,7 +39,7 @@ const generateEmployeeId = async (hospitalId) => {
 const getHospitalForUser = async (user) => {
     if (!user) return null;
 
-    if (user.role === "hr" || user.role === "employee") {
+    if (user.role === "employee") {
         let hospitalId = user.hospitalId;
         if (!hospitalId && user.employeeId) {
             const emp = await Employee.findById(user.employeeId).select("hospitalId").lean();
@@ -297,7 +297,6 @@ const inviteEmployee = async ({
         hospitalName: hospital.name,
         recipientName: fullName,
         inviterName: "",
-        role: type,
         invitationUrl,
     });
 
@@ -395,12 +394,9 @@ const acceptInvitation = async (rawToken, password) => {
         resolvedEmployeeId = await generateEmployeeId(invitation.hospitalId._id);
     }
 
-    // Derive modules from Position defaults and role
+    // Derive modules from Position defaults
     const positionDefaultModules = invitation.positionId?.defaultModules || [];
     const moduleSet = new Set(["core", ...positionDefaultModules.filter(m => m !== "core")]);
-    if (invitation.role === "hr") {
-        moduleSet.add("hrms");
-    }
     const userModules = Array.from(moduleSet);
 
     // Create User account (every employee gets a login)
@@ -612,7 +608,6 @@ const resendInvitation = async ({ invitationId, hospitalId }) => {
         hospitalName: invitation.hospitalId.name,
         recipientName: fullName,
         inviterName: "",
-        role: invitation.role || "employee",
         invitationUrl,
     });
 

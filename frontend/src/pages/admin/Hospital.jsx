@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Button, Stack, TextField } from '@mui/material';
 import { AddBusinessRounded, EditRounded, LocalHospitalRounded } from '@mui/icons-material';
 import hospitalService from '../../services/hospital.service';
-import hr from '../../services/hr.service';
 import auth from '../../services/auth.service';
 import GlassCard from '../../components/GlassCard';
 import SectionCard from '../../components/SectionCard';
@@ -264,18 +263,12 @@ const Hospital = () => {
         return;
       }
 
-      const [hospitalResponse, hrResponse] = await Promise.all([
-        hospitalService.getMyHospital().catch(() => ({ data: { data: null } })),
-        hr.getAll().catch(() => ({ data: { data: [] } })),
-      ]);
-
+      const hospitalResponse = await hospitalService.getMyHospital().catch(() => ({ data: { data: null } }));
       const hospitalData = hospitalResponse?.data?.data || null;
-      const hrData = hrResponse?.data?.data;
-      const hrCount = Array.isArray(hrData) ? hrData.length : hrData ? 1 : 0;
 
       setHospital(hospitalData);
       setStats({
-        hrCount,
+        hrCount: 0,
       });
       setError('');
     } catch (err) {
@@ -350,8 +343,8 @@ const Hospital = () => {
                 }}
               >
                 <StatCard
-                  label="HR Count"
-                  value={stats.hrCount ?? 0}
+                  label="Workforce"
+                  value={stats.employeeCount ?? stats.hrCount ?? 0}
                   footer={<StatusBadge status="active" label="Active" />}
                 />
                 <StatCard

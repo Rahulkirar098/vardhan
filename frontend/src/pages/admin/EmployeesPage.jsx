@@ -235,35 +235,6 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            select
-            label="Vardhan Role *"
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            required
-            fullWidth
-            slotProps={{
-              inputLabel: { shrink: true },
-              select: {
-                displayEmpty: true,
-                renderValue: (selected) => {
-                  if (!selected) {
-                    return <Typography component="span" variant="body2" color="text.secondary">Select Role</Typography>;
-                  }
-                  if (selected === 'employee') return 'Employee';
-                  if (selected === 'hr') return 'HR';
-                  return selected;
-                },
-              },
-            }}
-          >
-            <MenuItem value="">
-              <em>Select Role</em>
-            </MenuItem>
-            <MenuItem value="employee">Employee</MenuItem>
-            <MenuItem value="hr">HR</MenuItem>
-          </TextField>
         </Stack>
         <TextField
           label="Date of Joining (optional)"
@@ -470,13 +441,13 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
           { label: 'Employment Status', value: employee.employmentStatus },
           ...(employee.employmentStatus === 'INACTIVE' ? [{ label: 'Leaving Date', value: formatDate(employee.leavingDate) }] : []),
           { label: 'Vardhan Account', value: employee.userId ? (employee.employmentStatus === 'INACTIVE' ? 'Disabled' : 'Active') : 'No Login' },
-          { label: 'Role', value: employee.userId ? (employee.userId.role === 'hr' ? 'HR' : 'Employee') : '—' },
+          { label: 'Role', value: employee.userId ? 'Employee' : '—' },
           { label: 'Modules', value: employee.userId?.modules?.length ? employee.userId.modules.join(', ') : '—' },
           { label: 'Permissions', value: employee.userId?.permissions?.length ? employee.userId.permissions.length + ' permissions' : '—' },
           ...(employee.createdBy ? [{
             label: 'Created By',
             value: typeof employee.createdBy === 'object'
-              ? `${employee.createdBy.name || 'User'} (${employee.createdBy.role === 'hr' ? 'HR' : 'Admin'})`
+              ? (employee.createdBy.name || 'Admin')
               : 'Admin',
           }] : []),
           { label: 'Created', value: formatDate(employee.createdAt) },
@@ -599,7 +570,7 @@ const EmployeesPage = () => {
   const renderEmployeeCell = (emp, column) => {
     const fullName = `${emp.firstName} ${emp.lastName}`;
     const isActive = emp.employmentStatus === 'ACTIVE';
-    const roleLabel = emp.userId ? (emp.userId.role === 'hr' ? 'HR' : 'Employee') : 'No Login';
+    const roleLabel = emp.userId ? 'Employee' : 'No Login';
   
     switch (column.key) {
       case 'employee':
@@ -630,7 +601,7 @@ const EmployeesPage = () => {
               fontSize: '0.75rem',
               height: 22,
               fontWeight: 600,
-              backgroundColor: emp.userId?.role === 'hr' ? '#F5F5F5' : 'transparent',
+              backgroundColor: '#F5F5F5',
               borderColor: '#E5E5E5',
               color: '#0A0A0A'
             }}
@@ -862,22 +833,6 @@ const EmployeesPage = () => {
               />
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <TextField
-                  select
-                  size="small"
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  sx={{ minWidth: 150 }}
-                  slotProps={{
-                    select: {
-                      displayEmpty: true,
-                    },
-                  }}
-                >
-                  <MenuItem value="">All Roles</MenuItem>
-                  <MenuItem value="hr">HR</MenuItem>
-                  <MenuItem value="employee">Employee</MenuItem>
-                </TextField>
 
                 <TextField
                   select

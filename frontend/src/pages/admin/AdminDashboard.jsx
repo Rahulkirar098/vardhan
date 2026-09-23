@@ -83,8 +83,8 @@ const AdminDashboard = () => {
                 footer={<StatusBadge status={hospital?.status || 'inactive'} />}
               />
               <StatCard
-                label="HR Count"
-                value={stats.hrCount ?? 0}
+                label="Workforce"
+                value={stats.employeeCount ?? stats.hrCount ?? 0}
                 footer={<StatusBadge status="active" label="Active" />}
               />
             </Box>

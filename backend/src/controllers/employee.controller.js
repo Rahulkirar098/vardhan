@@ -87,8 +87,9 @@ const inviteEmployee = async (req, res) => {
         if (!positionId) {
             return res.status(400).json({ success: false, message: "Position is required" });
         }
-        if (!role || !["hr", "employee"].includes(role)) {
-            return res.status(400).json({ success: false, message: "Valid Vardhan role is required (hr or employee)" });
+        const assignedRole = role || "employee";
+        if (assignedRole !== "employee") {
+            return res.status(400).json({ success: false, message: "Role must be employee" });
         }
 
         const hospital = await employeeService.getHospitalForUser(req.user);

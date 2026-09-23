@@ -94,12 +94,12 @@ async function runTests() {
         status: "active",
     });
 
-    // Create HR in Hospital A
+    // Create HR Manager in Hospital A
     const hrUserA = await User.create({
         name: `HR A ${timestamp}`,
         email: `hrA_${timestamp}@hospital.com`,
         password: pwd,
-        role: "hr",
+        role: "employee",
         hospitalId: hospitalA._id,
         status: "active",
         permissions: [],
@@ -155,7 +155,7 @@ async function runTests() {
     // Auth Tokens
     const adminTokenA = generateToken({ id: adminUserA._id, role: "admin", hospitalId: hospitalA._id });
     const adminTokenB = generateToken({ id: adminUserB._id, role: "admin", hospitalId: hospitalB._id });
-    const hrTokenA = generateToken({ id: hrUserA._id, role: "hr", hospitalId: hospitalA._id });
+    const hrTokenA = generateToken({ id: hrUserA._id, role: "employee", hospitalId: hospitalA._id });
     const empTokenA = generateToken({ id: empUserA._id, role: "employee", hospitalId: hospitalA._id });
 
     let passed = 0;
@@ -246,10 +246,17 @@ async function runTests() {
         assert(res10.status === 400, "TEST 10: Invalid module keys rejected with 400");
 
     } finally {
-        server.close();
+        if (server) {
+            await new Promise((resolve) => server.close(resolve));
+        }
+        if (mongoose.connection.readyState !== 0) {
+            await mongoose.disconnect();
+        }
         console.log(`\nAccess Management Test results: ${passed} passed, ${failed} failed.\n`);
         if (failed > 0) {
             process.exit(1);
+        } else {
+            process.exit(0);
         }
     }
 }

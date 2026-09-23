@@ -33,7 +33,7 @@ const listWorkforceAccess = async (req, res) => {
         }
 
         const query = {
-            role: { $in: ["hr", "employee"] },
+            role: "employee",
         };
         
         let employeeMap = new Map();

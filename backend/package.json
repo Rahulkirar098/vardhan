@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "node tests/structure.test.js && node tests/permission.test.js && node tests/hr-permission-flow.test.js && node tests/core-platform.test.js && node tests/hr-profile-fix.test.js && node tests/unified-employees.test.js && node tests/access-management.test.js"
+    "test": "node tests/schema.test.js && node tests/auth-foundation.test.js && node tests/structure.test.js && node tests/permission.test.js && node tests/core-platform.test.js && node tests/unified-employees.test.js && node tests/access-management.test.js"
   },
   "keywords": [],
   "author": "",

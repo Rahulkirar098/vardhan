@@ -8,16 +8,11 @@ const getCurrentUser = async (req, res) => {
         const user = await authService.getCurrentUser(req.user.id);
 
         let userUpdated = false;
-        if (user.role === "hr" && (!user.modules || !user.modules.includes("hrms"))) {
-            user.modules = [...new Set([...(user.modules || ["core"]), "hrms"])];
-            userUpdated = true;
-        }
-
         let hospitalId = user.hospitalId;
         let employeeId = user.employeeId;
         let employeeRecord = null;
 
-        if (user.role === "hr" || user.role === "employee") {
+        if (user.role === "employee") {
             employeeRecord = employeeId ? await Employee.findById(employeeId).populate("positionId", "name").lean() : null;
             if (!employeeRecord) {
                 employeeRecord = await Employee.findOne({ userId: user._id }).populate("positionId", "name").lean();
@@ -136,15 +131,10 @@ const loginUser = async (req, res) => {
         const { token, user } = await authService.loginUser({ email, password });
 
         let userUpdated = false;
-        if (user.role === "hr" && (!user.modules || !user.modules.includes("hrms"))) {
-            user.modules = [...new Set([...(user.modules || ["core"]), "hrms"])];
-            userUpdated = true;
-        }
-
         let hospitalId = user.hospitalId;
         let employeeId = user.employeeId;
 
-        if (user.role === "hr" || user.role === "employee") {
+        if (user.role === "employee") {
             let employee = employeeId ? await Employee.findById(employeeId).lean() : null;
             if (!employee) {
                 employee = await Employee.findOne({ userId: user._id }).lean();

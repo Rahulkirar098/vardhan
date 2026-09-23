@@ -5,7 +5,7 @@ const ROLE_PERMISSIONS = Object.freeze({
         PERMISSIONS.HOSPITAL_VIEW,
         PERMISSIONS.HOSPITAL_UPDATE,
         PERMISSIONS.STRUCTURE_VIEW,
-        PERMISSIONS.HR_VIEW,
+        PERMISSIONS.EMPLOYEE_VIEW,
     ]),
 
     admin: Object.freeze(Object.values(PERMISSIONS)),
