@@ -477,6 +477,9 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
 
 // ─── Main Leave Management Page ──────────────────────────────────────────────
 const LeaveManagementPage = () => {
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const showSnack = (message, severity = 'success') => setSnackbar({ open: true, message, severity });
+
   const currentUserRole = localStorage.getItem('role') || 'employee';
   const currentUserId = localStorage.getItem('userId') || '';
   const canApprove = hasPermission(PERMISSIONS.LEAVE_APPROVE) || currentUserRole === 'admin';
