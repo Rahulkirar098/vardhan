@@ -581,7 +581,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
     setSelectedDateStr(today.toISOString().split('T')[0]);
   };
 
-  // Generate calendar grid
+  // Generate complete 7-column calendar grid (Sun to Sat)
   const calendarGrid = useMemo(() => {
     const firstDayIndex = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -593,8 +593,10 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
     for (let i = firstDayIndex - 1; i >= 0; i--) {
       const dayNum = daysInPrevMonth - i;
       const d = new Date(year, month - 1, dayNum);
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
       days.push({
-        dateStr: d.toISOString().split('T')[0],
+        dateStr: `${d.getFullYear()}-${mm}-${dd}`,
         dayNum,
         isCurrentMonth: false,
       });
@@ -603,19 +605,23 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
     // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
       const d = new Date(year, month, i);
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
       days.push({
-        dateStr: d.toISOString().split('T')[0],
+        dateStr: `${d.getFullYear()}-${mm}-${dd}`,
         dayNum: i,
         isCurrentMonth: true,
       });
     }
 
-    // Next month padding
+    // Next month padding to complete 7-column weeks
     const remaining = (7 - (days.length % 7)) % 7;
     for (let i = 1; i <= remaining; i++) {
       const d = new Date(year, month + 1, i);
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
       days.push({
-        dateStr: d.toISOString().split('T')[0],
+        dateStr: `${d.getFullYear()}-${mm}-${dd}`,
         dayNum: i,
         isCurrentMonth: false,
       });
@@ -636,7 +642,9 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
       const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
 
       while (cur <= endDay) {
-        const key = cur.toISOString().split('T')[0];
+        const mm = String(cur.getMonth() + 1).padStart(2, '0');
+        const dd = String(cur.getDate()).padStart(2, '0');
+        const key = `${cur.getFullYear()}-${mm}-${dd}`;
         if (!map[key]) map[key] = [];
         map[key].push(l);
         cur.setDate(cur.getDate() + 1);
@@ -648,159 +656,296 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
   const selectedDateLeaves = leavesByDate[selectedDateStr] || [];
 
   return (
-    <Grid container spacing={3}>
-      {/* Left: Calendar */}
-      <Grid item xs={12} lg={7} xl={8}>
-        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px' }}>
-          {/* Header & Navigation */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
+    <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
+      {/* Left: 7-Column Calendar Grid (65-70% width) */}
+      <Grid item xs={12} md={7} lg={7.5} xl={8}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: { xs: 1.5, sm: 2.5 },
+            borderRadius: '14px',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {/* Header & Controls */}
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ mb: { xs: 2, sm: 2.5 }, flexWrap: 'wrap', gap: 1 }}
+          >
             <Stack direction="row" spacing={1.5} alignItems="center">
               <CalendarMonthRounded color="primary" />
-              <Typography variant="h6" sx={{ fontWeight: 750 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1.05rem', sm: '1.25rem' } }}>
                 {monthName}
               </Typography>
             </Stack>
 
             <Stack direction="row" spacing={1} alignItems="center">
-              <Button size="small" variant="outlined" startIcon={<TodayRounded />} onClick={goToToday} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<TodayRounded />}
+                onClick={goToToday}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  borderColor: '#E2E8F0',
+                  color: '#0F172A',
+                  '&:hover': { borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+                }}
+              >
                 Today
               </Button>
-              <IconButton size="small" onClick={prevMonth} aria-label="Previous Month">
-                <ChevronLeftRounded />
+              <IconButton
+                size="small"
+                onClick={prevMonth}
+                aria-label="Previous Month"
+                sx={{ border: '1px solid #E2E8F0', borderRadius: '8px' }}
+              >
+                <ChevronLeftRounded fontSize="small" />
               </IconButton>
-              <IconButton size="small" onClick={nextMonth} aria-label="Next Month">
-                <ChevronRightRounded />
+              <IconButton
+                size="small"
+                onClick={nextMonth}
+                aria-label="Next Month"
+                sx={{ border: '1px solid #E2E8F0', borderRadius: '8px' }}
+              >
+                <ChevronRightRounded fontSize="small" />
               </IconButton>
             </Stack>
           </Stack>
 
-          {/* Weekday Headers */}
-          <Grid container sx={{ mb: 1.5, textAlign: 'center' }}>
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-              <Grid item xs={12 / 7} key={d}>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5 }}>
-                  {d}
+          {/* 7-Column Day Headers */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: { xs: 0.5, sm: 1 },
+              mb: 1,
+              textAlign: 'center',
+            }}
+          >
+            {[
+              { full: 'Sunday', short: 'Sun', letter: 'S' },
+              { full: 'Monday', short: 'Mon', letter: 'M' },
+              { full: 'Tuesday', short: 'Tue', letter: 'T' },
+              { full: 'Wednesday', short: 'Wed', letter: 'W' },
+              { full: 'Thursday', short: 'Thu', letter: 'T' },
+              { full: 'Friday', short: 'Fri', letter: 'F' },
+              { full: 'Saturday', short: 'Sat', letter: 'S' },
+            ].map((d) => (
+              <Box key={d.full} sx={{ py: 0.5 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 700,
+                    color: '#64748B',
+                    letterSpacing: 0.5,
+                    display: { xs: 'none', sm: 'block' },
+                  }}
+                >
+                  {d.short}
                 </Typography>
-              </Grid>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 700,
+                    color: '#64748B',
+                    display: { xs: 'block', sm: 'none' },
+                  }}
+                >
+                  {d.letter}
+                </Typography>
+              </Box>
             ))}
-          </Grid>
+          </Box>
 
-          {/* Date Grid */}
-          <Grid container spacing={0.75}>
+          {/* 7-Column Monthly Date Grid */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: { xs: 0.5, sm: 1 },
+              flexGrow: 1,
+            }}
+          >
             {calendarGrid.map((day) => {
               const dayLeaves = leavesByDate[day.dateStr] || [];
               const isSelected = day.dateStr === selectedDateStr;
-              const isToday = day.dateStr === new Date().toISOString().split('T')[0];
+              const todayObj = new Date();
+              const todayFormatted = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+              const isToday = day.dateStr === todayFormatted;
 
               const hasApproved = dayLeaves.some((l) => l.status === 'approved');
               const hasPending = dayLeaves.some((l) => l.status === 'pending');
               const hasRejected = dayLeaves.some((l) => l.status === 'rejected');
 
+              // Soft continuous range background for leaves
+              let cellBg = day.isCurrentMonth ? '#FFFFFF' : '#FAFAFA';
+              let cellBorder = '#F1F5F9';
+
+              if (hasApproved) {
+                cellBg = '#F0FDF4';
+                cellBorder = '#DCFCE7';
+              } else if (hasPending) {
+                cellBg = '#FFFBEB';
+                cellBorder = '#FEF3C7';
+              } else if (hasRejected) {
+                cellBg = '#FEF2F2';
+                cellBorder = '#FEE2E2';
+              }
+
+              if (isSelected) {
+                cellBg = '#F0F9FF';
+                cellBorder = '#0284C7';
+              }
+
               return (
-                <Grid item xs={12 / 7} key={day.dateStr}>
-                  <Box
-                    onClick={() => setSelectedDateStr(day.dateStr)}
+                <Box
+                  key={day.dateStr}
+                  onClick={() => setSelectedDateStr(day.dateStr)}
+                  sx={{
+                    minHeight: { xs: 54, sm: 70, md: 78 },
+                    p: { xs: 0.5, sm: 0.85 },
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    border: isSelected ? '2px solid #0284C7' : `1px solid ${cellBorder}`,
+                    backgroundColor: cellBg,
+                    opacity: day.isCurrentMonth ? 1 : 0.38,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    transition: 'all 120ms ease',
+                    boxSizing: 'border-box',
+                    '&:hover': {
+                      backgroundColor: isSelected ? '#F0F9FF' : '#F8FAFC',
+                      borderColor: isSelected ? '#0284C7' : '#CBD5E1',
+                    },
+                  }}
+                >
+                  {/* Date Number with Today Pill/Dot */}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: isToday || isSelected ? 800 : day.isCurrentMonth ? 600 : 400,
+                        color: isSelected ? '#0284C7' : isToday ? '#0284C7' : day.isCurrentMonth ? '#1E293B' : '#94A3B8',
+                        fontSize: { xs: 11, sm: 12.5 },
+                        width: isToday ? 22 : 'auto',
+                        height: isToday ? 22 : 'auto',
+                        display: isToday ? 'flex' : 'inline',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: isToday ? '50%' : 'none',
+                        backgroundColor: isToday ? '#E0F2FE' : 'transparent',
+                      }}
+                    >
+                      {day.dayNum}
+                    </Typography>
+
+                    {isToday && !isSelected && (
+                      <Box sx={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: '#0284C7' }} />
+                    )}
+                  </Box>
+
+                  {/* Clean Status Indicator Dots (No repeated names) */}
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
                     sx={{
-                      height: 64,
-                      p: 0.75,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      border: isSelected ? '2px solid #0284C7' : '1px solid #F1F5F9',
-                      backgroundColor: isSelected
-                        ? '#F0F9FF'
-                        : isToday
-                        ? '#F8FAFC'
-                        : day.isCurrentMonth
-                        ? '#FFFFFF'
-                        : '#FAFAFA',
-                      opacity: day.isCurrentMonth ? 1 : 0.4,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      transition: 'all 120ms ease',
-                      '&:hover': {
-                        backgroundColor: isSelected ? '#F0F9FF' : '#F8FAFC',
-                        borderColor: isSelected ? '#0284C7' : '#CBD5E1',
-                      },
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      minHeight: 10,
+                      pb: 0.25,
                     }}
                   >
-                    {/* Day number & Today ring */}
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontWeight: isToday || isSelected ? 800 : day.isCurrentMonth ? 600 : 400,
-                          color: isSelected ? '#0284C7' : isToday ? '#0284C7' : 'text.primary',
-                          fontSize: 12,
-                        }}
-                      >
-                        {day.dayNum}
-                      </Typography>
-                      {isToday && (
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#0284C7' }} />
-                      )}
-                    </Stack>
-
-                    {/* Clean Status Dots Indicator (No repeated employee names) */}
-                    <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'center', alignItems: 'center', minHeight: 12 }}>
-                      {hasApproved && (
-                        <Tooltip title="Approved Leave">
-                          <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#16A34A' }} />
-                        </Tooltip>
-                      )}
-                      {hasPending && (
-                        <Tooltip title="Pending Request">
-                          <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#D97706' }} />
-                        </Tooltip>
-                      )}
-                      {hasRejected && (
-                        <Tooltip title="Rejected Request">
-                          <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#DC2626' }} />
-                        </Tooltip>
-                      )}
-                    </Stack>
-                  </Box>
-                </Grid>
+                    {hasApproved && (
+                      <Tooltip title="Approved Leave">
+                        <Box sx={{ width: 6.5, height: 6.5, borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                      </Tooltip>
+                    )}
+                    {hasPending && (
+                      <Tooltip title="Pending Request">
+                        <Box sx={{ width: 6.5, height: 6.5, borderRadius: '50%', backgroundColor: '#D97706' }} />
+                      </Tooltip>
+                    )}
+                    {hasRejected && (
+                      <Tooltip title="Rejected Request">
+                        <Box sx={{ width: 6.5, height: 6.5, borderRadius: '50%', backgroundColor: '#DC2626' }} />
+                      </Tooltip>
+                    )}
+                  </Stack>
+                </Box>
               );
             })}
-          </Grid>
+          </Box>
 
           {/* Calendar Status Legend */}
-          <Stack direction="row" spacing={3} sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #F1F5F9', justifyContent: 'center' }}>
+          <Stack
+            direction="row"
+            spacing={{ xs: 1.5, sm: 3 }}
+            sx={{
+              mt: 2.5,
+              pt: 2,
+              borderTop: '1px solid #F1F5F9',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              gap: 1,
+            }}
+          >
             <Stack direction="row" spacing={0.75} alignItems="center">
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#16A34A' }} />
+              <Box sx={{ width: 7.5, height: 7.5, borderRadius: '50%', backgroundColor: '#16A34A' }} />
               <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                Approved
+                Approved Leave
               </Typography>
             </Stack>
             <Stack direction="row" spacing={0.75} alignItems="center">
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#D97706' }} />
+              <Box sx={{ width: 7.5, height: 7.5, borderRadius: '50%', backgroundColor: '#D97706' }} />
               <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                Pending
+                Pending Leave
               </Typography>
             </Stack>
             <Stack direction="row" spacing={0.75} alignItems="center">
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#DC2626' }} />
+              <Box sx={{ width: 7.5, height: 7.5, borderRadius: '50%', backgroundColor: '#DC2626' }} />
               <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                Rejected
+                Rejected Leave
               </Typography>
             </Stack>
             <Stack direction="row" spacing={0.75} alignItems="center">
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#0284C7' }} />
+              <Box sx={{ width: 7.5, height: 7.5, borderRadius: '50%', backgroundColor: '#0284C7' }} />
               <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                Selected / Today
+                Today / Selected Date
               </Typography>
             </Stack>
           </Stack>
         </Paper>
       </Grid>
 
-      {/* Right: Who's On Leave */}
-      <Grid item xs={12} lg={5} xl={4}>
-        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+      {/* Right: Who's On Leave (30-35% width) */}
+      <Grid item xs={12} md={5} lg={4.5} xl={4}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: { xs: 2, sm: 2.5 },
+            borderRadius: '14px',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 0.5 }}>
             <PersonOutlineRounded color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 750 }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.15rem' }}>
               Who&apos;s On Leave
             </Typography>
           </Stack>
@@ -809,10 +954,10 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
             People who are on leave for <strong>{formatDate(selectedDateStr)}</strong>.
           </Typography>
 
-          <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+          <Box sx={{ flexGrow: 1, overflowY: 'auto', minHeight: 220, maxHeight: 520, pr: 0.5 }}>
             {selectedDateLeaves.length === 0 ? (
-              <Box sx={{ p: 4, textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
-                <EventBusyRounded sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+              <Box sx={{ p: 4, textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px dashed #E2E8F0', my: 'auto' }}>
+                <EventBusyRounded sx={{ fontSize: 42, color: '#94A3B8', mb: 1 }} />
                 <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                   No one is on leave for this date.
                 </Typography>
@@ -831,6 +976,8 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
                         border: '1px solid #E2E8F0',
                         backgroundColor: '#FFFFFF',
                         boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                        transition: 'border-color 150ms ease',
+                        '&:hover': { borderColor: '#CBD5E1' },
                       }}
                     >
                       <Stack direction="row" spacing={1.5} alignItems="center">
@@ -846,11 +993,20 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
                         <StatusBadge status={leave.status} />
                       </Stack>
 
-                      <Box sx={{ mt: 1.25, pt: 1, borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box
+                        sx={{
+                          mt: 1.25,
+                          pt: 1,
+                          borderTop: '1px solid #F1F5F9',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
                         <Typography variant="caption" color="text.secondary">
                           {formatDate(leave.startDate)} → {formatDate(leave.endDate)}
                         </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A' }}>
                           {leave.totalDays} {leave.totalDays === 1 ? 'Day' : 'Days'}
                           {leave.isHalfDay ? ` (${leave.halfDaySession === 'SECOND_HALF' ? '2nd Half' : '1st Half'})` : ''}
                         </Typography>
@@ -866,6 +1022,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
     </Grid>
   );
 };
+
 
 // ─── Main Leave Management Page ──────────────────────────────────────────────
 const LeaveManagementPage = () => {
