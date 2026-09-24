@@ -26,8 +26,9 @@ const getCurrentRole = () => {
 const getCurrentUser = () => {
   const name = localStorage.getItem('userName') || 'User';
   const email = localStorage.getItem('userEmail') || '';
+  const positionName = localStorage.getItem('positionName') || null;
 
-  return { name, email };
+  return { name, email, positionName };
 };
 
 const isActivePath = (currentPath, targetPath) => {
@@ -47,6 +48,14 @@ const isActivePath = (currentPath, targetPath) => {
     return currentPath.startsWith('/employees');
   }
 
+  if (targetPath === '/leaves') {
+    return currentPath.startsWith('/leaves');
+  }
+
+  if (targetPath === '/access-management') {
+    return currentPath.startsWith('/access-management');
+  }
+
   if (targetPath === '/profile') {
     return currentPath.startsWith('/profile');
   }
@@ -54,21 +63,24 @@ const isActivePath = (currentPath, targetPath) => {
   return false;
 };
 
-const Section = ({ title, children }) => {
+const Section = ({ title, isFirst, children }) => {
   if (!title && !children) return null;
 
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box sx={{ mb: 1.5 }}>
       {title && (
         <Typography
           variant="caption"
           sx={{
             display: 'block',
             px: 1.5,
+            pt: isFirst ? 0.5 : 2,
             pb: 0.75,
-            color: '#6B7280',
-            letterSpacing: 1.1,
+            color: '#94A3B8',
+            letterSpacing: '0.08em',
             fontWeight: 700,
+            fontSize: '0.7rem',
+            textTransform: 'uppercase',
           }}
         >
           {title}
@@ -87,29 +99,42 @@ const NavItem = ({ item, currentPath, onClick }) => {
     <ListItemButton
       onClick={onClick}
       sx={{
-        minHeight: 40,
+        minHeight: 44,
         px: 1.5,
-        py: 0.75,
-        borderRadius: '9px',
-        backgroundColor: active ? '#0A0A0A' : 'transparent',
-        color: active ? '#FFFFFF' : '#3F3F3F',
-        transition: 'background-color 150ms ease, color 150ms ease',
+        py: 0.85,
+        mb: 0.4,
+        borderRadius: '10px',
+        backgroundColor: active ? '#0F172A' : 'transparent',
+        color: active ? '#FFFFFF' : '#334155',
+        transition: 'all 120ms ease',
         '&:hover': {
-          backgroundColor: active ? '#0A0A0A' : '#F5F5F5',
-          color: active ? '#FFFFFF' : '#0A0A0A',
+          backgroundColor: active ? '#0F172A' : '#F1F5F9',
+          color: active ? '#FFFFFF' : '#0F172A',
+          '& .MuiListItemIcon-root': {
+            color: active ? '#FFFFFF' : '#0F172A',
+          },
         },
       }}
     >
-      <ListItemIcon sx={{ minWidth: 30, color: 'inherit' }}>
-        <Icon fontSize="small" />
+      <ListItemIcon
+        sx={{
+          minWidth: 32,
+          color: active ? '#FFFFFF' : '#64748B',
+          transition: 'color 120ms ease',
+          '& .MuiSvgIcon-root': {
+            fontSize: 20,
+          },
+        }}
+      >
+        <Icon />
       </ListItemIcon>
       <ListItemText
         primary={item.label}
-        slotProps={{
-          primary: {
-            fontSize: 14,
-            fontWeight: active ? 700 : 500,
-          },
+        primaryTypographyProps={{
+          fontSize: '0.885rem',
+          fontWeight: active ? 700 : 500,
+          color: active ? '#FFFFFF' : 'inherit',
+          noWrap: true,
         }}
       />
     </ListItemButton>
@@ -119,23 +144,68 @@ const NavItem = ({ item, currentPath, onClick }) => {
 const UserCard = ({ user, role, onLogout }) => (
   <Box
     sx={{
-      border: '1px solid #E5E5E5',
+      border: '1px solid #E2E8F0',
       borderRadius: '12px',
       backgroundColor: '#FAFAFA',
+      p: 1.25,
+      transition: 'all 120ms ease',
+      '&:hover': {
+        borderColor: '#CBD5E1',
+      },
     }}
   >
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 1.25 }}>
-      <InitialsAvatar name={user?.name} size={34} />
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+      <InitialsAvatar
+        name={user?.name}
+        size={36}
+        sx={{
+          backgroundColor: '#0F172A',
+          color: '#FFFFFF',
+          fontWeight: 700,
+        }}
+      />
       <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.3 }} noWrap>
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            color: '#0F172A',
+            lineHeight: 1.25,
+          }}
+          noWrap
+        >
           {user?.name || 'User'}
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.3 }} noWrap>
-          {getRoleDisplayName(role)}
+        <Typography
+          variant="caption"
+          sx={{
+            color: '#64748B',
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            lineHeight: 1.25,
+            display: 'block',
+          }}
+          noWrap
+        >
+          {user?.positionName || getRoleDisplayName(role)}
         </Typography>
       </Box>
       <Tooltip title="Logout">
-        <IconButton size="small" onClick={onLogout} aria-label="Logout" sx={{ color: 'text.secondary' }}>
+        <IconButton
+          size="small"
+          onClick={onLogout}
+          aria-label="Logout"
+          sx={{
+            color: '#64748B',
+            borderRadius: '8px',
+            p: 0.75,
+            '&:hover': {
+              color: '#0F172A',
+              backgroundColor: '#F1F5F9',
+            },
+          }}
+        >
           <LogoutRounded fontSize="small" />
         </IconButton>
       </Tooltip>
@@ -144,13 +214,13 @@ const UserCard = ({ user, role, onLogout }) => (
 );
 
 const Brand = () => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, pb: 0.5, pt: 0.25 }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 0.5 }}>
     <Box
       sx={{
         width: 36,
         height: 36,
-        borderRadius: '10px',
-        backgroundColor: '#0A0A0A',
+        borderRadius: '9px',
+        backgroundColor: '#0F172A',
         color: '#FFFFFF',
         display: 'flex',
         alignItems: 'center',
@@ -159,20 +229,34 @@ const Brand = () => (
         fontSize: 18,
         letterSpacing: '-0.02em',
         flexShrink: 0,
+        boxShadow: '0 2px 6px rgba(15,23,42,0.15)',
       }}
     >
       V
     </Box>
     <Box sx={{ minWidth: 0 }}>
       <Typography
-        sx={{ fontWeight: 800, fontSize: 17, lineHeight: 1.1, letterSpacing: '-0.01em' }}
+        sx={{
+          fontWeight: 800,
+          fontSize: '1.05rem',
+          lineHeight: 1.15,
+          letterSpacing: '-0.02em',
+          color: '#0F172A',
+        }}
         noWrap
       >
         VARDHAN
       </Typography>
       <Typography
         variant="caption"
-        sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: 0.9, fontSize: 9.5 }}
+        sx={{
+          color: '#64748B',
+          fontWeight: 700,
+          letterSpacing: '0.06em',
+          fontSize: '0.62rem',
+          display: 'block',
+          mt: 0.25,
+        }}
         noWrap
       >
         HOSPITAL WORKFORCE PLATFORM
@@ -225,7 +309,7 @@ const Sidebar = ({ role: forcedRole, user: userProp, onLogout, mobileOpen = fals
         width: SIDEBAR_WIDTH,
         height: '100%',
         backgroundColor: '#FFFFFF',
-        borderRight: '1px solid #E5E5E5',
+        borderRight: '1px solid #E5E7EB',
       }}
     >
       <Loading label="Loading…" height="100%" />
@@ -236,29 +320,22 @@ const Sidebar = ({ role: forcedRole, user: userProp, onLogout, mobileOpen = fals
         width: SIDEBAR_WIDTH,
         height: '100%',
         backgroundColor: '#FFFFFF',
-        borderRight: '1px solid #E5E5E5',
+        borderRight: '1px solid #E5E7EB',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
       }}
     >
-      <Box sx={{ px: 2.5, py: 2.25, flexShrink: 0 }}>
+      {/* Top Brand Header */}
+      <Box sx={{ px: 2.5, pt: 2.75, pb: 2.25, flexShrink: 0 }}>
         <Brand />
       </Box>
 
-      <Box sx={{ px: 1.5, pb: 1 }}>
-        <Typography
-          variant="caption"
-          sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: 1, px: 1.25 }}
-        >
-          NAVIGATION
-        </Typography>
-      </Box>
-
-      <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', px: 1.5, py: 0.5 }}>
+      {/* Navigation Groups */}
+      <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', px: 1.75, py: 0.5 }}>
         <List disablePadding>
-          {sections.map((section) => (
-            <Section key={section.title || 'section'} title={section.title}>
+          {sections.map((section, idx) => (
+            <Section key={section.title || `section-${idx}`} title={section.title} isFirst={idx === 0}>
               {section.items.map((item) => (
                 <NavItem
                   key={`${section.title}-${item.label}`}
@@ -275,7 +352,8 @@ const Sidebar = ({ role: forcedRole, user: userProp, onLogout, mobileOpen = fals
         </List>
       </Box>
 
-      <Box sx={{ px: 2, py: 2, flexShrink: 0 }}>
+      {/* Fixed Bottom User Card */}
+      <Box sx={{ px: 2, py: 2, borderTop: '1px solid #F1F5F9', flexShrink: 0 }}>
         <UserCard user={currentUser} role={resolvedRole} onLogout={handleLogout} />
       </Box>
     </Box>

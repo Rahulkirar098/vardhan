@@ -10,13 +10,16 @@ import {
 } from '@mui/icons-material';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
+export const SECTION_ORDER = ['MAIN', 'HOSPITAL', 'WORKFORCE', 'ACCESS', 'ACCOUNT'];
+
 /**
- * Master navigation item definitions for Hospital workspace.
+ * Master navigation item definitions for Hospital workspace with section grouping.
  */
 export const NAVIGATION_ITEMS = [
   {
     key: 'dashboard',
     label: 'Dashboard',
+    section: 'MAIN',
     path: '/dashboard',
     icon: DashboardRounded,
     allowedRoles: ['admin'],
@@ -24,6 +27,7 @@ export const NAVIGATION_ITEMS = [
   {
     key: 'hospital',
     label: 'Hospital',
+    section: 'HOSPITAL',
     path: '/hospital',
     icon: LocalHospitalRounded,
     allowedRoles: ['admin', 'employee'],
@@ -32,6 +36,7 @@ export const NAVIGATION_ITEMS = [
   {
     key: 'structure',
     label: 'Hospital Structure',
+    section: 'HOSPITAL',
     path: '/structure',
     icon: LayersRounded,
     allowedRoles: ['admin', 'employee'],
@@ -40,6 +45,7 @@ export const NAVIGATION_ITEMS = [
   {
     key: 'positions',
     label: 'Positions',
+    section: 'HOSPITAL',
     path: '/positions',
     icon: BusinessCenterRounded,
     allowedRoles: ['admin', 'employee'],
@@ -48,6 +54,7 @@ export const NAVIGATION_ITEMS = [
   {
     key: 'employees',
     label: 'Employees',
+    section: 'WORKFORCE',
     path: '/employees',
     icon: BadgeRounded,
     allowedRoles: ['admin', 'employee'],
@@ -57,6 +64,7 @@ export const NAVIGATION_ITEMS = [
   {
     key: 'leaves',
     label: 'Leave Management',
+    section: 'WORKFORCE',
     path: '/leaves',
     icon: EventNoteRounded,
     allowedRoles: ['admin', 'employee'],
@@ -72,6 +80,7 @@ export const NAVIGATION_ITEMS = [
   {
     key: 'access-management',
     label: 'Access Management',
+    section: 'ACCESS',
     path: '/access-management',
     icon: VpnKeyRounded,
     allowedRoles: ['admin', 'employee'],
@@ -80,6 +89,7 @@ export const NAVIGATION_ITEMS = [
   {
     key: 'profile',
     label: 'My Profile',
+    section: 'ACCOUNT',
     path: '/profile',
     icon: AccountCircleRounded,
     allowedRoles: ['admin', 'super_admin', 'employee'],
@@ -87,9 +97,9 @@ export const NAVIGATION_ITEMS = [
 ];
 
 export const SUPER_ADMIN_NAVIGATION_ITEMS = [
-  { label: 'Dashboard', path: '/super-admin/dashboard', icon: DashboardRounded },
-  { label: 'Hospitals', path: '/super-admin/hospitals', icon: LocalHospitalRounded },
-  { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
+  { label: 'Dashboard', section: 'MAIN', path: '/super-admin/dashboard', icon: DashboardRounded },
+  { label: 'Hospitals', section: 'HOSPITAL', path: '/super-admin/hospitals', icon: LocalHospitalRounded },
+  { label: 'My Profile', section: 'ACCOUNT', path: '/profile', icon: AccountCircleRounded },
 ];
 
 export const getRoleDisplayName = (role) => {
@@ -103,11 +113,38 @@ export const getRoleDisplayName = (role) => {
 };
 
 /**
+ * Groups items into ordered sections based on SECTION_ORDER
+ */
+const groupItemsIntoSections = (items) => {
+  const map = {};
+  items.forEach((item) => {
+    const sec = item.section || 'MAIN';
+    if (!map[sec]) map[sec] = [];
+    map[sec].push(item);
+  });
+
+  const sections = [];
+  SECTION_ORDER.forEach((sec) => {
+    if (map[sec] && map[sec].length > 0) {
+      sections.push({ title: sec, items: map[sec] });
+    }
+  });
+
+  Object.keys(map).forEach((sec) => {
+    if (!SECTION_ORDER.includes(sec) && map[sec].length > 0) {
+      sections.push({ title: sec, items: map[sec] });
+    }
+  });
+
+  return sections;
+};
+
+/**
  * Returns sidebar sections dynamically based on role, assigned modules, and user permissions.
  */
 export const getSidebarSectionsForRole = (role, userPermissions, userModules) => {
   if (role === 'super_admin') {
-    return [{ title: '', items: SUPER_ADMIN_NAVIGATION_ITEMS }];
+    return groupItemsIntoSections(SUPER_ADMIN_NAVIGATION_ITEMS);
   }
 
   if (role === 'admin') {
@@ -117,7 +154,7 @@ export const getSidebarSectionsForRole = (role, userPermissions, userModules) =>
       }
       return true;
     });
-    return [{ title: '', items }];
+    return groupItemsIntoSections(items);
   }
 
   if (role === 'employee') {
@@ -154,7 +191,7 @@ export const getSidebarSectionsForRole = (role, userPermissions, userModules) =>
       return true;
     });
 
-    return [{ title: '', items }];
+    return groupItemsIntoSections(items);
   }
 
   return [];
