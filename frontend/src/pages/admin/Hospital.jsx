@@ -16,6 +16,8 @@ import AppLayout from '../../components/AppLayout';
 import Loading from '../../components/Loading';
 import Modal from '../../components/Modal';
 
+import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+
 const formatStatus = (status) => {
   if (!status) return 'Active';
   return String(status).charAt(0).toUpperCase() + String(status).slice(1);
@@ -313,11 +315,11 @@ const Hospital = () => {
             title="Hospital"
             subtitle="Manage your hospital profile and information."
             actions={
-              hospital && (
+              hospital && hasPermission(PERMISSIONS.HOSPITAL_UPDATE) ? (
                 <Button variant="outlined" startIcon={<EditRounded />} onClick={() => setEditOpen(true)}>
                   Edit Hospital
                 </Button>
-              )
+              ) : null
             }
           />
 

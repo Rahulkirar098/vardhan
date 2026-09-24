@@ -54,31 +54,69 @@ const Login = () => {
 
         try {
           const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(atob(base64));
           const currentUid = response?.data?.data?.user?._id || response?.data?.data?.user?.id || payload.id || '';
           localStorage.setItem('userId', currentUid);
-          localStorage.setItem('role', payload.role || 'admin');
+          const role = payload.role || 'admin';
+          localStorage.setItem('role', role);
           localStorage.setItem('userName', response?.data?.data?.user?.name || 'User');
           localStorage.setItem('userEmail', response?.data?.data?.user?.email || '');
           localStorage.setItem('positionName', response?.data?.data?.user?.positionName || '');
           localStorage.setItem('permissions', JSON.stringify(response?.data?.data?.user?.permissions || []));
           localStorage.setItem('modules', JSON.stringify(response?.data?.data?.user?.modules || ['core']));
 
-          if (payload.role === 'super_admin') {
+          if (role === 'super_admin') {
             navigate('/super-admin/dashboard');
             return;
           }
 
-          if (payload.role === 'employee') {
+          if (role === 'admin') {
+            navigate('/hospital');
+            return;
+          }
+
+          if (role === 'employee') {
             const userMods = response?.data?.data?.user?.modules || ['core'];
             const userPerms = response?.data?.data?.user?.permissions || [];
-            if (userMods.includes('hrms') && userPerms.includes('employee.view')) {
+            const hasHrms = userMods.includes('hrms');
+
+            if (hasHrms && userPerms.includes('employee.view')) {
               navigate('/employees');
               return;
             }
-            if ((userMods.includes('hospital_structure') || userMods.includes('core')) && userPerms.includes('structure.view')) {
+
+            const hasAnyLeave =
+              userPerms.includes('leave.apply') ||
+              userPerms.includes('leave.view_own') ||
+              userPerms.includes('leave.view') ||
+              userPerms.includes('leave.approve') ||
+              userPerms.includes('leave.manage');
+
+            if (hasHrms && hasAnyLeave) {
+              navigate('/leaves');
+              return;
+            }
+
+            if (userPerms.includes('structure.view')) {
               navigate('/structure');
               return;
             }
+
+            if (userPerms.includes('position.view')) {
+              navigate('/positions');
+              return;
+            }
+
+            if (userPerms.includes('access.view')) {
+              navigate('/access-management');
+              return;
+            }
+
+            if (userPerms.includes('hospital.view')) {
+              navigate('/hospital');
+              return;
+            }
+
             navigate('/profile');
             return;
           }

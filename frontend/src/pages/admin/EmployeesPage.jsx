@@ -52,10 +52,6 @@ import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const canCreate = () => hasPermission(PERMISSIONS.EMPLOYEE_CREATE);
-const canUpdate = () => hasPermission(PERMISSIONS.EMPLOYEE_UPDATE);
-const canDeactivate = () => hasPermission(PERMISSIONS.EMPLOYEE_DELETE);
-
 const formatDate = (d) => {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-IN', {

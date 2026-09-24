@@ -44,7 +44,7 @@ const getUserRole = () => {
   }
 };
 
-const getDefaultRedirectForRole = (role) => {
+export const getDefaultRedirectForRole = (role) => {
   if (role === 'super_admin') {
     return '/super-admin/dashboard';
   }
@@ -55,24 +55,44 @@ const getDefaultRedirectForRole = (role) => {
 
   if (role === 'employee') {
     let hasHrmsModule = false;
-    let hasStructureModule = false;
 
     try {
       const storedModules = localStorage.getItem('modules');
       const mods = storedModules ? JSON.parse(storedModules) : [];
       hasHrmsModule = Array.isArray(mods) && mods.includes('hrms');
-      hasStructureModule = Array.isArray(mods) && (mods.includes('hospital_structure') || mods.includes('core'));
     } catch {
       hasHrmsModule = false;
-      hasStructureModule = false;
     }
 
     if (hasHrmsModule && hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
       return '/employees';
     }
 
-    if (hasStructureModule && hasPermission(PERMISSIONS.STRUCTURE_VIEW)) {
+    const hasAnyLeave =
+      hasPermission(PERMISSIONS.LEAVE_APPLY) ||
+      hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) ||
+      hasPermission(PERMISSIONS.LEAVE_VIEW) ||
+      hasPermission(PERMISSIONS.LEAVE_APPROVE) ||
+      hasPermission(PERMISSIONS.LEAVE_MANAGE);
+
+    if (hasHrmsModule && hasAnyLeave) {
+      return '/leaves';
+    }
+
+    if (hasPermission(PERMISSIONS.STRUCTURE_VIEW)) {
       return '/structure';
+    }
+
+    if (hasPermission(PERMISSIONS.POSITION_VIEW)) {
+      return '/positions';
+    }
+
+    if (hasPermission(PERMISSIONS.HOSPITAL_VIEW)) {
+      return '/hospital';
+    }
+
+    if (hasPermission(PERMISSIONS.ACCESS_VIEW)) {
+      return '/access-management';
     }
 
     return '/profile';
@@ -185,7 +205,10 @@ const AppRoutes = () => {
       <Route
         path="/hospital"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute
+            allowedRoles={['admin', 'employee']}
+            requiredPermission={PERMISSIONS.HOSPITAL_VIEW}
+          >
             <Hospital />
           </ProtectedRoute>
         }
@@ -193,7 +216,10 @@ const AppRoutes = () => {
       <Route
         path="/positions"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute
+            allowedRoles={['admin', 'employee']}
+            requiredPermission={PERMISSIONS.POSITION_VIEW}
+          >
             <PositionsPage />
           </ProtectedRoute>
         }
@@ -201,7 +227,10 @@ const AppRoutes = () => {
       <Route
         path="/access-management"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute
+            allowedRoles={['admin', 'employee']}
+            requiredPermission={PERMISSIONS.ACCESS_VIEW}
+          >
             <AccessManagementPage />
           </ProtectedRoute>
         }

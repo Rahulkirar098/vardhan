@@ -13,7 +13,7 @@ const SYSTEM_MODULES = [
         isCore: true,
         isEnabled: true,
         description: "Fundamental multi-tenant SaaS foundation: Hospital/Tenant, Authentication, Users, Roles, and Permissions.",
-        allowedRoles: ["super_admin", "admin", "hr", "employee"],
+        allowedRoles: ["super_admin", "admin", "employee"],
         features: [
             "hospital_tenant",
             "authentication",
@@ -29,7 +29,7 @@ const SYSTEM_MODULES = [
         isCore: true,
         isEnabled: true,
         description: "Physical hospital organization including Floors and generic Rooms (ICU, Wards, OT, etc.).",
-        allowedRoles: ["super_admin", "admin", "hr", "employee"],
+        allowedRoles: ["super_admin", "admin", "employee"],
         requiredPermission: "structure.view",
         features: ["floors", "rooms"],
     },
@@ -40,7 +40,7 @@ const SYSTEM_MODULES = [
         isCore: false,
         isEnabled: true,
         description: "Business module for Employee records, Reporting Manager, Roster, Attendance, and Leave tracking.",
-        allowedRoles: ["admin", "hr", "employee"],
+        allowedRoles: ["admin", "employee"],
         features: ["employees", "roster", "attendance", "leave", "reporting_manager"],
     },
     {

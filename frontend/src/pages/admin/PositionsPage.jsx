@@ -12,6 +12,7 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import { positionService } from '../../services/position.service';
+import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
 const AVAILABLE_MODULES = [
     { key: 'hrms', label: 'HRMS Module', description: 'Workforce management, Roster, Attendance & Leaves' },
@@ -178,24 +179,30 @@ const PositionsPage = () => {
         return pos[column.key];
     };
 
-    const renderActions = (pos) => (
-        <Box display="flex" justifyContent="flex-end" gap={1}>
-            <Tooltip title="Edit Position">
-                <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenEdit(pos); }}>
-                    <EditRounded fontSize="small" />
-                </IconButton>
-            </Tooltip>
-            <Tooltip title={pos.status === 'active' ? "Deactivate Position" : "Activate Position"}>
-                <IconButton 
-                    size="small" 
-                    color={pos.status === 'active' ? "error" : "success"}
-                    onClick={(e) => { e.stopPropagation(); handleOpenToggleStatus(pos); }}
-                >
-                    <PowerSettingsNewRounded fontSize="small" />
-                </IconButton>
-            </Tooltip>
-        </Box>
-    );
+    const canCreate = hasPermission(PERMISSIONS.POSITION_CREATE);
+    const canUpdate = hasPermission(PERMISSIONS.POSITION_UPDATE);
+
+    const renderActions = (pos) => {
+        if (!canUpdate) return null;
+        return (
+            <Box display="flex" justifyContent="flex-end" gap={1}>
+                <Tooltip title="Edit Position">
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenEdit(pos); }}>
+                        <EditRounded fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title={pos.status === 'active' ? "Deactivate Position" : "Activate Position"}>
+                    <IconButton 
+                        size="small" 
+                        color={pos.status === 'active' ? "error" : "success"}
+                        onClick={(e) => { e.stopPropagation(); handleOpenToggleStatus(pos); }}
+                    >
+                        <PowerSettingsNewRounded fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+            </Box>
+        );
+    };
 
     if (error) {
         return (
@@ -211,14 +218,16 @@ const PositionsPage = () => {
                 <PageHeader 
                     title="Position Master" 
                     subtitle="Manage employee positions and designations across the hospital."
-                    action={
-                        <Button
-                            variant="contained"
-                            startIcon={<AddRounded />}
-                            onClick={handleOpenAdd}
-                        >
-                            Add Position
-                        </Button>
+                    actions={
+                        canCreate ? (
+                            <Button
+                                variant="contained"
+                                startIcon={<AddRounded />}
+                                onClick={handleOpenAdd}
+                            >
+                                Add Position
+                            </Button>
+                        ) : null
                     }
                 />
             </Box>

@@ -22,10 +22,10 @@ VARDHAN SaaS
 │   ├── Authentication (JWT with token revocation)
 │   ├── Hospital / Tenant (Strict tenant isolation)
 │   ├── Users (Authentication & Identity)
-│   ├── Roles (super_admin, admin, hr, employee)
+│   ├── Roles (super_admin, admin, employee)
 │   ├── Permissions (Centralized capability registry)
 │   ├── Module Access (core, hrms, hospital_structure)
-│   ├── Access Management (Generic workforce permissions & module configuration)
+│   ├── Access Management (Workforce permissions & module configuration)
 │   ├── Hospital Structure
 │   │   ├── Floor
 │   │   └── Room
@@ -33,11 +33,11 @@ VARDHAN SaaS
 │
 └── MODULES
     └── HRMS
-        ├── Employees (Single staff record per person)
-        └── Invitations (Centralized invitation flow with token hashing)
-        ├── Attendance (Future)
-        ├── Leave (Future)
-        └── Roster (Future)
+        ├── Employees (Workforce staff record reciprocal to User)
+        ├── Invitations (Centralized invitation flow with token hashing)
+        ├── Leave Management (Apply, My Leave, Approval, Balance, Stats)
+        ├── Attendance (Planned)
+        └── Roster (Planned)
 ```
 
 ---
@@ -45,7 +45,7 @@ VARDHAN SaaS
 ## ✨ Features
 
 ### 1. Authentication & Security
-- Admin registration and multi-role login (`super_admin`, `admin`, `hr`, `employee`).
+- Admin registration and multi-role login (`super_admin`, `admin`, `employee`).
 - Stateless JWT-based authentication with `RevokedToken` support for explicit logout.
 - In-app profile updates and password changes.
 - Password reset via secure email tokens.
@@ -56,23 +56,23 @@ VARDHAN SaaS
 - Hospital Structure: Floors and generic Rooms with deletion/deactivation safety checks.
 
 ### 3. Positions Master
-- Hospital-specific position/designation master.
+- Hospital-specific position/designation master (e.g. HR Manager, Nurse, Payroll Manager, Doctor).
 - Configurable default module access assigned during employee onboarding.
 - Position active/inactive status lifecycle.
 
 ### 4. Workforce & Employee Management
-- Centralized Employee table shared between Admin and HR.
-- Role filters (`All`, `HR`, `Employee`) and status filters (`All`, `Active`, `Inactive`).
+- Centralized Employee table with reciprocal references between User and Employee records.
+- Status filters (`All`, `Active`, `Inactive`).
 - Single generic invitation flow with SHA-256 token hashing and 48-hour expiration.
 - Every invited employee receives a linked Vardhan login account.
 - Employee deactivation disables login without deleting historical data; reactivation restores login.
 - Employee Edit manages profile details and is strictly decoupled from Access Management.
 
 ### 5. Access Management
-- Unified Access Management screen for administrators to manage permissions and module access for ANY workforce user (`hr` or `employee`).
-- Grouped capability permissions (Hospital Structure, Workforce, Hospital Info, Positions).
+- Unified Access Management screen for administrators to manage permissions and module access for workforce employees (`employee` role).
+- Grouped capability permissions (Hospital Structure, Workforce, Hospital Info, Positions, Leave).
 - Module access toggling (`hrms`).
-- Privilege escalation protections preventing ordinary administrators from altering system-level admin roles.
+- Privilege escalation protections preventing ordinary administrators from altering system-level admin accounts or self-modifying access.
 
 ---
 

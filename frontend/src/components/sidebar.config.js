@@ -10,47 +10,87 @@ import {
 } from '@mui/icons-material';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
-const sidebarConfig = {
-  super_admin: {
-    sections: [
-      {
-        title: '',
-        items: [
-          { label: 'Dashboard', path: '/super-admin/dashboard', icon: DashboardRounded },
-          { label: 'Hospitals', path: '/super-admin/hospitals', icon: LocalHospitalRounded },
-          { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
-        ],
-      },
+/**
+ * Master navigation item definitions for Hospital workspace.
+ */
+export const NAVIGATION_ITEMS = [
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    path: '/dashboard',
+    icon: DashboardRounded,
+    allowedRoles: ['admin'],
+  },
+  {
+    key: 'hospital',
+    label: 'Hospital',
+    path: '/hospital',
+    icon: LocalHospitalRounded,
+    allowedRoles: ['admin', 'employee'],
+    requiredPermission: PERMISSIONS.HOSPITAL_VIEW,
+  },
+  {
+    key: 'structure',
+    label: 'Hospital Structure',
+    path: '/structure',
+    icon: LayersRounded,
+    allowedRoles: ['admin', 'employee'],
+    requiredPermission: PERMISSIONS.STRUCTURE_VIEW,
+  },
+  {
+    key: 'positions',
+    label: 'Positions',
+    path: '/positions',
+    icon: BusinessCenterRounded,
+    allowedRoles: ['admin', 'employee'],
+    requiredPermission: PERMISSIONS.POSITION_VIEW,
+  },
+  {
+    key: 'employees',
+    label: 'Employees',
+    path: '/employees',
+    icon: BadgeRounded,
+    allowedRoles: ['admin', 'employee'],
+    requiredModule: 'hrms',
+    requiredPermission: PERMISSIONS.EMPLOYEE_VIEW,
+  },
+  {
+    key: 'leaves',
+    label: 'Leave Management',
+    path: '/leaves',
+    icon: EventNoteRounded,
+    allowedRoles: ['admin', 'employee'],
+    requiredModule: 'hrms',
+    requiredAnyPermission: [
+      PERMISSIONS.LEAVE_APPLY,
+      PERMISSIONS.LEAVE_VIEW_OWN,
+      PERMISSIONS.LEAVE_VIEW,
+      PERMISSIONS.LEAVE_APPROVE,
+      PERMISSIONS.LEAVE_MANAGE,
     ],
   },
-  admin: {
-    sections: [
-      {
-        title: '',
-        items: [
-          { label: 'Dashboard', path: '/dashboard', icon: DashboardRounded },
-          { label: 'Hospital', path: '/hospital', icon: LocalHospitalRounded },
-          { label: 'Hospital Structure', path: '/structure', icon: LayersRounded },
-          { label: 'Positions', path: '/positions', icon: BusinessCenterRounded },
-          { label: 'Employees', path: '/employees', icon: BadgeRounded },
-          { label: 'Leave Management', path: '/leaves', icon: EventNoteRounded },
-          { label: 'Access Management', path: '/access-management', icon: VpnKeyRounded },
-          { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
-        ],
-      },
-    ],
+  {
+    key: 'access-management',
+    label: 'Access Management',
+    path: '/access-management',
+    icon: VpnKeyRounded,
+    allowedRoles: ['admin', 'employee'],
+    requiredPermission: PERMISSIONS.ACCESS_VIEW,
   },
-  employee: {
-    sections: [
-      {
-        title: '',
-        items: [
-          { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
-        ],
-      },
-    ],
+  {
+    key: 'profile',
+    label: 'My Profile',
+    path: '/profile',
+    icon: AccountCircleRounded,
+    allowedRoles: ['admin', 'super_admin', 'employee'],
   },
-};
+];
+
+export const SUPER_ADMIN_NAVIGATION_ITEMS = [
+  { label: 'Dashboard', path: '/super-admin/dashboard', icon: DashboardRounded },
+  { label: 'Hospitals', path: '/super-admin/hospitals', icon: LocalHospitalRounded },
+  { label: 'My Profile', path: '/profile', icon: AccountCircleRounded },
+];
 
 export const getRoleDisplayName = (role) => {
   const labels = {
@@ -67,53 +107,50 @@ export const getRoleDisplayName = (role) => {
  */
 export const getSidebarSectionsForRole = (role) => {
   if (role === 'super_admin') {
-    return sidebarConfig.super_admin.sections;
+    return [{ title: '', items: SUPER_ADMIN_NAVIGATION_ITEMS }];
   }
 
   if (role === 'admin') {
-    return sidebarConfig.admin.sections;
+    const items = NAVIGATION_ITEMS.filter((item) => {
+      if (item.allowedRoles && !item.allowedRoles.includes('admin')) {
+        return false;
+      }
+      return true;
+    });
+    return [{ title: '', items }];
   }
 
   if (role === 'employee') {
-    let hasHrmsModule = false;
-    let hasStructureModule = false;
-
+    let userModules = ['core'];
     try {
-      const storedModules = localStorage.getItem('modules');
-      const mods = storedModules ? JSON.parse(storedModules) : [];
-      hasHrmsModule = Array.isArray(mods) && mods.includes('hrms');
-      hasStructureModule = Array.isArray(mods) && (mods.includes('hospital_structure') || mods.includes('core'));
+      const stored = localStorage.getItem('modules');
+      userModules = stored ? JSON.parse(stored) : ['core'];
     } catch {
-      hasHrmsModule = false;
-      hasStructureModule = false;
+      userModules = ['core'];
     }
 
-    const items = [];
+    const items = NAVIGATION_ITEMS.filter((item) => {
+      if (item.allowedRoles && !item.allowedRoles.includes('employee')) {
+        return false;
+      }
 
-    // Employees Navigation (HRMS module + employee.view permission)
-    if (hasHrmsModule && hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
-      items.push({ label: 'Employees', path: '/employees', icon: BadgeRounded });
-    }
+      if (item.requiredModule && (!Array.isArray(userModules) || !userModules.includes(item.requiredModule))) {
+        return false;
+      }
 
-    // Leave Management Navigation (HRMS module + at least one leave permission)
-    const hasAnyLeavePermission =
-      hasPermission(PERMISSIONS.LEAVE_APPLY) ||
-      hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) ||
-      hasPermission(PERMISSIONS.LEAVE_VIEW) ||
-      hasPermission(PERMISSIONS.LEAVE_APPROVE) ||
-      hasPermission(PERMISSIONS.LEAVE_MANAGE);
+      if (item.requiredPermission && !hasPermission(item.requiredPermission)) {
+        return false;
+      }
 
-    if (hasHrmsModule && hasAnyLeavePermission) {
-      items.push({ label: 'Leave Management', path: '/leaves', icon: EventNoteRounded });
-    }
+      if (item.requiredAnyPermission && Array.isArray(item.requiredAnyPermission)) {
+        const hasAny = item.requiredAnyPermission.some((perm) => hasPermission(perm));
+        if (!hasAny) {
+          return false;
+        }
+      }
 
-    // Structure Navigation (structure module/core + structure.view permission)
-    if (hasStructureModule && hasPermission(PERMISSIONS.STRUCTURE_VIEW)) {
-      items.push({ label: 'Hospital Structure', path: '/structure', icon: LayersRounded });
-    }
-
-    // My Profile is always available for all authenticated employees
-    items.push({ label: 'My Profile', path: '/profile', icon: AccountCircleRounded });
+      return true;
+    });
 
     return [{ title: '', items }];
   }
@@ -121,4 +158,9 @@ export const getSidebarSectionsForRole = (role) => {
   return [];
 };
 
-export default sidebarConfig;
+export default {
+  getRoleDisplayName,
+  getSidebarSectionsForRole,
+  NAVIGATION_ITEMS,
+  SUPER_ADMIN_NAVIGATION_ITEMS,
+};

@@ -38,6 +38,7 @@ import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import DataTable from '../../components/DataTable';
+import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
 const PERMISSION_GROUPS = [
   {
@@ -587,22 +588,27 @@ const AccessManagementPage = () => {
     }
   };
 
-  const renderActions = (u) => (
-    <Box display="flex" justifyContent="flex-end">
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<VpnKeyRounded fontSize="small" />}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedUser(u);
-        }}
-        sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5 }}
-      >
-        Manage
-      </Button>
-    </Box>
-  );
+  const canManage = hasPermission(PERMISSIONS.ACCESS_MANAGE);
+
+  const renderActions = (u) => {
+    if (!canManage) return null;
+    return (
+      <Box display="flex" justifyContent="flex-end">
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<VpnKeyRounded fontSize="small" />}
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedUser(u);
+          }}
+          sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5 }}
+        >
+          Manage
+        </Button>
+      </Box>
+    );
+  };
 
   if (error) {
     return (
