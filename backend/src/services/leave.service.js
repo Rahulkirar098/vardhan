@@ -34,9 +34,38 @@ const normalizeToMidnight = (dateVal, isEndOfDay = false) => {
 /**
  * Helper to retrieve the Employee record linked to a User
  */
-const getEmployeeForUser = async (userId, hospitalId) => {
-    if (!userId || !hospitalId) return null;
-    return await Employee.findOne({ userId, hospitalId }).lean();
+const getEmployeeForUser = async (userIdOrUser, hospitalId) => {
+    if (!userIdOrUser || !hospitalId) return null;
+
+    let userId = null;
+    let userEmpId = null;
+
+    if (typeof userIdOrUser === "object" && userIdOrUser !== null) {
+        if (userIdOrUser._id) {
+            userId = userIdOrUser._id.toString();
+        } else if (userIdOrUser.id) {
+            userId = userIdOrUser.id.toString();
+        }
+        if (userIdOrUser.employeeId) {
+            userEmpId = userIdOrUser.employeeId.toString();
+        }
+    } else {
+        userId = userIdOrUser.toString();
+    }
+
+    if (userEmpId && mongoose.Types.ObjectId.isValid(userEmpId)) {
+        const emp = await Employee.findOne({
+            $or: [{ userId }, { _id: userEmpId }],
+            hospitalId,
+        }).lean();
+        if (emp) return emp;
+    }
+
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        return await Employee.findOne({ userId, hospitalId }).lean();
+    }
+
+    return null;
 };
 
 /**

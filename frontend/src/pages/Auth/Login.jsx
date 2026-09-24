@@ -54,7 +54,8 @@ const Login = () => {
 
         try {
           const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-          const payload = JSON.parse(atob(base64));
+          const currentUid = response?.data?.data?.user?._id || response?.data?.data?.user?.id || payload.id || '';
+          localStorage.setItem('userId', currentUid);
           localStorage.setItem('role', payload.role || 'admin');
           localStorage.setItem('userName', response?.data?.data?.user?.name || 'User');
           localStorage.setItem('userEmail', response?.data?.data?.user?.email || '');

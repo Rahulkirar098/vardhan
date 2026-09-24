@@ -481,7 +481,21 @@ const LeaveManagementPage = () => {
   const showSnack = (message, severity = 'success') => setSnackbar({ open: true, message, severity });
 
   const currentUserRole = localStorage.getItem('role') || 'employee';
-  const currentUserId = localStorage.getItem('userId') || '';
+  const currentUserId = useMemo(() => {
+    const stored = localStorage.getItem('userId');
+    if (stored) return stored;
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.id || payload._id || payload.userId || '';
+      } catch {
+        return '';
+      }
+    }
+    return '';
+  }, []);
+
   const canApprove = hasPermission(PERMISSIONS.LEAVE_APPROVE) || currentUserRole === 'admin';
   const canApply = hasPermission(PERMISSIONS.LEAVE_APPLY) || currentUserRole === 'admin';
   const canViewManagement = hasPermission(PERMISSIONS.LEAVE_VIEW) || currentUserRole === 'admin';
@@ -615,59 +629,59 @@ const LeaveManagementPage = () => {
   // Table Columns
   const columns = useMemo(
     () => [
-      {
-        id: 'employee',
-        label: 'Employee',
-        render: (row) => {
-          const emp = row.employeeId || {};
-          const isMe = String(row.appliedBy?._id || row.appliedBy) === String(currentUserId);
-          return (
-            <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {emp.firstName ? `${emp.firstName} ${emp.lastName}` : row.appliedBy?.name || '—'}
-                {isMe && (
-                  <Chip label="You" size="small" sx={{ ml: 1, height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
-                )}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {emp.email || row.appliedBy?.email || '—'}
-              </Typography>
-            </Box>
-          );
-        },
-      },
-      {
-        id: 'employeeId',
-        label: 'Employee ID',
-        render: (row) => (
+      { key: 'employee', label: 'Employee' },
+      { key: 'employeeId', label: 'Employee ID' },
+      { key: 'leaveType', label: 'Leave Type' },
+      { key: 'duration', label: 'Dates & Days' },
+      { key: 'reason', label: 'Reason' },
+      { key: 'status', label: 'Status' },
+      { key: 'requestedDate', label: 'Requested' },
+    ],
+    []
+  );
+
+  const renderLeaveCell = (row, column) => {
+    switch (column.key) {
+      case 'employee': {
+        const emp = row.employeeId || {};
+        const isMe = String(row.appliedBy?._id || row.appliedBy) === String(currentUserId);
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {emp.firstName ? `${emp.firstName} ${emp.lastName}` : row.appliedBy?.name || '—'}
+              {isMe && (
+                <Chip label="You" size="small" sx={{ ml: 1, height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
+              )}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {emp.email || row.appliedBy?.email || '—'}
+            </Typography>
+          </Box>
+        );
+      }
+      case 'employeeId':
+        return (
           <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
             {row.employeeId?.employeeId || '—'}
           </Typography>
-        ),
-      },
-      {
-        id: 'leaveType',
-        label: 'Leave Type',
-        render: (row) => {
-          const t = getLeaveTypeObj(row.leaveType);
-          return (
-            <Chip
-              label={t.label}
-              size="small"
-              sx={{
-                fontWeight: 600,
-                backgroundColor: `${t.color}15`,
-                color: t.color,
-                border: `1px solid ${t.color}35`,
-              }}
-            />
-          );
-        },
-      },
-      {
-        id: 'duration',
-        label: 'Dates & Days',
-        render: (row) => (
+        );
+      case 'leaveType': {
+        const t = getLeaveTypeObj(row.leaveType);
+        return (
+          <Chip
+            label={t.label}
+            size="small"
+            sx={{
+              fontWeight: 600,
+              backgroundColor: `${t.color}15`,
+              color: t.color,
+              border: `1px solid ${t.color}35`,
+            }}
+          />
+        );
+      }
+      case 'duration':
+        return (
           <Box>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {formatDate(row.startDate)} → {formatDate(row.endDate)}
@@ -676,12 +690,9 @@ const LeaveManagementPage = () => {
               {row.totalDays} {row.totalDays === 1 ? 'Day' : 'Days'}
             </Typography>
           </Box>
-        ),
-      },
-      {
-        id: 'reason',
-        label: 'Reason',
-        render: (row) => (
+        );
+      case 'reason':
+        return (
           <Tooltip title={row.reason || ''} arrow placement="top-start">
             <Typography
               variant="body2"
@@ -696,84 +707,74 @@ const LeaveManagementPage = () => {
               {row.reason || '—'}
             </Typography>
           </Tooltip>
-        ),
-      },
-      {
-        id: 'status',
-        label: 'Status',
-        render: (row) => <StatusBadge status={row.status} />,
-      },
-      {
-        id: 'requestedDate',
-        label: 'Requested',
-        render: (row) => (
+        );
+      case 'status':
+        return <StatusBadge status={row.status} />;
+      case 'requestedDate':
+        return (
           <Typography variant="caption" color="text.secondary">
             {formatDate(row.createdAt)}
           </Typography>
-        ),
-      },
-      {
-        id: 'actions',
-        label: 'Actions',
-        align: 'right',
-        render: (row) => {
-          const isOwn = String(row.appliedBy?._id || row.appliedBy) === String(currentUserId);
-          const isPending = row.status === 'pending';
+        );
+      default:
+        return null;
+    }
+  };
 
-          return (
-            <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
-              <Tooltip title="View Details">
-                <IconButton size="small" onClick={() => setDetailsLeave(row)}>
-                  <VisibilityRounded fontSize="small" />
-                </IconButton>
-              </Tooltip>
+  const renderLeaveActions = (row) => {
+    const isOwn = String(row.appliedBy?._id || row.appliedBy) === String(currentUserId);
+    const isPending = row.status === 'pending';
 
-              {/* Management Actions: Approve & Reject (only for other employees when permitted) */}
-              {isPending && canApprove && !isOwn && activeTab !== 'my' && (
-                <>
-                  <Tooltip title="Approve Request">
-                    <IconButton
-                      size="small"
-                      color="success"
-                      onClick={() => setApprovingLeave(row)}
-                      sx={{ '&:hover': { backgroundColor: '#F0FDF4' } }}
-                    >
-                      <CheckCircleOutlineRounded fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Reject Request">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => setRejectingLeave(row)}
-                      sx={{ '&:hover': { backgroundColor: '#FEF2F2' } }}
-                    >
-                      <HighlightOffRounded fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </>
-              )}
+    return (
+      <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+        <Tooltip title="View Details">
+          <IconButton size="small" onClick={() => setDetailsLeave(row)}>
+            <VisibilityRounded fontSize="small" />
+          </IconButton>
+        </Tooltip>
 
-              {/* Requester / Manager Action: Cancel pending request */}
-              {isPending && (isOwn || canManage || activeTab === 'my') && (
-                <Tooltip title="Cancel Request">
-                  <IconButton
-                    size="small"
-                    color="warning"
-                    onClick={() => setCancellingLeave(row)}
-                    sx={{ '&:hover': { backgroundColor: '#FFFBEB' } }}
-                  >
-                    <CloseRounded fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Stack>
-          );
-        },
-      },
-    ],
-    [currentUserId, canApprove, canManage, activeTab]
-  );
+        {/* Management Actions: Approve & Reject (only for other employees when permitted) */}
+        {isPending && canApprove && !isOwn && activeTab !== 'my' && (
+          <>
+            <Tooltip title="Approve Request">
+              <IconButton
+                size="small"
+                color="success"
+                onClick={() => setApprovingLeave(row)}
+                sx={{ '&:hover': { backgroundColor: '#F0FDF4' } }}
+              >
+                <CheckCircleOutlineRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Reject Request">
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => setRejectingLeave(row)}
+                sx={{ '&:hover': { backgroundColor: '#FEF2F2' } }}
+              >
+                <HighlightOffRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
+
+        {/* Requester / Manager Action: Cancel pending request */}
+        {isPending && (isOwn || canManage || activeTab === 'my') && (
+          <Tooltip title="Cancel Request">
+            <IconButton
+              size="small"
+              color="warning"
+              onClick={() => setCancellingLeave(row)}
+              sx={{ '&:hover': { backgroundColor: '#FFFBEB' } }}
+            >
+              <CloseRounded fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Stack>
+    );
+  };
 
   return (
     <AppLayout>
@@ -949,7 +950,14 @@ const LeaveManagementPage = () => {
               />
             </Box>
           ) : (
-            <DataTable columns={columns} data={leaves} loading={loading} />
+            <DataTable
+              columns={columns}
+              rows={leaves}
+              getRowKey={(row) => row._id}
+              renderCell={renderLeaveCell}
+              renderActions={renderLeaveActions}
+              loading={loading}
+            />
           )}
         </GlassCard>
       </Stack>
