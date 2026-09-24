@@ -140,6 +140,7 @@ const UnifiedCalendar = ({
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
+        minWidth: 0,
         boxSizing: 'border-box',
         ...sx,
       }}
@@ -153,10 +154,12 @@ const UnifiedCalendar = ({
           flexWrap: 'wrap',
           gap: 1.5,
           mb: { xs: 2, sm: 2.75 },
+          width: '100%',
+          minWidth: 0,
         }}
       >
         {/* Left: Previous Button + Prominent Month/Date Title */}
-        <Stack direction="row" spacing={1.25} alignItems="center">
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0, flexShrink: 1 }}>
           <IconButton
             onClick={handlePrev}
             aria-label={
@@ -171,6 +174,7 @@ const UnifiedCalendar = ({
               color: '#0F172A',
               backgroundColor: '#FFFFFF',
               transition: 'all 120ms ease',
+              flexShrink: 0,
               '&:hover': {
                 borderColor: '#CBD5E1',
                 backgroundColor: '#F8FAFC',
@@ -188,7 +192,9 @@ const UnifiedCalendar = ({
               color: '#0F172A',
               letterSpacing: '-0.02em',
               userSelect: 'none',
+              minWidth: 0,
             }}
+            noWrap
           >
             {headerTitle}
           </Typography>
@@ -209,6 +215,7 @@ const UnifiedCalendar = ({
                 color: '#334155',
                 py: 0.5,
                 px: 1.25,
+                flexShrink: 0,
                 '&:hover': { borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
               }}
             >
@@ -218,7 +225,7 @@ const UnifiedCalendar = ({
         </Stack>
 
         {/* Right: View Controls (Day / Week / Month) + Next Button */}
-        <Stack direction="row" spacing={1.25} alignItems="center">
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexShrink: 0 }}>
           {/* Segmented View Controls: Day | Week | Month */}
           <Box
             sx={{
@@ -275,6 +282,7 @@ const UnifiedCalendar = ({
               color: '#0F172A',
               backgroundColor: '#FFFFFF',
               transition: 'all 120ms ease',
+              flexShrink: 0,
               '&:hover': {
                 borderColor: '#CBD5E1',
                 backgroundColor: '#F8FAFC',
@@ -287,7 +295,7 @@ const UnifiedCalendar = ({
       </Box>
 
       {/* ─── Active Calendar View Body ───────────────────────────────── */}
-      <Box sx={{ flexGrow: 1, minHeight: 0 }}>
+      <Box sx={{ flexGrow: 1, width: '100%', minWidth: 0 }}>
         {activeView === 'month' && (
           <MonthView
             currentDate={currentDate}
@@ -320,7 +328,7 @@ const UnifiedCalendar = ({
 
       {/* ─── Optional Custom Legend / Status Footer ─────────────────── */}
       {legend && (
-        <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #F1F5F9' }}>
+        <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #F1F5F9', width: '100%', minWidth: 0 }}>
           {legend}
         </Box>
       )}

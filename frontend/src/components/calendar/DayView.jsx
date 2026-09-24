@@ -13,7 +13,7 @@ const DayView = ({
   const dayEvents = eventsByDate[dateKey] || [];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', minHeight: 380 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0, minHeight: 380 }}>
       {/* Day Header Banner */}
       <Box
         sx={{
@@ -27,15 +27,18 @@ const DayView = ({
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 1,
+          width: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
         }}
       >
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <EventNoteRounded sx={{ color: '#0284C7' }} />
-          <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+          <EventNoteRounded sx={{ color: '#0284C7', flexShrink: 0 }} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }} noWrap>
               {formatDayFull(activeDate)}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 500 }}>
+            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 500 }} noWrap>
               {dayEvents.length === 0
                 ? 'No scheduled events or requests for this day.'
                 : `${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'} recorded.`}
@@ -45,7 +48,7 @@ const DayView = ({
       </Box>
 
       {/* Events / Timeline List */}
-      <Box sx={{ flexGrow: 1 }}>
+      <Box sx={{ flexGrow: 1, width: '100%', minWidth: 0 }}>
         {dayEvents.length === 0 ? (
           <Box
             sx={{
@@ -59,6 +62,9 @@ const DayView = ({
               alignItems: 'center',
               justifyContent: 'center',
               minHeight: 240,
+              width: '100%',
+              minWidth: 0,
+              boxSizing: 'border-box',
             }}
           >
             <ScheduleRounded sx={{ fontSize: 44, color: '#CBD5E1', mb: 1 }} />
@@ -70,7 +76,7 @@ const DayView = ({
             </Typography>
           </Box>
         ) : (
-          <Stack spacing={1.5}>
+          <Stack spacing={1.5} sx={{ width: '100%', minWidth: 0 }}>
             {dayEvents.map((evt, idx) =>
               renderEventItem ? (
                 renderEventItem(evt, idx)
@@ -86,13 +92,16 @@ const DayView = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    width: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box',
                   }}
                 >
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                  <Box sx={{ minWidth: 0, mr: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }} noWrap>
                       {evt.appliedBy?.name || evt.title || 'Leave Event'}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#64748B' }}>
+                    <Typography variant="caption" sx={{ color: '#64748B' }} noWrap>
                       {evt.leaveType || evt.subtitle || 'Scheduled Record'}
                     </Typography>
                   </Box>
@@ -115,6 +124,7 @@ const DayView = ({
                           : '#B45309',
                       fontSize: '0.75rem',
                       fontWeight: 700,
+                      flexShrink: 0,
                     }}
                   >
                     {evt.status || 'Active'}

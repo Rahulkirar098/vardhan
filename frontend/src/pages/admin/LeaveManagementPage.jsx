@@ -595,9 +595,21 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
   const selectedDateLeaves = leavesByDate[selectedDateStr] || [];
 
   return (
-    <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
-      {/* Left: Reusable Unified Calendar (65-70% width) */}
-      <Grid item xs={12} md={7} lg={7.5} xl={8}>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: {
+          xs: '1fr',
+          lg: 'minmax(0, 1fr) minmax(300px, 32%)',
+        },
+        gap: 3,
+        alignItems: 'start',
+        width: '100%',
+        minWidth: 0,
+      }}
+    >
+      {/* Left: Reusable Unified Calendar (absorbs available space) */}
+      <Box sx={{ width: '100%', minWidth: 0 }}>
         <UnifiedCalendar
           events={leaves}
           selectedDate={selectedDateStr}
@@ -639,10 +651,10 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
             </Stack>
           }
         />
-      </Grid>
+      </Box>
 
-      {/* Right: Who's On Leave (30-35% width) */}
-      <Grid item xs={12} md={5} lg={4.5} xl={4}>
+      {/* Right: Who's On Leave (stable width) */}
+      <Box sx={{ width: '100%', minWidth: 0 }}>
         <Paper
           variant="outlined"
           sx={{
@@ -651,9 +663,11 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
             backgroundColor: '#FFFFFF',
             border: '1px solid #E2E8F0',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            height: '100%',
             display: 'flex',
             flexDirection: 'column',
+            width: '100%',
+            minWidth: 0,
+            boxSizing: 'border-box',
           }}
         >
           <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 0.5 }}>
@@ -667,7 +681,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
             People who are on leave for <strong>{formatDate(selectedDateStr)}</strong>.
           </Typography>
 
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', minHeight: 220, maxHeight: 520, pr: 0.5 }}>
+          <Box sx={{ flexGrow: 1, overflowY: 'auto', minHeight: 220, maxHeight: 520, pr: 0.5, width: '100%', minWidth: 0 }}>
             {selectedDateLeaves.length === 0 ? (
               <Box sx={{ p: 4, textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px dashed #E2E8F0', my: 'auto' }}>
                 <EventBusyRounded sx={{ fontSize: 42, color: '#94A3B8', mb: 1 }} />
@@ -676,7 +690,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
                 </Typography>
               </Box>
             ) : (
-              <Stack spacing={1.5}>
+              <Stack spacing={1.5} sx={{ width: '100%', minWidth: 0 }}>
                 {selectedDateLeaves.map((leave) => {
                   const emp = leave.employeeId || {};
                   const typeObj = getLeaveTypeObj(leave.leaveType);
@@ -690,10 +704,13 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
                         backgroundColor: '#FFFFFF',
                         boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                         transition: 'border-color 150ms ease',
+                        width: '100%',
+                        minWidth: 0,
+                        boxSizing: 'border-box',
                         '&:hover': { borderColor: '#CBD5E1' },
                       }}
                     >
-                      <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
                         <InitialsAvatar name={emp.firstName ? `${emp.firstName} ${emp.lastName}` : leave.appliedBy?.name} size={38} />
                         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                           <Typography variant="subtitle2" sx={{ fontWeight: 700 }} noWrap>
@@ -714,12 +731,13 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
+                          minWidth: 0,
                         }}
                       >
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" noWrap>
                           {formatDate(leave.startDate)} → {formatDate(leave.endDate)}
                         </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', flexShrink: 0, ml: 1 }}>
                           {leave.totalDays} {leave.totalDays === 1 ? 'Day' : 'Days'}
                           {leave.isHalfDay ? ` (${leave.halfDaySession === 'SECOND_HALF' ? '2nd Half' : '1st Half'})` : ''}
                         </Typography>
@@ -731,8 +749,8 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
             )}
           </Box>
         </Paper>
-      </Grid>
-    </Grid>
+      </Box>
+    </Box>
   );
 };
 

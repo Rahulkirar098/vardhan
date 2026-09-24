@@ -13,17 +13,16 @@ const WeekView = ({
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0 }}>
       {/* 7-Column Day Cards Grid */}
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(1, 1fr)',
-            sm: 'repeat(7, minmax(0, 1fr))',
-          },
-          gap: { xs: 1.5, sm: 1 },
+          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+          gap: { xs: 0.5, sm: 1 },
           minHeight: 380,
+          width: '100%',
+          minWidth: 0,
         }}
       >
         {weekDays.map((day) => {
@@ -39,12 +38,16 @@ const WeekView = ({
                 borderRadius: '12px',
                 border: isSelected ? '2px solid #0284C7' : '1px solid #E2E8F0',
                 backgroundColor: isSelected ? '#F0F9FF' : isToday ? '#F8FAFC' : '#FFFFFF',
-                p: { xs: 1.5, sm: 1.25 },
+                p: { xs: 0.75, sm: 1 },
                 display: 'flex',
                 flexDirection: 'column',
                 transition: 'all 120ms ease',
                 cursor: 'pointer',
-                minHeight: { xs: 100, sm: 300 },
+                minHeight: { xs: 120, sm: 300 },
+                minWidth: 0,
+                width: '100%',
+                boxSizing: 'border-box',
+                overflow: 'hidden',
                 '&:hover': {
                   borderColor: isSelected ? '#0284C7' : '#CBD5E1',
                   backgroundColor: isSelected ? '#F0F9FF' : '#F8FAFC',
@@ -54,10 +57,12 @@ const WeekView = ({
               {/* Day Header */}
               <Box
                 sx={{
-                  pb: 1,
-                  mb: 1,
+                  pb: 0.75,
+                  mb: 0.75,
                   borderBottom: '1px solid #F1F5F9',
                   textAlign: 'center',
+                  minWidth: 0,
+                  width: '100%',
                 }}
               >
                 <Typography
@@ -67,9 +72,10 @@ const WeekView = ({
                     color: '#64748B',
                     textTransform: 'uppercase',
                     letterSpacing: '0.04em',
-                    fontSize: '0.7rem',
+                    fontSize: { xs: '0.62rem', sm: '0.7rem' },
                     display: 'block',
                   }}
+                  noWrap
                 >
                   {day.dayNameShort}
                 </Typography>
@@ -78,13 +84,13 @@ const WeekView = ({
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 28,
-                    height: 28,
+                    width: 26,
+                    height: 26,
                     borderRadius: '50%',
                     backgroundColor: isToday ? '#0284C7' : 'transparent',
                     color: isToday ? '#FFFFFF' : isSelected ? '#0284C7' : '#0F172A',
                     fontWeight: 800,
-                    fontSize: '0.9rem',
+                    fontSize: '0.85rem',
                     mt: 0.25,
                   }}
                 >
@@ -93,7 +99,7 @@ const WeekView = ({
               </Box>
 
               {/* Event Cards Area for this Day */}
-              <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+              <Box sx={{ flexGrow: 1, overflowY: 'auto', minWidth: 0, width: '100%' }}>
                 {dayEvents.length === 0 ? (
                   <Box
                     sx={{
@@ -110,7 +116,7 @@ const WeekView = ({
                     </Typography>
                   </Box>
                 ) : (
-                  <Stack spacing={0.75}>
+                  <Stack spacing={0.5} sx={{ minWidth: 0, width: '100%' }}>
                     {dayEvents.map((evt, idx) =>
                       renderEventItem ? (
                         renderEventItem(evt, idx)
@@ -118,7 +124,7 @@ const WeekView = ({
                         <Box
                           key={evt._id || evt.id || idx}
                           sx={{
-                            p: 0.75,
+                            p: 0.5,
                             borderRadius: '6px',
                             backgroundColor:
                               evt.status === 'approved'
@@ -132,21 +138,25 @@ const WeekView = ({
                                 : evt.status === 'rejected'
                                 ? '#B91C1C'
                                 : '#B45309',
-                            fontSize: '0.75rem',
+                            fontSize: '0.72rem',
                             fontWeight: 700,
                             lineHeight: 1.2,
+                            minWidth: 0,
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            overflow: 'hidden',
                           }}
                         >
                           <Typography
                             variant="caption"
-                            sx={{ fontWeight: 700, fontSize: '0.72rem', display: 'block' }}
+                            sx={{ fontWeight: 700, fontSize: '0.68rem', display: 'block' }}
                             noWrap
                           >
                             {evt.appliedBy?.name || evt.title || 'Leave'}
                           </Typography>
                           <Typography
                             variant="caption"
-                            sx={{ fontSize: '0.65rem', opacity: 0.85, display: 'block' }}
+                            sx={{ fontSize: '0.62rem', opacity: 0.85, display: 'block' }}
                             noWrap
                           >
                             {evt.leaveType || evt.subtitle || evt.status}

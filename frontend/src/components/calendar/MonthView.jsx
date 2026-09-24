@@ -13,7 +13,7 @@ const MonthView = ({
   const days = useMemo(() => getMonthGrid(currentDate), [currentDate]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0 }}>
       {/* 7-Column Weekday Headers */}
       <Box
         sx={{
@@ -22,10 +22,12 @@ const MonthView = ({
           gap: { xs: 0.5, sm: 1 },
           mb: 1,
           textAlign: 'center',
+          width: '100%',
+          minWidth: 0,
         }}
       >
         {WEEKDAYS.map((d) => (
-          <Box key={d.full} sx={{ py: 0.75 }}>
+          <Box key={d.full} sx={{ py: 0.75, minWidth: 0 }}>
             <Typography
               variant="caption"
               sx={{
@@ -61,6 +63,8 @@ const MonthView = ({
           gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
           gap: { xs: 0.5, sm: 1 },
           flexGrow: 1,
+          width: '100%',
+          minWidth: 0,
         }}
       >
         {days.map((day) => {
@@ -118,6 +122,8 @@ const MonthView = ({
                 justifyContent: 'space-between',
                 transition: 'all 120ms ease',
                 boxSizing: 'border-box',
+                minWidth: 0,
+                width: '100%',
                 outline: 'none',
                 '&:hover': {
                   backgroundColor: isSelected ? '#F0F9FF' : '#F8FAFC',
