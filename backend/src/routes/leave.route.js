@@ -55,6 +55,7 @@ leaveRoute.get(
         PERMISSIONS.LEAVE_VIEW,
         PERMISSIONS.LEAVE_VIEW_OWN,
         PERMISSIONS.LEAVE_APPLY,
+        PERMISSIONS.LEAVE_CANCEL_OWN,
         PERMISSIONS.LEAVE_APPROVE,
         PERMISSIONS.LEAVE_MANAGE
     ),
@@ -75,10 +76,11 @@ leaveRoute.patch(
     rejectLeave
 );
 
-// Cancel leave (requires leave.apply, leave.view_own, or leave.manage)
+// Cancel leave (requires leave.cancel_own, leave.apply, leave.view_own, or leave.manage)
 leaveRoute.patch(
     "/:id/cancel",
     authorizeAnyPermission(
+        PERMISSIONS.LEAVE_CANCEL_OWN,
         PERMISSIONS.LEAVE_APPLY,
         PERMISSIONS.LEAVE_VIEW_OWN,
         PERMISSIONS.LEAVE_MANAGE

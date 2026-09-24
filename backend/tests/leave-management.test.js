@@ -163,7 +163,7 @@ const runTests = async () => {
         await hrUser.save();
         const hrToken = generateToken({ id: hrUser._id.toString(), role: "employee", hospitalId: hospitalA._id });
 
-        // Staff Nurse User & Employee in Hospital A
+        // Staff Nurse User & Employee in Hospital A (Fresh normal employee with NO manually granted permissions)
         const staffUser = await User.create({
             _id: staffUserId,
             name: `Staff Nurse ${testTimestamp}`,
@@ -173,7 +173,7 @@ const runTests = async () => {
             hospitalId: hospitalA._id,
             status: "active",
             modules: ["core", "hrms"],
-            permissions: [PERMISSIONS.LEAVE_APPLY, PERMISSIONS.LEAVE_VIEW_OWN],
+            permissions: [], // Default self-service only: no manual permissions
         });
 
         const staffEmployee = await Employee.create({
@@ -202,7 +202,7 @@ const runTests = async () => {
             hospitalId: hospitalA._id,
             status: "active",
             modules: ["core", "hrms"],
-            permissions: [PERMISSIONS.LEAVE_APPLY, PERMISSIONS.LEAVE_VIEW_OWN],
+            permissions: [],
         });
 
         const inactiveEmployee = await Employee.create({
@@ -643,297 +643,146 @@ const runTests = async () => {
         await zeroHRUser.save();
         const zeroHRToken = generateToken({ id: zeroHRUser._id.toString(), role: "employee", hospitalId: hospitalA._id });
 
-        // Test 20: User with HRMS but zero Leave permissions receives 403 on all Leave APIs
+        // Test 20: Fresh normal employee with ZERO manual permissions has default self-service access
         {
+            // Can apply own leave
             const applyRes = await request("/api/v1/hrms/leaves", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${zeroPermsToken}` },
-                body: { leaveType: "CASUAL", startDate: "2026-12-01", endDate: "2026-12-02", reason: "Test" },
+                body: { leaveType: "CASUAL", startDate: "2026-12-01", endDate: "2026-12-02", reason: "Self-service test" },
             });
-            assert.strictEqual(applyRes.status, 403, `Expected 403 on POST /leaves for zero-perm user, got ${applyRes.status}`);
+            assert.strictEqual(applyRes.status, 201, `Expected 201 on POST /leaves for fresh employee, got ${applyRes.status}`);
+            const freshLeaveId = applyRes.body.data.leave._id;
 
-            const listRes = await request("/api/v1/hrms/leaves", {
-                headers: { Authorization: `Bearer ${zeroPermsToken}` },
-            });
-            assert.strictEqual(listRes.status, 403, `Expected 403 on GET /leaves for zero-perm user, got ${listRes.status}`);
-
+            // Can view own leaves
             const myRes = await request("/api/v1/hrms/leaves/my", {
                 headers: { Authorization: `Bearer ${zeroPermsToken}` },
             });
-            assert.strictEqual(myRes.status, 403, `Expected 403 on GET /leaves/my for zero-perm user, got ${myRes.status}`);
+            assert.strictEqual(myRes.status, 200, `Expected 200 on GET /leaves/my for fresh employee, got ${myRes.status}`);
+            assert(myRes.body.data.leaves.length >= 1);
 
-            const singleRes = await request(`/api/v1/hrms/leaves/${leave1Id}`, {
-                headers: { Authorization: `Bearer ${zeroPermsToken}` },
-            });
-            assert.strictEqual(singleRes.status, 403, `Expected 403 on GET /leaves/:id for zero-perm user, got ${singleRes.status}`);
-
-            const approveRes = await request(`/api/v1/hrms/leaves/${leave1Id}/approve`, {
+            // Can cancel own pending leave
+            const cancelRes = await request(`/api/v1/hrms/leaves/${freshLeaveId}/cancel`, {
                 method: "PATCH",
                 headers: { Authorization: `Bearer ${zeroPermsToken}` },
             });
-            assert.strictEqual(approveRes.status, 403, `Expected 403 on PATCH /approve for zero-perm user, got ${approveRes.status}`);
+            assert.strictEqual(cancelRes.status, 200, `Expected 200 on PATCH /cancel for own leave, got ${cancelRes.status}`);
+            assert.strictEqual(cancelRes.body.data.leave.status, "cancelled");
 
-            const cancelRes = await request(`/api/v1/hrms/leaves/${leave1Id}/cancel`, {
-                method: "PATCH",
-                headers: { Authorization: `Bearer ${zeroPermsToken}` },
-            });
-            assert.strictEqual(cancelRes.status, 403, `Expected 403 on PATCH /cancel for zero-perm user, got ${cancelRes.status}`);
-
-            console.log("  ✓ 20. User with HRMS enabled but zero Leave permissions receives 403 Forbidden across all Leave APIs");
+            console.log("  ✓ 20. Fresh normal employee with 0 manual permissions can apply, view own, and cancel own leave (Default Self-Service)");
         }
 
-        // Test 21: HR Manager without Leave permissions cannot access Leave APIs (Position != Permission)
+        // Test 21: HR Manager without management permissions can apply/view own leave but cannot approve others
         {
+            // HR Manager can apply own leave
+            const hrApplyRes = await request("/api/v1/hrms/leaves", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${zeroHRToken}` },
+                body: { leaveType: "CASUAL", startDate: "2026-12-03", endDate: "2026-12-04", reason: "HR self apply" },
+            });
+            assert.strictEqual(hrApplyRes.status, 201, "HR Manager can apply for own leave");
+
+            // HR Manager can view own leaves
+            const hrMyRes = await request("/api/v1/hrms/leaves/my", {
+                headers: { Authorization: `Bearer ${zeroHRToken}` },
+            });
+            assert.strictEqual(hrMyRes.status, 200, "HR Manager can view own leaves");
+
+            // HR Manager without leave.view cannot view workforce leaves
             const hrListRes = await request("/api/v1/hrms/leaves", {
                 headers: { Authorization: `Bearer ${zeroHRToken}` },
             });
             assert.strictEqual(hrListRes.status, 403, "Expected 403 for HR Manager without leave.view");
 
-            const hrApplyRes = await request("/api/v1/hrms/leaves", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${zeroHRToken}` },
-                body: { leaveType: "CASUAL", startDate: "2026-12-01", endDate: "2026-12-02", reason: "Test" },
-            });
-            assert.strictEqual(hrApplyRes.status, 403, "Expected 403 for HR Manager without leave.apply");
-
+            // HR Manager without leave.approve cannot approve other employee's leave
             const hrApproveRes = await request(`/api/v1/hrms/leaves/${leave1Id}/approve`, {
                 method: "PATCH",
                 headers: { Authorization: `Bearer ${zeroHRToken}` },
             });
             assert.strictEqual(hrApproveRes.status, 403, "Expected 403 for HR Manager without leave.approve");
 
-            console.log("  ✓ 21. HR Manager without Leave permissions receives 403 (Position = HR Manager does NOT bypass permissions)");
+            console.log("  ✓ 21. HR Manager without management permissions can apply/view own leave but cannot approve others (Position alone does not grant management permissions)");
         }
 
-        // Test 22: Employee role does not grant default leave permissions
+        // Test 22: Fresh normal employee cannot view workforce leaves or stats without leave.view
         {
-            const empMyRes = await request("/api/v1/hrms/leaves/my", {
+            const listRes = await request("/api/v1/hrms/leaves", {
                 headers: { Authorization: `Bearer ${zeroPermsToken}` },
             });
-            assert.strictEqual(empMyRes.status, 403);
-            console.log("  ✓ 22. Employee role without permissions cannot access Leave (role = employee does NOT grant default leave permissions)");
-        }
+            assert.strictEqual(listRes.status, 403, "Expected 403 on GET /leaves for ungranted user");
 
-        // Test 23: User with ONLY leave.apply
-        {
-            const applyOnlyUser = await User.create({
-                name: `Apply Only User ${testTimestamp}`,
-                email: `applyonly_${testTimestamp}@hospital.com`,
-                password: passwordHash,
-                role: "employee",
-                hospitalId: hospitalA._id,
-                status: "active",
-                modules: ["core", "hrms"],
-                permissions: [PERMISSIONS.LEAVE_APPLY],
-            });
-            const applyOnlyEmp = await Employee.create({
-                employeeId: `EMP_APP_${testTimestamp}`,
-                firstName: "Apply",
-                lastName: "Only",
-                email: `applyonly_${testTimestamp}@hospital.com`,
-                positionId: posNurse._id,
-                hospitalId: hospitalA._id,
-                userId: applyOnlyUser._id,
-                employmentStatus: "ACTIVE",
-                createdBy: adminA._id,
-            });
-            applyOnlyUser.employeeId = applyOnlyEmp._id;
-            await applyOnlyUser.save();
-            const applyOnlyToken = generateToken({ id: applyOnlyUser._id.toString(), role: "employee", hospitalId: hospitalA._id });
-
-            // Can apply
-            const res = await request("/api/v1/hrms/leaves", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${applyOnlyToken}` },
-                body: { leaveType: "CASUAL", startDate: "2026-12-05", endDate: "2026-12-06", reason: "Apply test" },
-            });
-            assert.strictEqual(res.status, 201, `Expected 201 Created but got ${res.status}`);
-
-            // Cannot view workforce leaves
-            const listRes = await request("/api/v1/hrms/leaves", {
-                headers: { Authorization: `Bearer ${applyOnlyToken}` },
-            });
-            assert.strictEqual(listRes.status, 403);
-
-            // Cannot approve
-            const appRes = await request(`/api/v1/hrms/leaves/${leave1Id}/approve`, {
-                method: "PATCH",
-                headers: { Authorization: `Bearer ${applyOnlyToken}` },
-            });
-            assert.strictEqual(appRes.status, 403);
-
-            console.log("  ✓ 23. User with ONLY leave.apply can apply for leave but cannot view workforce leaves or approve");
-        }
-
-        // Test 24: User with ONLY leave.view_own
-        {
-            const viewOwnUser = await User.create({
-                name: `View Own User ${testTimestamp}`,
-                email: `viewown_${testTimestamp}@hospital.com`,
-                password: passwordHash,
-                role: "employee",
-                hospitalId: hospitalA._id,
-                status: "active",
-                modules: ["core", "hrms"],
-                permissions: [PERMISSIONS.LEAVE_VIEW_OWN],
-            });
-            const viewOwnEmp = await Employee.create({
-                employeeId: `EMP_VWO_${testTimestamp}`,
-                firstName: "View",
-                lastName: "Own",
-                email: `viewown_${testTimestamp}@hospital.com`,
-                positionId: posNurse._id,
-                hospitalId: hospitalA._id,
-                userId: viewOwnUser._id,
-                employmentStatus: "ACTIVE",
-                createdBy: adminA._id,
-            });
-            viewOwnUser.employeeId = viewOwnEmp._id;
-            await viewOwnUser.save();
-            const viewOwnToken = generateToken({ id: viewOwnUser._id.toString(), role: "employee", hospitalId: hospitalA._id });
-
-            // Can view own
-            const myRes = await request("/api/v1/hrms/leaves/my", {
-                headers: { Authorization: `Bearer ${viewOwnToken}` },
-            });
-            assert.strictEqual(myRes.status, 200);
-
-            // Cannot apply
-            const appRes = await request("/api/v1/hrms/leaves", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${viewOwnToken}` },
-                body: { leaveType: "CASUAL", startDate: "2026-12-05", endDate: "2026-12-06", reason: "Test" },
-            });
-            assert.strictEqual(appRes.status, 403);
-
-            // Cannot view workforce leaves
-            const listRes = await request("/api/v1/hrms/leaves", {
-                headers: { Authorization: `Bearer ${viewOwnToken}` },
-            });
-            assert.strictEqual(listRes.status, 403);
-
-            // Cannot view other employee's leave by ID
-            const singleRes = await request(`/api/v1/hrms/leaves/${leave1Id}`, {
-                headers: { Authorization: `Bearer ${viewOwnToken}` },
-            });
-            assert.strictEqual(singleRes.status, 403);
-
-            console.log("  ✓ 24. User with ONLY leave.view_own can view own leaves but cannot apply, view workforce leaves, or view other's leave by ID");
-        }
-
-        // Test 25: User with ONLY leave.view
-        {
-            const viewUser = await User.create({
-                name: `View User ${testTimestamp}`,
-                email: `viewuser_${testTimestamp}@hospital.com`,
-                password: passwordHash,
-                role: "employee",
-                hospitalId: hospitalA._id,
-                status: "active",
-                modules: ["core", "hrms"],
-                permissions: [PERMISSIONS.LEAVE_VIEW],
-            });
-            const viewEmp = await Employee.create({
-                employeeId: `EMP_VW_${testTimestamp}`,
-                firstName: "View",
-                lastName: "User",
-                email: `viewuser_${testTimestamp}@hospital.com`,
-                positionId: posNurse._id,
-                hospitalId: hospitalA._id,
-                userId: viewUser._id,
-                employmentStatus: "ACTIVE",
-                createdBy: adminA._id,
-            });
-            viewUser.employeeId = viewEmp._id;
-            await viewUser.save();
-            const viewToken = generateToken({ id: viewUser._id.toString(), role: "employee", hospitalId: hospitalA._id });
-
-            // Can view workforce list
-            const listRes = await request("/api/v1/hrms/leaves", {
-                headers: { Authorization: `Bearer ${viewToken}` },
-            });
-            assert.strictEqual(listRes.status, 200);
-
-            // Can view stats
             const statsRes = await request("/api/v1/hrms/leaves/stats", {
-                headers: { Authorization: `Bearer ${viewToken}` },
+                headers: { Authorization: `Bearer ${zeroPermsToken}` },
             });
-            assert.strictEqual(statsRes.status, 200);
+            assert.strictEqual(statsRes.status, 403, "Expected 403 on GET /leaves/stats for ungranted user");
 
-            // Cannot apply
-            const appRes = await request("/api/v1/hrms/leaves", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${viewToken}` },
-                body: { leaveType: "CASUAL", startDate: "2026-12-05", endDate: "2026-12-06", reason: "Test" },
-            });
-            assert.strictEqual(appRes.status, 403);
-
-            // Cannot approve
-            const aprRes = await request(`/api/v1/hrms/leaves/${leave1Id}/approve`, {
-                method: "PATCH",
-                headers: { Authorization: `Bearer ${viewToken}` },
-            });
-            assert.strictEqual(aprRes.status, 403);
-
-            console.log("  ✓ 25. User with ONLY leave.view can view workforce leaves & stats but cannot apply or approve");
+            console.log("  ✓ 22. Fresh normal employee cannot view workforce leaves or stats unless granted (403 Forbidden)");
         }
 
-        // Test 26: User with ONLY leave.approve
+        // Test 23: Fresh normal employee cannot approve or reject another employee's leave
         {
-            const approveUser = await User.create({
-                name: `Approve User ${testTimestamp}`,
-                email: `appruser_${testTimestamp}@hospital.com`,
-                password: passwordHash,
-                role: "employee",
-                hospitalId: hospitalA._id,
-                status: "active",
-                modules: ["core", "hrms"],
-                permissions: [PERMISSIONS.LEAVE_APPROVE],
+            const approveRes = await request(`/api/v1/hrms/leaves/${leave1Id}/approve`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${zeroPermsToken}` },
             });
-            const approveEmp = await Employee.create({
-                employeeId: `EMP_APR_${testTimestamp}`,
-                firstName: "Approve",
-                lastName: "User",
-                email: `appruser_${testTimestamp}@hospital.com`,
-                positionId: posNurse._id,
-                hospitalId: hospitalA._id,
-                userId: approveUser._id,
-                employmentStatus: "ACTIVE",
-                createdBy: adminA._id,
-            });
-            approveUser.employeeId = approveEmp._id;
-            await approveUser.save();
-            const approveToken = generateToken({ id: approveUser._id.toString(), role: "employee", hospitalId: hospitalA._id });
+            assert.strictEqual(approveRes.status, 403, "Expected 403 on PATCH /approve for employee without leave.approve");
 
-            // Create a pending leave from staff
-            const newLeaveRes = await request("/api/v1/hrms/leaves", {
+            const rejectRes = await request(`/api/v1/hrms/leaves/${leave1Id}/reject`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${zeroPermsToken}` },
+                body: { rejectionReason: "Unauthorized attempt" },
+            });
+            assert.strictEqual(rejectRes.status, 403, "Expected 403 on PATCH /reject for employee without leave.approve");
+
+            console.log("  ✓ 23. Fresh normal employee cannot approve or reject another employee's leave (403 Forbidden)");
+        }
+
+        // Test 24: Admin can grant leave.view / leave.approve / leave.manage via Access Management
+        {
+            const grantRes = await request(`/api/v1/access-management/${zeroHRUser._id}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${adminAToken}` },
+                body: {
+                    permissions: [PERMISSIONS.EMPLOYEE_VIEW, PERMISSIONS.LEAVE_VIEW, PERMISSIONS.LEAVE_APPROVE],
+                    modules: ["core", "hrms"],
+                },
+            });
+            assert.strictEqual(grantRes.status, 200, "Admin can grant leave permissions via Access Management");
+            assert(grantRes.body.data.permissions.includes(PERMISSIONS.LEAVE_APPROVE));
+            assert(grantRes.body.data.permissions.includes(PERMISSIONS.LEAVE_VIEW));
+
+            console.log("  ✓ 24. Admin can grant leave.view / leave.approve / leave.manage via Access Management");
+        }
+
+        // Test 25: After granting approval permission, the employee can approve/reject other employees' pending leave
+        {
+            // Staff applies for a new pending leave
+            const staffNewLeaveRes = await request("/api/v1/hrms/leaves", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${staffToken}` },
-                body: { leaveType: "SICK", startDate: "2026-12-10", endDate: "2026-12-12", reason: "Sick leave test" },
+                body: { leaveType: "CASUAL", startDate: "2026-12-18", endDate: "2026-12-19", reason: "Approval grant verification" },
             });
-            assert.strictEqual(newLeaveRes.status, 201, `Expected 201 Created but got ${newLeaveRes.status}: ${JSON.stringify(newLeaveRes.body)}`);
-            const pendingLeaveId = newLeaveRes.body.data.leave._id;
+            assert.strictEqual(staffNewLeaveRes.status, 201);
+            const staffPendingLeaveId = staffNewLeaveRes.body.data.leave._id;
 
-            // Can approve
-            const appRes = await request(`/api/v1/hrms/leaves/${pendingLeaveId}/approve`, {
+            // Granted HR can now view workforce leaves
+            const hrListRes = await request("/api/v1/hrms/leaves", {
+                headers: { Authorization: `Bearer ${zeroHRToken}` },
+            });
+            assert.strictEqual(hrListRes.status, 200, "HR with granted leave.view can view workforce leaves");
+
+            // Granted HR can now approve other employee's pending leave
+            const hrApproveRes = await request(`/api/v1/hrms/leaves/${staffPendingLeaveId}/approve`, {
                 method: "PATCH",
-                headers: { Authorization: `Bearer ${approveToken}` },
+                headers: { Authorization: `Bearer ${zeroHRToken}` },
             });
-            assert.strictEqual(appRes.status, 200);
-            assert.strictEqual(appRes.body.data.leave.status, "approved");
+            assert.strictEqual(hrApproveRes.status, 200, "HR with granted leave.approve can approve other employee's leave");
+            assert.strictEqual(hrApproveRes.body.data.leave.status, "approved");
 
-            // Cannot apply
-            const applyRes = await request("/api/v1/hrms/leaves", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${approveToken}` },
-                body: { leaveType: "CASUAL", startDate: "2026-12-05", endDate: "2026-12-06", reason: "Test" },
-            });
-            assert.strictEqual(applyRes.status, 403);
-
-            console.log("  ✓ 26. User with ONLY leave.approve can approve leave but cannot apply");
+            console.log("  ✓ 25. After granting approval permission, the employee can view workforce leaves and approve other employees' pending leave");
         }
 
-        // Test 27: User with ONLY leave.manage (inherits apply, view_own, view, approve)
+        // Test 26: User with ONLY leave.manage inherits workforce view, approve, and broad management
         {
             const manageUser = await User.create({
                 name: `Manager User ${testTimestamp}`,
@@ -984,7 +833,7 @@ const runTests = async () => {
             const staffNewLeave = await request("/api/v1/hrms/leaves", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${staffToken}` },
-                body: { leaveType: "SICK", startDate: "2026-12-15", endDate: "2026-12-16", reason: "Sick" },
+                body: { leaveType: "SICK", startDate: "2026-12-28", endDate: "2026-12-29", reason: "Sick" },
             });
             const staffLeaveId = staffNewLeave.body.data.leave._id;
 
@@ -995,7 +844,25 @@ const runTests = async () => {
             assert.strictEqual(aprRes.status, 200);
             assert.strictEqual(aprRes.body.data.leave.status, "approved");
 
-            console.log("  ✓ 27. User with ONLY leave.manage inherits leave.apply, leave.view_own, leave.view, and leave.approve");
+            console.log("  ✓ 26. User with leave.manage has full workforce view, approve, and cancellation management");
+        }
+
+        // Test 27: Direct API requests strictly enforce the leave permission model
+        {
+            // Direct attempt by unprivileged user to approve
+            const directApprove = await request(`/api/v1/hrms/leaves/${leave1Id}/approve`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${zeroPermsToken}` },
+            });
+            assert.strictEqual(directApprove.status, 403);
+
+            // Direct attempt to read single leave of another employee
+            const directSingle = await request(`/api/v1/hrms/leaves/${leave1Id}`, {
+                headers: { Authorization: `Bearer ${zeroPermsToken}` },
+            });
+            assert.strictEqual(directSingle.status, 403);
+
+            console.log("  ✓ 27. Direct API requests enforce identical leave authorization rules");
         }
 
         console.log("\n=======================================================");

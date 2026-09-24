@@ -80,13 +80,28 @@ const PERMISSION_GROUPS = [
   },
   {
     title: 'Leave Management',
-    description: 'Permissions for submitting, inspecting, approving, and managing employee leaves.',
-    permissions: [
-      { key: 'leave.apply', label: 'Apply Leave', description: 'Submit leave applications for self' },
-      { key: 'leave.view_own', label: 'View Own Leaves', description: 'View personal leave history and status' },
-      { key: 'leave.view', label: 'View Workforce Leaves', description: 'View leave requests across hospital workforce' },
-      { key: 'leave.approve', label: 'Approve / Reject Leave', description: 'Approve or reject pending leave requests' },
-      { key: 'leave.manage', label: 'Manage Leaves', description: 'Broader management and cancellation of hospital leaves' },
+    description: 'Self-service capabilities are default for active employees. Management permissions are Admin-controlled.',
+    subsections: [
+      {
+        title: 'SELF SERVICE',
+        subtitle: 'Default capabilities active for all active employees',
+        isDefaultGroup: true,
+        permissions: [
+          { key: 'leave.apply', label: 'Apply Leave — Default', description: 'Submit leave applications for self', isDefault: true },
+          { key: 'leave.view_own', label: 'View Own Leaves — Default', description: 'View personal leave history and status', isDefault: true },
+          { key: 'leave.cancel_own', label: 'Cancel Own Leave — Default', description: 'Cancel own pending leave requests', isDefault: true },
+        ],
+      },
+      {
+        title: 'MANAGEMENT',
+        subtitle: 'Admin-controlled permissions for workforce leave governance',
+        isDefaultGroup: false,
+        permissions: [
+          { key: 'leave.view', label: 'View Workforce Leaves', description: 'View leave requests across hospital workforce', isDefault: false },
+          { key: 'leave.approve', label: 'Approve / Reject Leave', description: 'Approve or reject pending leave requests', isDefault: false },
+          { key: 'leave.manage', label: 'Manage Leaves', description: 'Broader management and cancellation of hospital leaves', isDefault: false },
+        ],
+      },
     ],
   },
 ];
@@ -248,6 +263,138 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
 
           <Stack spacing={2.5}>
             {PERMISSION_GROUPS.map((group) => {
+              if (group.subsections) {
+                return (
+                  <Box key={group.title} sx={{ border: '1px solid #E2E8F0', borderRadius: 2, p: 2, bgcolor: '#FAFAFA' }}>
+                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
+                      {group.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                      {group.description}
+                    </Typography>
+
+                    <Stack spacing={2}>
+                      {group.subsections.map((sub) => {
+                        const subKeys = sub.permissions.map((p) => p.key);
+                        const allSelected = subKeys.every((k) => selectedPermissions.includes(k));
+
+                        return (
+                          <Box key={sub.title} sx={{ bgcolor: '#FFFFFF', p: 1.5, borderRadius: 1.5, border: '1px solid #EAEAEA' }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                              <Box>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Typography variant="caption" fontWeight={700} sx={{ letterSpacing: 0.5, color: sub.isDefaultGroup ? '#059669' : '#0F172A', textTransform: 'uppercase' }}>
+                                    {sub.title}
+                                  </Typography>
+                                  {sub.isDefaultGroup && (
+                                    <Chip label="Default Active" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#ECFDF5', color: '#059669' }} />
+                                  )}
+                                </Stack>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.72rem' }}>
+                                  {sub.subtitle}
+                                </Typography>
+                              </Box>
+                              {!sub.isDefaultGroup && (
+                                <Stack direction="row" spacing={1}>
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    onClick={() => selectAllPermissionsInGroup(sub.permissions)}
+                                    disabled={allSelected}
+                                    sx={{ fontSize: '0.75rem', py: 0 }}
+                                  >
+                                    Select All
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    color="inherit"
+                                    onClick={() => clearPermissionsInGroup(sub.permissions)}
+                                    sx={{ fontSize: '0.75rem', py: 0 }}
+                                  >
+                                    Clear
+                                  </Button>
+                                </Stack>
+                              )}
+                            </Stack>
+
+                            <FormGroup sx={{ gap: 1 }}>
+                              {sub.permissions.map((option) => {
+                                const isChecked = option.isDefault ? true : selectedPermissions.includes(option.key);
+
+                                if (option.isDefault) {
+                                  return (
+                                    <Paper
+                                      key={option.key}
+                                      variant="outlined"
+                                      sx={{
+                                        p: 1.25,
+                                        borderRadius: 1.5,
+                                        borderColor: '#A7F3D0',
+                                        bgcolor: '#F0FDF4',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                      }}
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <CheckCircleOutlineRounded sx={{ color: '#059669', fontSize: 20 }} />
+                                        <Box>
+                                          <Typography variant="body2" fontWeight={600} color="#065F46">
+                                            {option.label}
+                                          </Typography>
+                                          <FormHelperText sx={{ m: 0, color: '#047857' }}>{option.description}</FormHelperText>
+                                        </Box>
+                                      </Box>
+                                      <Chip label="Default" size="small" sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#D1FAE5', color: '#065F46' }} />
+                                    </Paper>
+                                  );
+                                }
+
+                                return (
+                                  <Paper
+                                    key={option.key}
+                                    variant="outlined"
+                                    onClick={() => togglePermission(option.key)}
+                                    sx={{
+                                      p: 1.25,
+                                      borderRadius: 1.5,
+                                      cursor: 'pointer',
+                                      borderColor: isChecked ? 'primary.main' : 'divider',
+                                      bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
+                                      transition: 'all 0.15s ease-in-out',
+                                    }}
+                                  >
+                                    <FormControlLabel
+                                      control={
+                                        <Checkbox
+                                          checked={isChecked}
+                                          onChange={() => togglePermission(option.key)}
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                      }
+                                      label={
+                                        <Box sx={{ ml: 0.5 }}>
+                                          <Typography variant="body2" fontWeight={600} color="text.primary">
+                                            {option.label}
+                                          </Typography>
+                                          <FormHelperText sx={{ m: 0 }}>{option.description}</FormHelperText>
+                                        </Box>
+                                      }
+                                      sx={{ width: '100%', m: 0 }}
+                                    />
+                                  </Paper>
+                                );
+                              })}
+                            </FormGroup>
+                          </Box>
+                        );
+                      })}
+                    </Stack>
+                  </Box>
+                );
+              }
+
               const groupKeys = group.permissions.map((p) => p.key);
               const allSelected = groupKeys.every((k) => selectedPermissions.includes(k));
               return (

@@ -29,6 +29,7 @@ export const PERMISSIONS = Object.freeze({
   // Leave Management (HRMS)
   LEAVE_APPLY: 'leave.apply',
   LEAVE_VIEW_OWN: 'leave.view_own',
+  LEAVE_CANCEL_OWN: 'leave.cancel_own',
   LEAVE_VIEW: 'leave.view',
   LEAVE_APPROVE: 'leave.approve',
   LEAVE_MANAGE: 'leave.manage',
@@ -49,7 +50,11 @@ export const ROLE_PERMISSIONS = Object.freeze({
 
   admin: Object.freeze(Object.values(PERMISSIONS)),
 
-  employee: Object.freeze([]),
+  employee: Object.freeze([
+    PERMISSIONS.LEAVE_APPLY,
+    PERMISSIONS.LEAVE_VIEW_OWN,
+    PERMISSIONS.LEAVE_CANCEL_OWN,
+  ]),
 });
 
 /**
@@ -108,6 +113,7 @@ export const hasPermission = (permission, role, userPermissions) => {
   if (Array.isArray(assigned) && assigned.includes(PERMISSIONS.LEAVE_MANAGE) && [
     PERMISSIONS.LEAVE_APPLY,
     PERMISSIONS.LEAVE_VIEW_OWN,
+    PERMISSIONS.LEAVE_CANCEL_OWN,
     PERMISSIONS.LEAVE_VIEW,
     PERMISSIONS.LEAVE_APPROVE,
     PERMISSIONS.LEAVE_MANAGE,
