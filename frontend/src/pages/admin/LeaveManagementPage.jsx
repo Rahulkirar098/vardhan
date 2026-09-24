@@ -3,23 +3,17 @@ import {
   Alert,
   Box,
   Button,
-  ButtonGroup,
   Chip,
   FormControl,
-  FormControlLabel,
-  FormLabel,
   Grid,
   IconButton,
   InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
-  Radio,
-  RadioGroup,
   Select,
   Snackbar,
   Stack,
-  Switch,
   Tab,
   Tabs,
   TextField,
@@ -98,11 +92,10 @@ const formatDateTime = (dateStr) => {
 // ─── Apply Leave Modal Component ─────────────────────────────────────────────
 const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
   const [leaveType, setLeaveType] = useState('CASUAL');
-  const [isMultiDay, setIsMultiDay] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isHalfDay, setIsHalfDay] = useState(false);
-  const [halfDaySession, setHalfDaySession] = useState('FIRST_HALF');
+  const [dayType, setDayType] = useState('FULL_DAY'); // 'FULL_DAY' | 'HALF_DAY'
+  const [halfDaySession, setHalfDaySession] = useState('FIRST_HALF'); // 'FIRST_HALF' | 'SECOND_HALF'
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -112,10 +105,9 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
   useEffect(() => {
     if (open) {
       setLeaveType('CASUAL');
-      setIsMultiDay(false);
       setStartDate(todayStr);
       setEndDate(todayStr);
-      setIsHalfDay(false);
+      setDayType('FULL_DAY');
       setHalfDaySession('FIRST_HALF');
       setReason('');
       setError('');
@@ -123,14 +115,9 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
     }
   }, [open, todayStr]);
 
-  // Dynamic Total Days Calculation
+  // Derived total duration calculation
   const totalDays = useMemo(() => {
-    if (!startDate) return 0;
-    if (!isMultiDay) {
-      return isHalfDay ? 0.5 : 1;
-    }
-    if (!endDate) return 0;
-
+    if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
@@ -140,27 +127,27 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
     const diffDays = Math.floor((endUTC - startUTC) / (1000 * 60 * 60 * 24)) + 1;
 
     if (diffDays <= 0) return 0;
-    if (isHalfDay) {
+
+    if (dayType === 'HALF_DAY') {
+      if (diffDays === 1) {
+        return 0.5;
+      }
+      // Multi-day with half-day portion (e.g. 24-26 Sep = 2.5 days)
       return Math.max(0.5, diffDays - 0.5);
     }
+
     return diffDays;
-  }, [startDate, endDate, isMultiDay, isHalfDay]);
+  }, [startDate, endDate, dayType]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!startDate) {
-      setError('Please select a start date.');
-      return;
-    }
-
-    const effectiveEnd = isMultiDay ? endDate : startDate;
-    if (!effectiveEnd) {
-      setError('Please select an end date.');
+    if (!startDate || !endDate) {
+      setError('Start Date and End Date are both required.');
       return;
     }
 
     if (totalDays <= 0) {
-      setError('End date cannot be before start date.');
+      setError('End Date cannot be before Start Date.');
       return;
     }
 
@@ -172,12 +159,13 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
     setSubmitting(true);
     setError('');
     try {
+      const isHalf = dayType === 'HALF_DAY';
       await leaveService.applyLeave({
         leaveType,
         startDate,
-        endDate: effectiveEnd,
-        isHalfDay,
-        halfDaySession: isHalfDay ? halfDaySession : null,
+        endDate,
+        isHalfDay: isHalf,
+        halfDaySession: isHalf ? halfDaySession : null,
         totalDays,
         reason: reason.trim(),
       });
@@ -212,9 +200,9 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
 
         {/* Leave Type */}
         <FormControl fullWidth required>
-          <InputLabel id="leave-type-label">Leave Type</InputLabel>
+          <InputLabel id="leave-type-select-label">Leave Type</InputLabel>
           <Select
-            labelId="leave-type-label"
+            labelId="leave-type-select-label"
             value={leaveType}
             label="Leave Type"
             onChange={(e) => setLeaveType(e.target.value)}
@@ -227,46 +215,11 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
           </Select>
         </FormControl>
 
-        {/* Duration Mode Selection */}
-        <Box sx={{ p: 1.5, borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              Leave Duration Mode
-            </Typography>
-            <ButtonGroup size="small" variant="outlined">
-              <Button
-                variant={!isMultiDay ? 'contained' : 'outlined'}
-                onClick={() => {
-                  setIsMultiDay(false);
-                  setEndDate(startDate || todayStr);
-                }}
-                sx={{ textTransform: 'none', fontWeight: 600 }}
-              >
-                Single Day
-              </Button>
-              <Button
-                variant={isMultiDay ? 'contained' : 'outlined'}
-                onClick={() => {
-                  setIsMultiDay(true);
-                  if (endDate === startDate) {
-                    const d = new Date(startDate || todayStr);
-                    d.setDate(d.getDate() + 1);
-                    setEndDate(d.toISOString().split('T')[0]);
-                  }
-                }}
-                sx={{ textTransform: 'none', fontWeight: 600 }}
-              >
-                Multi-Day
-              </Button>
-            </ButtonGroup>
-          </Stack>
-        </Box>
-
-        {/* Date Inputs */}
+        {/* Start Date & End Date (Always visible) */}
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={isMultiDay ? 6 : 12}>
+          <Grid item xs={12} sm={6}>
             <TextField
-              label={isMultiDay ? 'Start Date' : 'Leave Date'}
+              label="Start Date"
               type="date"
               fullWidth
               required
@@ -274,92 +227,63 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
               inputProps={{ min: todayStr }}
               value={startDate}
               onChange={(e) => {
-                setStartDate(e.target.value);
-                if (!isMultiDay) setEndDate(e.target.value);
+                const newStart = e.target.value;
+                setStartDate(newStart);
+                if (endDate && new Date(endDate) < new Date(newStart)) {
+                  setEndDate(newStart);
+                }
               }}
             />
           </Grid>
-          {isMultiDay && (
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="End Date"
+              type="date"
+              fullWidth
+              required
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: startDate || todayStr }}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </Grid>
+        </Grid>
+
+        {/* Day Type Dropdown */}
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={dayType === 'HALF_DAY' ? 6 : 12}>
+            <FormControl fullWidth required>
+              <InputLabel id="day-type-select-label">Day Type</InputLabel>
+              <Select
+                labelId="day-type-select-label"
+                value={dayType}
+                label="Day Type"
+                onChange={(e) => setDayType(e.target.value)}
+              >
+                <MenuItem value="FULL_DAY">Full Day</MenuItem>
+                <MenuItem value="HALF_DAY">Half Day</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Half Day Session Dropdown (only visible when Day Type is Half Day) */}
+          {dayType === 'HALF_DAY' && (
             <Grid item xs={12} sm={6}>
-              <TextField
-                label="End Date"
-                type="date"
-                fullWidth
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: startDate || todayStr }}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+              <FormControl fullWidth required>
+                <InputLabel id="half-day-session-label">Half Day Session</InputLabel>
+                <Select
+                  labelId="half-day-session-label"
+                  value={halfDaySession}
+                  label="Half Day Session"
+                  onChange={(e) => setHalfDaySession(e.target.value)}
+                >
+                  <MenuItem value="FIRST_HALF">First Half (Morning)</MenuItem>
+                  <MenuItem value="SECOND_HALF">Second Half (Afternoon)</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
           )}
         </Grid>
-
-        {/* Half Day Configuration */}
-        {!isMultiDay ? (
-          <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isHalfDay}
-                  onChange={(e) => setIsHalfDay(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label={
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  Half-Day Leave (0.5 Day)
-                </Typography>
-              }
-            />
-
-            {isHalfDay && (
-              <Box sx={{ mt: 1.5, pl: 1 }}>
-                <FormLabel component="legend" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary', mb: 0.5 }}>
-                  Select Session
-                </FormLabel>
-                <RadioGroup
-                  row
-                  value={halfDaySession}
-                  onChange={(e) => setHalfDaySession(e.target.value)}
-                >
-                  <FormControlLabel
-                    value="FIRST_HALF"
-                    control={<Radio size="small" />}
-                    label={<Typography variant="body2">First Half (Morning)</Typography>}
-                  />
-                  <FormControlLabel
-                    value="SECOND_HALF"
-                    control={<Radio size="small" />}
-                    label={<Typography variant="body2">Second Half (Afternoon)</Typography>}
-                  />
-                </RadioGroup>
-              </Box>
-            )}
-          </Box>
-        ) : (
-          <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isHalfDay}
-                  onChange={(e) => setIsHalfDay(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label={
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  Half-Day on Final Day (e.g. 2.5 Days)
-                </Typography>
-              }
-            />
-            {isHalfDay && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                The final day ({formatDate(endDate)}) will count as 0.5 day (First Half).
-              </Typography>
-            )}
-          </Box>
-        )}
 
         {/* Calculated Total Duration Banner */}
         <Box
@@ -375,13 +299,13 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
         >
           <Box>
             <Typography variant="body2" sx={{ fontWeight: 600, color: totalDays > 0 ? '#166534' : '#991B1B' }}>
-              Calculated Total Duration
+              Calculated Duration
             </Typography>
-            {isHalfDay && (
+            {dayType === 'HALF_DAY' && totalDays > 0 && (
               <Typography variant="caption" sx={{ color: '#166534' }}>
-                {isMultiDay
-                  ? `Includes 0.5 day on final date (${formatDate(endDate)})`
-                  : `Half Day: ${halfDaySession === 'FIRST_HALF' ? 'First Half (Morning)' : 'Second Half (Afternoon)'}`}
+                {startDate === endDate
+                  ? `Half Day: ${halfDaySession === 'FIRST_HALF' ? 'First Half (Morning)' : 'Second Half (Afternoon)'}`
+                  : `Includes half-day session on end date (${formatDate(endDate)})`}
               </Typography>
             )}
           </Box>
@@ -403,7 +327,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
           rows={3}
           fullWidth
           required
-          placeholder="Briefly state the reason for this leave request..."
+          placeholder="Enter reason for leave..."
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
@@ -647,7 +571,6 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-
   const monthName = currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
@@ -658,7 +581,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
     setSelectedDateStr(today.toISOString().split('T')[0]);
   };
 
-  // Generate calendar days
+  // Generate calendar grid
   const calendarGrid = useMemo(() => {
     const firstDayIndex = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -687,7 +610,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
       });
     }
 
-    // Next month padding to fill complete weeks
+    // Next month padding
     const remaining = (7 - (days.length % 7)) % 7;
     for (let i = 1; i <= remaining; i++) {
       const d = new Date(year, month + 1, i);
@@ -701,7 +624,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
     return days;
   }, [year, month]);
 
-  // Match leaves to dates
+  // Map leaves to dates
   const leavesByDate = useMemo(() => {
     const map = {};
     leaves.forEach((l) => {
@@ -726,12 +649,12 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
 
   return (
     <Grid container spacing={3}>
-      {/* Calendar Grid Section */}
-      <Grid item xs={12} lg={8}>
+      {/* Left: Calendar */}
+      <Grid item xs={12} lg={7} xl={8}>
         <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px' }}>
-          {/* Calendar Header */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Stack direction="row" spacing={1} alignItems="center">
+          {/* Header & Navigation */}
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
               <CalendarMonthRounded color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 750 }}>
                 {monthName}
@@ -751,8 +674,8 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
             </Stack>
           </Stack>
 
-          {/* Days of week header */}
-          <Grid container sx={{ mb: 1, textAlign: 'center' }}>
+          {/* Weekday Headers */}
+          <Grid container sx={{ mb: 1.5, textAlign: 'center' }}>
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
               <Grid item xs={12 / 7} key={d}>
                 <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5 }}>
@@ -762,42 +685,52 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
             ))}
           </Grid>
 
-          {/* Day Cells */}
-          <Grid container spacing={0.5}>
+          {/* Date Grid */}
+          <Grid container spacing={0.75}>
             {calendarGrid.map((day) => {
               const dayLeaves = leavesByDate[day.dateStr] || [];
               const isSelected = day.dateStr === selectedDateStr;
               const isToday = day.dateStr === new Date().toISOString().split('T')[0];
+
+              const hasApproved = dayLeaves.some((l) => l.status === 'approved');
+              const hasPending = dayLeaves.some((l) => l.status === 'pending');
+              const hasRejected = dayLeaves.some((l) => l.status === 'rejected');
 
               return (
                 <Grid item xs={12 / 7} key={day.dateStr}>
                   <Box
                     onClick={() => setSelectedDateStr(day.dateStr)}
                     sx={{
-                      minHeight: 70,
+                      height: 64,
                       p: 0.75,
                       borderRadius: '8px',
                       cursor: 'pointer',
                       border: isSelected ? '2px solid #0284C7' : '1px solid #F1F5F9',
                       backgroundColor: isSelected
                         ? '#F0F9FF'
+                        : isToday
+                        ? '#F8FAFC'
                         : day.isCurrentMonth
                         ? '#FFFFFF'
                         : '#FAFAFA',
-                      opacity: day.isCurrentMonth ? 1 : 0.45,
-                      transition: 'all 150ms ease',
+                      opacity: day.isCurrentMonth ? 1 : 0.4,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      transition: 'all 120ms ease',
                       '&:hover': {
                         backgroundColor: isSelected ? '#F0F9FF' : '#F8FAFC',
                         borderColor: isSelected ? '#0284C7' : '#CBD5E1',
                       },
                     }}
                   >
+                    {/* Day number & Today ring */}
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Typography
                         variant="caption"
                         sx={{
-                          fontWeight: isToday ? 800 : day.isCurrentMonth ? 600 : 400,
-                          color: isToday ? '#0284C7' : 'text.primary',
+                          fontWeight: isToday || isSelected ? 800 : day.isCurrentMonth ? 600 : 400,
+                          color: isSelected ? '#0284C7' : isToday ? '#0284C7' : 'text.primary',
                           fontSize: 12,
                         }}
                       >
@@ -808,36 +741,22 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
                       )}
                     </Stack>
 
-                    {/* Mini event tags */}
-                    <Stack spacing={0.25} sx={{ mt: 0.5 }}>
-                      {dayLeaves.slice(0, 2).map((dl) => {
-                        const statusColor =
-                          dl.status === 'approved' ? '#16A34A' : dl.status === 'pending' ? '#D97706' : '#DC2626';
-                        return (
-                          <Box
-                            key={dl._id}
-                            sx={{
-                              px: 0.5,
-                              py: 0.1,
-                              borderRadius: '4px',
-                              backgroundColor: `${statusColor}15`,
-                              borderLeft: `2px solid ${statusColor}`,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              fontSize: '0.65rem',
-                              fontWeight: 600,
-                              color: statusColor,
-                            }}
-                          >
-                            {dl.employeeId?.firstName || dl.appliedBy?.name || 'Leave'}
-                          </Box>
-                        );
-                      })}
-                      {dayLeaves.length > 2 && (
-                        <Typography variant="caption" sx={{ fontSize: 9, color: 'text.secondary', fontWeight: 700 }}>
-                          +{dayLeaves.length - 2} more
-                        </Typography>
+                    {/* Clean Status Dots Indicator (No repeated employee names) */}
+                    <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'center', alignItems: 'center', minHeight: 12 }}>
+                      {hasApproved && (
+                        <Tooltip title="Approved Leave">
+                          <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                        </Tooltip>
+                      )}
+                      {hasPending && (
+                        <Tooltip title="Pending Request">
+                          <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#D97706' }} />
+                        </Tooltip>
+                      )}
+                      {hasRejected && (
+                        <Tooltip title="Rejected Request">
+                          <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#DC2626' }} />
+                        </Tooltip>
                       )}
                     </Stack>
                   </Box>
@@ -845,29 +764,57 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
               );
             })}
           </Grid>
+
+          {/* Calendar Status Legend */}
+          <Stack direction="row" spacing={3} sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #F1F5F9', justifyContent: 'center' }}>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#16A34A' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Approved
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#D97706' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Pending
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#DC2626' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Rejected
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#0284C7' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Selected / Today
+              </Typography>
+            </Stack>
+          </Stack>
         </Paper>
       </Grid>
 
-      {/* "Who's On Leave" Section */}
-      <Grid item xs={12} lg={4}>
+      {/* Right: Who's On Leave */}
+      <Grid item xs={12} lg={5} xl={4}>
         <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
             <PersonOutlineRounded color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 750 }}>
-              {canViewManagement ? "Who's On Leave" : 'My Scheduled Leave'}
+              Who&apos;s On Leave
             </Typography>
           </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Selected Date: <strong>{formatDate(selectedDateStr)}</strong>
+            People who are on leave for <strong>{formatDate(selectedDateStr)}</strong>.
           </Typography>
 
           <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
             {selectedDateLeaves.length === 0 ? (
-              <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
-                <EventBusyRounded sx={{ fontSize: 36, color: 'text.disabled', mb: 1 }} />
+              <Box sx={{ p: 4, textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
+                <EventBusyRounded sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
                 <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                  No one is on leave on this date.
+                  No one is on leave for this date.
                 </Typography>
               </Box>
             ) : (
@@ -879,15 +826,15 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
                     <Box
                       key={leave._id}
                       sx={{
-                        p: 1.5,
+                        p: 1.75,
                         borderRadius: '10px',
                         border: '1px solid #E2E8F0',
                         backgroundColor: '#FFFFFF',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                       }}
                     >
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <InitialsAvatar name={emp.firstName ? `${emp.firstName} ${emp.lastName}` : leave.appliedBy?.name} size={36} />
+                        <InitialsAvatar name={emp.firstName ? `${emp.firstName} ${emp.lastName}` : leave.appliedBy?.name} size={38} />
                         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                           <Typography variant="subtitle2" sx={{ fontWeight: 700 }} noWrap>
                             {emp.firstName ? `${emp.firstName} ${emp.lastName}` : leave.appliedBy?.name || 'Employee'}
@@ -899,7 +846,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
                         <StatusBadge status={leave.status} />
                       </Stack>
 
-                      <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ mt: 1.25, pt: 1, borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="caption" color="text.secondary">
                           {formatDate(leave.startDate)} → {formatDate(leave.endDate)}
                         </Typography>
@@ -947,7 +894,8 @@ const LeaveManagementPage = () => {
   const canViewOwn = hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) || currentUserRole === 'admin';
   const canManage = hasPermission(PERMISSIONS.LEAVE_MANAGE) || currentUserRole === 'admin';
 
-  const [activeTab, setActiveTab] = useState(canViewManagement ? 'all' : 'my'); // 'all' | 'pending' | 'approved' | 'rejected' | 'my' | 'calendar'
+  // Exactly the 6 required tabs: 'all' | 'pending' | 'approved' | 'rejected' | 'my' | 'calendar'
+  const [activeTab, setActiveTab] = useState(canViewManagement ? 'all' : 'my');
   const [leaves, setLeaves] = useState([]);
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, currentlyOnLeave: 0, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -1071,19 +1019,23 @@ const LeaveManagementPage = () => {
     }
   };
 
-  // Table Columns
-  const columns = useMemo(
-    () => [
-      { key: 'employee', label: 'Employee' },
-      { key: 'employeeId', label: 'Employee ID' },
+  // Required Primary Columns: Employee, Leave Type, From, To, Days, Reason, Status, Requested, Actions
+  const columns = useMemo(() => {
+    const baseCols = [];
+    if (activeTab !== 'my') {
+      baseCols.push({ key: 'employee', label: 'Employee' });
+    }
+    baseCols.push(
       { key: 'leaveType', label: 'Leave Type' },
-      { key: 'duration', label: 'Dates & Duration' },
+      { key: 'from', label: 'From' },
+      { key: 'to', label: 'To' },
+      { key: 'days', label: 'Days' },
       { key: 'reason', label: 'Reason' },
       { key: 'status', label: 'Status' },
-      { key: 'requestedDate', label: 'Requested' },
-    ],
-    []
-  );
+      { key: 'requested', label: 'Requested' }
+    );
+    return baseCols;
+  }, [activeTab]);
 
   const renderLeaveCell = (row, column) => {
     switch (column.key) {
@@ -1104,12 +1056,6 @@ const LeaveManagementPage = () => {
           </Box>
         );
       }
-      case 'employeeId':
-        return (
-          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-            {row.employeeId?.employeeId || '—'}
-          </Typography>
-        );
       case 'leaveType': {
         const t = getLeaveTypeObj(row.leaveType);
         return (
@@ -1125,22 +1071,31 @@ const LeaveManagementPage = () => {
           />
         );
       }
-      case 'duration':
+      case 'from':
+        return (
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {formatDate(row.startDate)}
+          </Typography>
+        );
+      case 'to':
+        return (
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {formatDate(row.endDate)}
+          </Typography>
+        );
+      case 'days':
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {formatDate(row.startDate)} → {formatDate(row.endDate)}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
               {row.totalDays} {row.totalDays === 1 ? 'Day' : 'Days'}
-              {row.isHalfDay && (
-                <Chip
-                  label={row.halfDaySession === 'SECOND_HALF' ? '2nd Half' : '1st Half'}
-                  size="small"
-                  sx={{ ml: 0.75, height: 16, fontSize: 9, fontWeight: 700 }}
-                />
-              )}
             </Typography>
+            {row.isHalfDay && (
+              <Chip
+                label={row.halfDaySession === 'SECOND_HALF' ? '2nd Half' : '1st Half'}
+                size="small"
+                sx={{ height: 16, fontSize: 9, fontWeight: 700, mt: 0.25 }}
+              />
+            )}
           </Box>
         );
       case 'reason':
@@ -1162,7 +1117,7 @@ const LeaveManagementPage = () => {
         );
       case 'status':
         return <StatusBadge status={row.status} />;
-      case 'requestedDate':
+      case 'requested':
         return (
           <Typography variant="caption" color="text.secondary">
             {formatDate(row.createdAt)}
@@ -1254,7 +1209,7 @@ const LeaveManagementPage = () => {
           }
         />
 
-        {/* Top Metric Cards */}
+        {/* Exactly 4 Summary Metric Cards */}
         {canViewManagement && (
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={3}>
@@ -1298,7 +1253,7 @@ const LeaveManagementPage = () => {
 
         {/* Main Content Area */}
         <GlassCard sx={{ p: 0, overflow: 'hidden' }}>
-          {/* Tabs Bar */}
+          {/* Exactly 6 Required Tabs */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, pt: 1, backgroundColor: '#FAFAFA' }}>
             <Tabs
               value={activeTab}
@@ -1359,9 +1314,9 @@ const LeaveManagementPage = () => {
 
                   <Grid item xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
-                      <InputLabel id="type-filter-label">Leave Type</InputLabel>
+                      <InputLabel id="type-filter-select-label">Leave Type</InputLabel>
                       <Select
-                        labelId="type-filter-label"
+                        labelId="type-filter-select-label"
                         value={typeFilter}
                         label="Leave Type"
                         onChange={(e) => setTypeFilter(e.target.value)}
