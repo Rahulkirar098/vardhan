@@ -45,6 +45,8 @@ const getInitialUser = () => {
     permissions,
     modules,
     hospitalId: localStorage.getItem('hospitalId') || '',
+    hospitalName: localStorage.getItem('hospitalName') || '',
+    hospitalLocation: localStorage.getItem('hospitalLocation') || '',
     employeeId: localStorage.getItem('employeeId') || '',
   };
 };
@@ -67,6 +69,8 @@ const AppLayout = ({ children, onLogout }) => {
         const permissions = Array.isArray(u.permissions) ? u.permissions : [];
         const modules = Array.isArray(u.modules) ? u.modules : ['core'];
         const hospitalId = u.hospitalId || '';
+        const hospitalName = u.hospitalName || '';
+        const hospitalLocation = u.hospitalLocation || '';
         const employeeId = u.employeeId || '';
 
         // Synchronize all access keys into localStorage
@@ -89,6 +93,18 @@ const AppLayout = ({ children, onLogout }) => {
           localStorage.removeItem('hospitalId');
         }
 
+        if (hospitalName) {
+          localStorage.setItem('hospitalName', hospitalName);
+        } else {
+          localStorage.removeItem('hospitalName');
+        }
+
+        if (hospitalLocation) {
+          localStorage.setItem('hospitalLocation', hospitalLocation);
+        } else {
+          localStorage.removeItem('hospitalLocation');
+        }
+
         if (employeeId) {
           localStorage.setItem('employeeId', employeeId);
         } else {
@@ -104,6 +120,8 @@ const AppLayout = ({ children, onLogout }) => {
           permissions,
           modules,
           hospitalId,
+          hospitalName,
+          hospitalLocation,
           employeeId,
         });
       }

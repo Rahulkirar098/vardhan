@@ -170,6 +170,18 @@ const loginUser = async (req, res) => {
             await user.save();
         }
 
+        let hospitalName = null;
+        if (hospitalId) {
+            const hosp = await Hospital.findById(hospitalId).select("name code").lean();
+            if (hosp) hospitalName = hosp.name;
+        } else if (user.role === "admin" || user.role === "super_admin") {
+            const hosp = await Hospital.findOne({ createdBy: user._id }).select("_id name code").lean();
+            if (hosp) {
+                hospitalId = hosp._id;
+                hospitalName = hosp.name;
+            }
+        }
+
         return res.status(200).json({
             success: true,
             message: "Login successful",
@@ -182,6 +194,7 @@ const loginUser = async (req, res) => {
                     phone: user.phone,
                     role: user.role,
                     hospitalId: hospitalId,
+                    hospitalName: hospitalName,
                     employeeId: employeeId,
                     positionName: positionName,
                     status: user.status,

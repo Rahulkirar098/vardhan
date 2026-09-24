@@ -27,8 +27,9 @@ const getCurrentUser = () => {
   const name = localStorage.getItem('userName') || 'User';
   const email = localStorage.getItem('userEmail') || '';
   const positionName = localStorage.getItem('positionName') || null;
+  const hospitalName = localStorage.getItem('hospitalName') || '';
 
-  return { name, email, positionName };
+  return { name, email, positionName, hospitalName };
 };
 
 const isActivePath = (currentPath, targetPath) => {
@@ -213,57 +214,44 @@ const UserCard = ({ user, role, onLogout }) => (
   </Box>
 );
 
-const Brand = () => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 0.5 }}>
-    <Box
-      sx={{
-        width: 36,
-        height: 36,
-        borderRadius: '9px',
-        backgroundColor: '#0F172A',
-        color: '#FFFFFF',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 800,
-        fontSize: 18,
-        letterSpacing: '-0.02em',
-        flexShrink: 0,
-        boxShadow: '0 2px 6px rgba(15,23,42,0.15)',
-      }}
-    >
-      V
-    </Box>
-    <Box sx={{ minWidth: 0 }}>
-      <Typography
+const Brand = ({ hospitalName, role }) => {
+  const isSuperAdmin = role === 'super_admin';
+  const displayName = hospitalName || (isSuperAdmin ? 'Super Admin' : 'Hospital Workspace');
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 0.5 }}>
+      <InitialsAvatar
+        name={displayName}
+        size={36}
         sx={{
+          borderRadius: '9px',
+          backgroundColor: '#0F172A',
+          color: '#FFFFFF',
           fontWeight: 800,
-          fontSize: '1.05rem',
-          lineHeight: 1.15,
+          fontSize: '0.85rem',
           letterSpacing: '-0.02em',
-          color: '#0F172A',
+          flexShrink: 0,
+          boxShadow: '0 2px 6px rgba(15,23,42,0.15)',
         }}
-        noWrap
-      >
-        VARDHAN
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: '#64748B',
-          fontWeight: 700,
-          letterSpacing: '0.06em',
-          fontSize: '0.62rem',
-          display: 'block',
-          mt: 0.25,
-        }}
-        noWrap
-      >
-        HOSPITAL WORKFORCE PLATFORM
-      </Typography>
+      />
+      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: '0.975rem',
+            lineHeight: 1.25,
+            letterSpacing: '-0.01em',
+            color: '#0F172A',
+          }}
+          noWrap
+          title={displayName}
+        >
+          {displayName}
+        </Typography>
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};
 
 const Sidebar = ({ role: forcedRole, user: userProp, onLogout, mobileOpen = false, onMobileClose = () => {} }) => {
   const theme = useTheme();
@@ -296,6 +284,8 @@ const Sidebar = ({ role: forcedRole, user: userProp, onLogout, mobileOpen = fals
       localStorage.removeItem('permissions');
       localStorage.removeItem('modules');
       localStorage.removeItem('hospitalId');
+      localStorage.removeItem('hospitalName');
+      localStorage.removeItem('hospitalLocation');
       localStorage.removeItem('employeeId');
       navigate('/login');
     }
@@ -328,7 +318,7 @@ const Sidebar = ({ role: forcedRole, user: userProp, onLogout, mobileOpen = fals
     >
       {/* Top Brand Header */}
       <Box sx={{ px: 2.5, pt: 2.75, pb: 2.25, flexShrink: 0 }}>
-        <Brand />
+        <Brand hospitalName={currentUser?.hospitalName} role={resolvedRole} />
       </Box>
 
       {/* Navigation Groups */}

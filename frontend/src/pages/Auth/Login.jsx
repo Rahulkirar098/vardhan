@@ -63,6 +63,7 @@ const Login = () => {
           localStorage.setItem('userEmail', response?.data?.data?.user?.email || '');
           localStorage.setItem('positionName', response?.data?.data?.user?.positionName || '');
           localStorage.setItem('hospitalId', response?.data?.data?.user?.hospitalId || '');
+          localStorage.setItem('hospitalName', response?.data?.data?.user?.hospitalName || '');
           localStorage.setItem('employeeId', response?.data?.data?.user?.employeeId || '');
           localStorage.setItem('permissions', JSON.stringify(response?.data?.data?.user?.permissions || []));
           localStorage.setItem('modules', JSON.stringify(response?.data?.data?.user?.modules || ['core']));
