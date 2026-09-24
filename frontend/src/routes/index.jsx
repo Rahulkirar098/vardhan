@@ -30,11 +30,15 @@ const getUserRole = () => {
 
     if (payload.exp && Date.now() >= payload.exp * 1000) {
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       localStorage.removeItem('role');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
-      localStorage.removeItem('modules');
+      localStorage.removeItem('positionName');
       localStorage.removeItem('permissions');
+      localStorage.removeItem('modules');
+      localStorage.removeItem('hospitalId');
+      localStorage.removeItem('employeeId');
       return null;
     }
 

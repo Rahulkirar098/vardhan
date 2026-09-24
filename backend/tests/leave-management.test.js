@@ -865,8 +865,50 @@ const runTests = async () => {
             console.log("  ✓ 27. Direct API requests enforce identical leave authorization rules");
         }
 
+        // Test 28: Half-day leave application (0.5 day)
+        {
+            const halfDayRes = await request("/api/v1/hrms/leaves", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${staffToken}` },
+                body: {
+                    leaveType: "CASUAL",
+                    startDate: "2027-01-05",
+                    endDate: "2027-01-05",
+                    isHalfDay: true,
+                    halfDaySession: "FIRST_HALF",
+                    reason: "Half day morning",
+                },
+            });
+            assert.strictEqual(halfDayRes.status, 201);
+            assert.strictEqual(halfDayRes.body.data.leave.totalDays, 0.5);
+            assert.strictEqual(halfDayRes.body.data.leave.isHalfDay, true);
+            assert.strictEqual(halfDayRes.body.data.leave.halfDaySession, "FIRST_HALF");
+
+            console.log("  ✓ 28. Employee can apply for 0.5 Half-Day leave");
+        }
+
+        // Test 29: Multi-day 2.5 days leave application
+        {
+            const multiDayRes = await request("/api/v1/hrms/leaves", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${staffToken}` },
+                body: {
+                    leaveType: "CASUAL",
+                    startDate: "2027-01-10",
+                    endDate: "2027-01-12",
+                    isHalfDay: true,
+                    halfDaySession: "SECOND_HALF",
+                    reason: "2.5 days leave with half day end",
+                },
+            });
+            assert.strictEqual(multiDayRes.status, 201);
+            assert.strictEqual(multiDayRes.body.data.leave.totalDays, 2.5);
+
+            console.log("  ✓ 29. Employee can apply for 2.5 multi-day partial leave");
+        }
+
         console.log("\n=======================================================");
-        console.log("=== ALL 27 LEAVE MANAGEMENT TESTS PASSED 100% ===");
+        console.log("=== ALL 29 LEAVE MANAGEMENT TESTS PASSED 100% ===");
         console.log("=======================================================\n");
 
         if (server) server.close();

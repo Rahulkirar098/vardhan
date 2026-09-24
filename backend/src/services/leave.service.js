@@ -9,7 +9,7 @@ const { hasPermission } = require("../config/rolePermissions");
 /**
  * Calculates total calendar days inclusively between two dates
  */
-const calculateTotalDays = (startDate, endDate) => {
+const calculateTotalDays = (startDate, endDate, options = {}) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -17,6 +17,16 @@ const calculateTotalDays = (startDate, endDate) => {
     const endUTC = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
 
     const diffDays = Math.floor((endUTC - startUTC) / (1000 * 60 * 60 * 24)) + 1;
+    if (diffDays <= 0) return 0.5;
+
+    if (diffDays === 1 && options.isHalfDay) {
+        return 0.5;
+    }
+
+    if (diffDays > 1 && options.isHalfDay) {
+        return diffDays - 0.5;
+    }
+
     return diffDays > 0 ? diffDays : 1;
 };
 
@@ -124,7 +134,13 @@ const applyLeave = async ({ user, leaveData }) => {
 
     const start = normalizeToMidnight(leaveData.startDate, false);
     const end = normalizeToMidnight(leaveData.endDate, true);
-    const totalDays = calculateTotalDays(start, end);
+    const isHalfDay = Boolean(leaveData.isHalfDay);
+    const halfDaySession = leaveData.halfDaySession || (isHalfDay ? "FIRST_HALF" : null);
+
+    let totalDays = calculateTotalDays(start, end, { isHalfDay });
+    if (leaveData.totalDays && !isNaN(Number(leaveData.totalDays)) && Number(leaveData.totalDays) >= 0.5) {
+        totalDays = Number(leaveData.totalDays);
+    }
 
     // Overlap Check: Find active (pending or approved) leaves for this employee
     const overlappingLeave = await Leave.findOne({
@@ -148,6 +164,8 @@ const applyLeave = async ({ user, leaveData }) => {
         startDate: start,
         endDate: end,
         totalDays,
+        isHalfDay,
+        halfDaySession,
         reason: String(leaveData.reason).trim(),
         status: LEAVE_STATUSES.PENDING,
         appliedBy: user.id || user._id,

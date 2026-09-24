@@ -18,29 +18,94 @@ const getCurrentRole = () => {
   }
 };
 
+const getInitialUser = () => {
+  let permissions = [];
+  let modules = ['core'];
+
+  try {
+    const p = localStorage.getItem('permissions');
+    if (p) permissions = JSON.parse(p);
+  } catch {
+    permissions = [];
+  }
+
+  try {
+    const m = localStorage.getItem('modules');
+    if (m) modules = JSON.parse(m);
+  } catch {
+    modules = ['core'];
+  }
+
+  return {
+    id: localStorage.getItem('userId') || '',
+    name: localStorage.getItem('userName') || 'User',
+    email: localStorage.getItem('userEmail') || '',
+    role: getCurrentRole(),
+    positionName: localStorage.getItem('positionName') || '',
+    permissions,
+    modules,
+    hospitalId: localStorage.getItem('hospitalId') || '',
+    employeeId: localStorage.getItem('employeeId') || '',
+  };
+};
+
 const AppLayout = ({ children, onLogout }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
-  const role = getCurrentRole();
-  const [userName, setUserName] = useState(localStorage.getItem('userName') || 'User');
-  const [positionName, setPositionName] = useState(localStorage.getItem('positionName') || '');
+  const [userProfile, setUserProfile] = useState(getInitialUser);
 
   useEffect(() => {
     auth.me().then((res) => {
       const u = res?.data?.data;
       if (u) {
-        if (u.name) {
-          localStorage.setItem('userName', u.name);
-          setUserName(u.name);
-        }
-        if (u.positionName) {
-          localStorage.setItem('positionName', u.positionName);
-          setPositionName(u.positionName);
-        } else if (u.role !== 'employee') {
+        const uid = u.id || u._id || '';
+        const name = u.name || 'User';
+        const email = u.email || '';
+        const role = u.role || 'employee';
+        const positionName = u.positionName || '';
+        const permissions = Array.isArray(u.permissions) ? u.permissions : [];
+        const modules = Array.isArray(u.modules) ? u.modules : ['core'];
+        const hospitalId = u.hospitalId || '';
+        const employeeId = u.employeeId || '';
+
+        // Synchronize all access keys into localStorage
+        if (uid) localStorage.setItem('userId', uid);
+        localStorage.setItem('userName', name);
+        if (email) localStorage.setItem('userEmail', email);
+        localStorage.setItem('role', role);
+        localStorage.setItem('permissions', JSON.stringify(permissions));
+        localStorage.setItem('modules', JSON.stringify(modules));
+
+        if (positionName) {
+          localStorage.setItem('positionName', positionName);
+        } else {
           localStorage.removeItem('positionName');
-          setPositionName('');
         }
+
+        if (hospitalId) {
+          localStorage.setItem('hospitalId', hospitalId);
+        } else {
+          localStorage.removeItem('hospitalId');
+        }
+
+        if (employeeId) {
+          localStorage.setItem('employeeId', employeeId);
+        } else {
+          localStorage.removeItem('employeeId');
+        }
+
+        setUserProfile({
+          id: uid,
+          name,
+          email,
+          role,
+          positionName,
+          permissions,
+          modules,
+          hospitalId,
+          employeeId,
+        });
       }
     }).catch(() => {});
   }, []);
@@ -56,9 +121,9 @@ const AppLayout = ({ children, onLogout }) => {
       }}
     >
       <AppNavbar
-        userName={userName}
-        userRole={role}
-        userPosition={positionName}
+        userName={userProfile.name}
+        userRole={userProfile.role}
+        userPosition={userProfile.positionName}
         showMenu={isMobile}
         onMenuClick={() => setMobileOpen(true)}
       />
@@ -72,6 +137,8 @@ const AppLayout = ({ children, onLogout }) => {
         }}
       >
         <AppSidebar
+          user={userProfile}
+          role={userProfile.role}
           mobileOpen={mobileOpen}
           onMobileClose={() => setMobileOpen(false)}
           onLogout={onLogout}

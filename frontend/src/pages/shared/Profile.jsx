@@ -143,9 +143,15 @@ const Profile = () => {
       console.error('Logout error:', logoutError);
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       localStorage.removeItem('role');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
+      localStorage.removeItem('positionName');
+      localStorage.removeItem('permissions');
+      localStorage.removeItem('modules');
+      localStorage.removeItem('hospitalId');
+      localStorage.removeItem('employeeId');
       navigate('/login');
     }
   };

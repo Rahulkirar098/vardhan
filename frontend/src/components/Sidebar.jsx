@@ -181,15 +181,18 @@ const Brand = () => (
   </Box>
 );
 
-const Sidebar = ({ role: forcedRole, onLogout, mobileOpen = false, onMobileClose = () => {} }) => {
+const Sidebar = ({ role: forcedRole, user: userProp, onLogout, mobileOpen = false, onMobileClose = () => {} }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(true);
-  const resolvedRole = forcedRole || getCurrentRole();
-  const user = useMemo(() => getCurrentUser(), []);
-  const sections = getSidebarSectionsForRole(resolvedRole);
+  const resolvedRole = forcedRole || userProp?.role || getCurrentRole();
+  const currentUser = userProp || getCurrentUser();
+  const sections = useMemo(
+    () => getSidebarSectionsForRole(resolvedRole, userProp?.permissions, userProp?.modules),
+    [resolvedRole, userProp?.permissions, userProp?.modules]
+  );
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -201,11 +204,15 @@ const Sidebar = ({ role: forcedRole, onLogout, mobileOpen = false, onMobileClose
       await onLogout();
     } else {
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       localStorage.removeItem('role');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
+      localStorage.removeItem('positionName');
       localStorage.removeItem('permissions');
       localStorage.removeItem('modules');
+      localStorage.removeItem('hospitalId');
+      localStorage.removeItem('employeeId');
       navigate('/login');
     }
 
@@ -269,7 +276,7 @@ const Sidebar = ({ role: forcedRole, onLogout, mobileOpen = false, onMobileClose
       </Box>
 
       <Box sx={{ px: 2, py: 2, flexShrink: 0 }}>
-        <UserCard user={user} role={resolvedRole} onLogout={handleLogout} />
+        <UserCard user={currentUser} role={resolvedRole} onLogout={handleLogout} />
       </Box>
     </Box>
   );

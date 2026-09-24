@@ -3,17 +3,23 @@ import {
   Alert,
   Box,
   Button,
+  ButtonGroup,
   Chip,
   FormControl,
+  FormControlLabel,
+  FormLabel,
   Grid,
   IconButton,
   InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
+  Radio,
+  RadioGroup,
   Select,
   Snackbar,
   Stack,
+  Switch,
   Tab,
   Tabs,
   TextField,
@@ -22,16 +28,18 @@ import {
 } from '@mui/material';
 import {
   AddRounded,
+  CalendarMonthRounded,
   CheckCircleOutlineRounded,
+  ChevronLeftRounded,
+  ChevronRightRounded,
   CloseRounded,
   EventBusyRounded,
   EventNoteRounded,
-  FilterListRounded,
   HighlightOffRounded,
   HourglassEmptyRounded,
-  InfoOutlined,
   PersonOutlineRounded,
   SearchRounded,
+  TodayRounded,
   VisibilityRounded,
 } from '@mui/icons-material';
 import DataTable from '../../components/DataTable';
@@ -44,6 +52,7 @@ import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
+import InitialsAvatar from '../../components/InitialsAvatar';
 import { leaveService } from '../../services/leave.service';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
@@ -57,17 +66,6 @@ const LEAVE_TYPES = [
 
 const getLeaveTypeObj = (type) =>
   LEAVE_TYPES.find((t) => t.key === type) || { key: type, label: type || 'Leave', color: '#6B7280' };
-
-const calculateDays = (startStr, endStr) => {
-  if (!startStr || !endStr) return 0;
-  const start = new Date(startStr);
-  const end = new Date(endStr);
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
-  const startUTC = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-  const endUTC = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
-  const diff = Math.floor((endUTC - startUTC) / (1000 * 60 * 60 * 24)) + 1;
-  return diff > 0 ? diff : 0;
-};
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
@@ -100,36 +98,72 @@ const formatDateTime = (dateStr) => {
 // ─── Apply Leave Modal Component ─────────────────────────────────────────────
 const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
   const [leaveType, setLeaveType] = useState('CASUAL');
+  const [isMultiDay, setIsMultiDay] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [isHalfDay, setIsHalfDay] = useState(false);
+  const [halfDaySession, setHalfDaySession] = useState('FIRST_HALF');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   useEffect(() => {
     if (open) {
       setLeaveType('CASUAL');
-      const today = new Date().toISOString().split('T')[0];
-      setStartDate(today);
-      setEndDate(today);
+      setIsMultiDay(false);
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+      setIsHalfDay(false);
+      setHalfDaySession('FIRST_HALF');
       setReason('');
       setError('');
       setSubmitting(false);
     }
-  }, [open]);
+  }, [open, todayStr]);
 
-  const totalDays = useMemo(() => calculateDays(startDate, endDate), [startDate, endDate]);
+  // Dynamic Total Days Calculation
+  const totalDays = useMemo(() => {
+    if (!startDate) return 0;
+    if (!isMultiDay) {
+      return isHalfDay ? 0.5 : 1;
+    }
+    if (!endDate) return 0;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+
+    const startUTC = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+    const endUTC = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+    const diffDays = Math.floor((endUTC - startUTC) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (diffDays <= 0) return 0;
+    if (isHalfDay) {
+      return Math.max(0.5, diffDays - 0.5);
+    }
+    return diffDays;
+  }, [startDate, endDate, isMultiDay, isHalfDay]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!startDate || !endDate) {
-      setError('Please select both start and end dates.');
+    if (!startDate) {
+      setError('Please select a start date.');
       return;
     }
+
+    const effectiveEnd = isMultiDay ? endDate : startDate;
+    if (!effectiveEnd) {
+      setError('Please select an end date.');
+      return;
+    }
+
     if (totalDays <= 0) {
       setError('End date cannot be before start date.');
       return;
     }
+
     if (!reason.trim()) {
       setError('Please provide a reason for the leave request.');
       return;
@@ -141,7 +175,10 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
       await leaveService.applyLeave({
         leaveType,
         startDate,
-        endDate,
+        endDate: effectiveEnd,
+        isHalfDay,
+        halfDaySession: isHalfDay ? halfDaySession : null,
+        totalDays,
         reason: reason.trim(),
       });
       onSuccess?.('Leave request submitted successfully.');
@@ -158,7 +195,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
       open={open}
       onClose={onClose}
       title="Apply for Leave"
-      description="Submit a new leave request for approval."
+      description="Submit a new leave request for authorization."
       SubmitIcon={EventNoteRounded}
       submitLabel="Submit Leave Request"
       cancelLabel="Cancel"
@@ -173,6 +210,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
           </Alert>
         )}
 
+        {/* Leave Type */}
         <FormControl fullWidth required>
           <InputLabel id="leave-type-label">Leave Type</InputLabel>
           <Select
@@ -189,31 +227,141 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
           </Select>
         </FormControl>
 
+        {/* Duration Mode Selection */}
+        <Box sx={{ p: 1.5, borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Leave Duration Mode
+            </Typography>
+            <ButtonGroup size="small" variant="outlined">
+              <Button
+                variant={!isMultiDay ? 'contained' : 'outlined'}
+                onClick={() => {
+                  setIsMultiDay(false);
+                  setEndDate(startDate || todayStr);
+                }}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                Single Day
+              </Button>
+              <Button
+                variant={isMultiDay ? 'contained' : 'outlined'}
+                onClick={() => {
+                  setIsMultiDay(true);
+                  if (endDate === startDate) {
+                    const d = new Date(startDate || todayStr);
+                    d.setDate(d.getDate() + 1);
+                    setEndDate(d.toISOString().split('T')[0]);
+                  }
+                }}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                Multi-Day
+              </Button>
+            </ButtonGroup>
+          </Stack>
+        </Box>
+
+        {/* Date Inputs */}
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={isMultiDay ? 6 : 12}>
             <TextField
-              label="Start Date"
+              label={isMultiDay ? 'Start Date' : 'Leave Date'}
               type="date"
               fullWidth
               required
               InputLabelProps={{ shrink: true }}
+              inputProps={{ min: todayStr }}
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                if (!isMultiDay) setEndDate(e.target.value);
+              }}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="End Date"
-              type="date"
-              fullWidth
-              required
-              InputLabelProps={{ shrink: true }}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </Grid>
+          {isMultiDay && (
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="End Date"
+                type="date"
+                fullWidth
+                required
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: startDate || todayStr }}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </Grid>
+          )}
         </Grid>
 
+        {/* Half Day Configuration */}
+        {!isMultiDay ? (
+          <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isHalfDay}
+                  onChange={(e) => setIsHalfDay(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  Half-Day Leave (0.5 Day)
+                </Typography>
+              }
+            />
+
+            {isHalfDay && (
+              <Box sx={{ mt: 1.5, pl: 1 }}>
+                <FormLabel component="legend" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary', mb: 0.5 }}>
+                  Select Session
+                </FormLabel>
+                <RadioGroup
+                  row
+                  value={halfDaySession}
+                  onChange={(e) => setHalfDaySession(e.target.value)}
+                >
+                  <FormControlLabel
+                    value="FIRST_HALF"
+                    control={<Radio size="small" />}
+                    label={<Typography variant="body2">First Half (Morning)</Typography>}
+                  />
+                  <FormControlLabel
+                    value="SECOND_HALF"
+                    control={<Radio size="small" />}
+                    label={<Typography variant="body2">Second Half (Afternoon)</Typography>}
+                  />
+                </RadioGroup>
+              </Box>
+            )}
+          </Box>
+        ) : (
+          <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isHalfDay}
+                  onChange={(e) => setIsHalfDay(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  Half-Day on Final Day (e.g. 2.5 Days)
+                </Typography>
+              }
+            />
+            {isHalfDay && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                The final day ({formatDate(endDate)}) will count as 0.5 day (First Half).
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        {/* Calculated Total Duration Banner */}
         <Box
           sx={{
             p: 1.5,
@@ -225,11 +373,20 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
             justifyContent: 'space-between',
           }}
         >
-          <Typography variant="body2" sx={{ fontWeight: 600, color: totalDays > 0 ? '#166534' : '#991B1B' }}>
-            Calculated Duration
-          </Typography>
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: totalDays > 0 ? '#166534' : '#991B1B' }}>
+              Calculated Total Duration
+            </Typography>
+            {isHalfDay && (
+              <Typography variant="caption" sx={{ color: '#166534' }}>
+                {isMultiDay
+                  ? `Includes 0.5 day on final date (${formatDate(endDate)})`
+                  : `Half Day: ${halfDaySession === 'FIRST_HALF' ? 'First Half (Morning)' : 'Second Half (Afternoon)'}`}
+              </Typography>
+            )}
+          </Box>
           <Chip
-            label={totalDays > 0 ? `${totalDays} ${totalDays === 1 ? 'Day' : 'Days'}` : 'Invalid Date Range'}
+            label={totalDays > 0 ? `${totalDays} ${totalDays === 1 ? 'Day' : 'Days'}` : 'Invalid Dates'}
             size="small"
             sx={{
               fontWeight: 700,
@@ -239,13 +396,14 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
           />
         </Box>
 
+        {/* Reason for Leave */}
         <TextField
           label="Reason for Leave"
           multiline
           rows={3}
           fullWidth
           required
-          placeholder="Briefly describe the reason for your leave request..."
+          placeholder="Briefly state the reason for this leave request..."
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
@@ -293,7 +451,7 @@ const RejectLeaveModal = ({ open, leave, onClose, onSuccess }) => {
       open={open}
       onClose={onClose}
       title="Reject Leave Request"
-      description="Specify the reason for rejecting this leave request."
+      description="Specify the justification for rejecting this leave request."
       SubmitIcon={HighlightOffRounded}
       submitLabel="Reject Leave"
       cancelLabel="Cancel"
@@ -310,7 +468,7 @@ const RejectLeaveModal = ({ open, leave, onClose, onSuccess }) => {
 
         <Box sx={{ p: 1.5, borderRadius: '8px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
           <Typography variant="caption" color="text.secondary">
-            Employee Request
+            Employee Leave Request
           </Typography>
           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
             {leave?.employeeId?.firstName} {leave?.employeeId?.lastName} ({getLeaveTypeObj(leave?.leaveType).label})
@@ -326,7 +484,7 @@ const RejectLeaveModal = ({ open, leave, onClose, onSuccess }) => {
           rows={3}
           fullWidth
           required
-          placeholder="Enter the justification for rejecting this request..."
+          placeholder="Provide the reason for rejecting this request..."
           value={rejectionReason}
           onChange={(e) => setRejectionReason(e.target.value)}
         />
@@ -347,7 +505,7 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
       open={open}
       onClose={onClose}
       title="Leave Details"
-      description="Read-only breakdown of the employee leave request and review history."
+      description="Read-only summary of the employee leave request and review history."
       maxWidth="sm"
       hideSubmit={true}
       closeLabel="Close"
@@ -407,6 +565,13 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
               </Typography>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 0.25 }}>
                 {leave.totalDays} {leave.totalDays === 1 ? 'Day' : 'Days'}
+                {leave.isHalfDay && (
+                  <Chip
+                    label={leave.halfDaySession === 'SECOND_HALF' ? '2nd Half' : '1st Half'}
+                    size="small"
+                    sx={{ ml: 1, height: 20, fontSize: 10, fontWeight: 700 }}
+                  />
+                )}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {formatDate(leave.startDate)} → {formatDate(leave.endDate)}
@@ -427,7 +592,7 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
 
         {/* Audit Details */}
         {leave.status === 'approved' && (
-          <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+          <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#ECFDF5', border: '1px solid #BBF7D0' }}>
             <Typography variant="caption" sx={{ color: '#166534', fontWeight: 700, textTransform: 'uppercase' }}>
               Approval Details
             </Typography>
@@ -446,7 +611,7 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
               Rejected by <strong>{leave.rejectedBy?.name || 'Authorized Approver'}</strong> on {formatDateTime(leave.rejectedAt)}
             </Typography>
             <Typography variant="body2" sx={{ color: '#991B1B', mt: 1, fontStyle: 'italic' }}>
-              Reason: "{leave.rejectionReason || 'No reason provided'}"
+              Reason: &ldquo;{leave.rejectionReason || 'No reason provided'}&rdquo;
             </Typography>
           </Box>
         )}
@@ -472,6 +637,286 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
         </Box>
       </Stack>
     </Modal>
+  );
+};
+
+// ─── Leave Calendar & Who's On Leave Component ───────────────────────────────
+const LeaveCalendarView = ({ leaves, canViewManagement }) => {
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [selectedDateStr, setSelectedDateStr] = useState(() => new Date().toISOString().split('T')[0]);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const monthName = currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    setSelectedDateStr(today.toISOString().split('T')[0]);
+  };
+
+  // Generate calendar days
+  const calendarGrid = useMemo(() => {
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const days = [];
+
+    // Previous month padding
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = daysInPrevMonth - i;
+      const d = new Date(year, month - 1, dayNum);
+      days.push({
+        dateStr: d.toISOString().split('T')[0],
+        dayNum,
+        isCurrentMonth: false,
+      });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = new Date(year, month, i);
+      days.push({
+        dateStr: d.toISOString().split('T')[0],
+        dayNum: i,
+        isCurrentMonth: true,
+      });
+    }
+
+    // Next month padding to fill complete weeks
+    const remaining = (7 - (days.length % 7)) % 7;
+    for (let i = 1; i <= remaining; i++) {
+      const d = new Date(year, month + 1, i);
+      days.push({
+        dateStr: d.toISOString().split('T')[0],
+        dayNum: i,
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
+  }, [year, month]);
+
+  // Match leaves to dates
+  const leavesByDate = useMemo(() => {
+    const map = {};
+    leaves.forEach((l) => {
+      if (l.status === 'cancelled') return;
+      const start = new Date(l.startDate);
+      const end = new Date(l.endDate);
+
+      const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+      while (cur <= endDay) {
+        const key = cur.toISOString().split('T')[0];
+        if (!map[key]) map[key] = [];
+        map[key].push(l);
+        cur.setDate(cur.getDate() + 1);
+      }
+    });
+    return map;
+  }, [leaves]);
+
+  const selectedDateLeaves = leavesByDate[selectedDateStr] || [];
+
+  return (
+    <Grid container spacing={3}>
+      {/* Calendar Grid Section */}
+      <Grid item xs={12} lg={8}>
+        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px' }}>
+          {/* Calendar Header */}
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <CalendarMonthRounded color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 750 }}>
+                {monthName}
+              </Typography>
+            </Stack>
+
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button size="small" variant="outlined" startIcon={<TodayRounded />} onClick={goToToday} sx={{ textTransform: 'none', fontWeight: 600 }}>
+                Today
+              </Button>
+              <IconButton size="small" onClick={prevMonth} aria-label="Previous Month">
+                <ChevronLeftRounded />
+              </IconButton>
+              <IconButton size="small" onClick={nextMonth} aria-label="Next Month">
+                <ChevronRightRounded />
+              </IconButton>
+            </Stack>
+          </Stack>
+
+          {/* Days of week header */}
+          <Grid container sx={{ mb: 1, textAlign: 'center' }}>
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+              <Grid item xs={12 / 7} key={d}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5 }}>
+                  {d}
+                </Typography>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Day Cells */}
+          <Grid container spacing={0.5}>
+            {calendarGrid.map((day) => {
+              const dayLeaves = leavesByDate[day.dateStr] || [];
+              const isSelected = day.dateStr === selectedDateStr;
+              const isToday = day.dateStr === new Date().toISOString().split('T')[0];
+
+              return (
+                <Grid item xs={12 / 7} key={day.dateStr}>
+                  <Box
+                    onClick={() => setSelectedDateStr(day.dateStr)}
+                    sx={{
+                      minHeight: 70,
+                      p: 0.75,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      border: isSelected ? '2px solid #0284C7' : '1px solid #F1F5F9',
+                      backgroundColor: isSelected
+                        ? '#F0F9FF'
+                        : day.isCurrentMonth
+                        ? '#FFFFFF'
+                        : '#FAFAFA',
+                      opacity: day.isCurrentMonth ? 1 : 0.45,
+                      transition: 'all 150ms ease',
+                      '&:hover': {
+                        backgroundColor: isSelected ? '#F0F9FF' : '#F8FAFC',
+                        borderColor: isSelected ? '#0284C7' : '#CBD5E1',
+                      },
+                    }}
+                  >
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontWeight: isToday ? 800 : day.isCurrentMonth ? 600 : 400,
+                          color: isToday ? '#0284C7' : 'text.primary',
+                          fontSize: 12,
+                        }}
+                      >
+                        {day.dayNum}
+                      </Typography>
+                      {isToday && (
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#0284C7' }} />
+                      )}
+                    </Stack>
+
+                    {/* Mini event tags */}
+                    <Stack spacing={0.25} sx={{ mt: 0.5 }}>
+                      {dayLeaves.slice(0, 2).map((dl) => {
+                        const statusColor =
+                          dl.status === 'approved' ? '#16A34A' : dl.status === 'pending' ? '#D97706' : '#DC2626';
+                        return (
+                          <Box
+                            key={dl._id}
+                            sx={{
+                              px: 0.5,
+                              py: 0.1,
+                              borderRadius: '4px',
+                              backgroundColor: `${statusColor}15`,
+                              borderLeft: `2px solid ${statusColor}`,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              fontSize: '0.65rem',
+                              fontWeight: 600,
+                              color: statusColor,
+                            }}
+                          >
+                            {dl.employeeId?.firstName || dl.appliedBy?.name || 'Leave'}
+                          </Box>
+                        );
+                      })}
+                      {dayLeaves.length > 2 && (
+                        <Typography variant="caption" sx={{ fontSize: 9, color: 'text.secondary', fontWeight: 700 }}>
+                          +{dayLeaves.length - 2} more
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Box>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Paper>
+      </Grid>
+
+      {/* "Who's On Leave" Section */}
+      <Grid item xs={12} lg={4}>
+        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+            <PersonOutlineRounded color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 750 }}>
+              {canViewManagement ? "Who's On Leave" : 'My Scheduled Leave'}
+            </Typography>
+          </Stack>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Selected Date: <strong>{formatDate(selectedDateStr)}</strong>
+          </Typography>
+
+          <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+            {selectedDateLeaves.length === 0 ? (
+              <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
+                <EventBusyRounded sx={{ fontSize: 36, color: 'text.disabled', mb: 1 }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                  No one is on leave on this date.
+                </Typography>
+              </Box>
+            ) : (
+              <Stack spacing={1.5}>
+                {selectedDateLeaves.map((leave) => {
+                  const emp = leave.employeeId || {};
+                  const typeObj = getLeaveTypeObj(leave.leaveType);
+                  return (
+                    <Box
+                      key={leave._id}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: '10px',
+                        border: '1px solid #E2E8F0',
+                        backgroundColor: '#FFFFFF',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <InitialsAvatar name={emp.firstName ? `${emp.firstName} ${emp.lastName}` : leave.appliedBy?.name} size={36} />
+                        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }} noWrap>
+                            {emp.firstName ? `${emp.firstName} ${emp.lastName}` : leave.appliedBy?.name || 'Employee'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" noWrap>
+                            {emp.positionId?.name || 'Staff'} • {typeObj.label}
+                          </Typography>
+                        </Box>
+                        <StatusBadge status={leave.status} />
+                      </Stack>
+
+                      <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {formatDate(leave.startDate)} → {formatDate(leave.endDate)}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                          {leave.totalDays} {leave.totalDays === 1 ? 'Day' : 'Days'}
+                          {leave.isHalfDay ? ` (${leave.halfDaySession === 'SECOND_HALF' ? '2nd Half' : '1st Half'})` : ''}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            )}
+          </Box>
+        </Paper>
+      </Grid>
+    </Grid>
   );
 };
 
@@ -502,7 +947,7 @@ const LeaveManagementPage = () => {
   const canViewOwn = hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) || currentUserRole === 'admin';
   const canManage = hasPermission(PERMISSIONS.LEAVE_MANAGE) || currentUserRole === 'admin';
 
-  const [activeTab, setActiveTab] = useState(canViewManagement ? 'all' : 'my'); // 'all' | 'pending' | 'approved' | 'rejected' | 'my'
+  const [activeTab, setActiveTab] = useState(canViewManagement ? 'all' : 'my'); // 'all' | 'pending' | 'approved' | 'rejected' | 'my' | 'calendar'
   const [leaves, setLeaves] = useState([]);
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, currentlyOnLeave: 0, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -522,12 +967,12 @@ const LeaveManagementPage = () => {
 
   // Initialize active tab based on view permissions
   useEffect(() => {
-    if (!canViewManagement && canViewOwn) {
+    if (!canViewManagement && canViewOwn && activeTab !== 'calendar') {
       setActiveTab('my');
     } else if (canViewManagement && activeTab === 'my' && !canViewOwn) {
       setActiveTab('all');
     }
-  }, [canViewManagement, canViewOwn]);
+  }, [canViewManagement, canViewOwn, activeTab]);
 
   // Load stats
   const loadStats = useCallback(async () => {
@@ -537,7 +982,7 @@ const LeaveManagementPage = () => {
         setStats(res?.data?.stats || { pending: 0, approved: 0, rejected: 0, currentlyOnLeave: 0, total: 0 });
       }
     } catch {
-      // stats failure is non-blocking
+      // non-blocking
     }
   }, [canViewManagement]);
 
@@ -546,7 +991,7 @@ const LeaveManagementPage = () => {
     setLoading(true);
     setError('');
     try {
-      const isMyLeaveTab = activeTab === 'my';
+      const isMyLeaveTab = activeTab === 'my' || (!canViewManagement && activeTab === 'calendar');
       let statusParam = undefined;
       if (activeTab === 'pending') statusParam = 'pending';
       if (activeTab === 'approved') statusParam = 'approved';
@@ -632,7 +1077,7 @@ const LeaveManagementPage = () => {
       { key: 'employee', label: 'Employee' },
       { key: 'employeeId', label: 'Employee ID' },
       { key: 'leaveType', label: 'Leave Type' },
-      { key: 'duration', label: 'Dates & Days' },
+      { key: 'duration', label: 'Dates & Duration' },
       { key: 'reason', label: 'Reason' },
       { key: 'status', label: 'Status' },
       { key: 'requestedDate', label: 'Requested' },
@@ -688,6 +1133,13 @@ const LeaveManagementPage = () => {
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {row.totalDays} {row.totalDays === 1 ? 'Day' : 'Days'}
+              {row.isHalfDay && (
+                <Chip
+                  label={row.halfDaySession === 'SECOND_HALF' ? '2nd Half' : '1st Half'}
+                  size="small"
+                  sx={{ ml: 0.75, height: 16, fontSize: 9, fontWeight: 700 }}
+                />
+              )}
             </Typography>
           </Box>
         );
@@ -782,7 +1234,7 @@ const LeaveManagementPage = () => {
         {/* Header */}
         <PageHeader
           title="Leave Management"
-          description="Review employee leave applications, approve workforce requests, and manage personal leave history."
+          description="Review employee leave applications, authorize workforce requests, and manage personal leave history."
           action={
             canApply && (
               <Button
@@ -867,97 +1319,107 @@ const LeaveManagementPage = () => {
               {canViewManagement && <Tab value="approved" label="Approved" />}
               {canViewManagement && <Tab value="rejected" label="Rejected" />}
               {canViewOwn && <Tab value="my" label="My Leave" />}
+              <Tab value="calendar" label="Calendar & Who's On Leave" />
             </Tabs>
           </Box>
 
-          {/* Search & Filter Controls */}
-          <Box sx={{ p: 2.5, borderBottom: '1px solid #F1F5F9' }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Search by employee name or ID..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchRounded fontSize="small" sx={{ color: 'text.secondary' }} />
-                      </InputAdornment>
-                    ),
-                    endAdornment: search && (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setSearch('')}>
-                          <CloseRounded fontSize="small" />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="type-filter-label">Leave Type</InputLabel>
-                  <Select
-                    labelId="type-filter-label"
-                    value={typeFilter}
-                    label="Leave Type"
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                  >
-                    <MenuItem value="">All Leave Types</MenuItem>
-                    {LEAVE_TYPES.map((t) => (
-                      <MenuItem key={t.key} value={t.key}>
-                        {t.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </Box>
-
-          {/* Table / Error / Empty States */}
-          {error ? (
-            <Box sx={{ p: 4 }}>
-              <ErrorState message={error} onRetry={loadLeaves} />
-            </Box>
-          ) : leaves.length === 0 && !loading ? (
-            <Box sx={{ p: 6 }}>
-              <EmptyState
-                icon={EventBusyRounded}
-                title={activeTab === 'my' ? 'No Leave History Found' : 'No Leave Requests'}
-                description={
-                  search || typeFilter
-                    ? 'No leave requests match your search or filter criteria.'
-                    : activeTab === 'my'
-                    ? 'You have not submitted any leave requests yet.'
-                    : 'There are no leave requests in this category.'
-                }
-                action={
-                  canApply && (
-                    <Button
-                      variant="contained"
-                      startIcon={<AddRounded />}
-                      onClick={() => setIsApplyOpen(true)}
-                      sx={{ mt: 1, backgroundColor: '#000000', '&:hover': { backgroundColor: '#222222' } }}
-                    >
-                      Apply for Leave
-                    </Button>
-                  )
-                }
-              />
+          {/* Calendar View vs Table View */}
+          {activeTab === 'calendar' ? (
+            <Box sx={{ p: 3 }}>
+              <LeaveCalendarView leaves={leaves} canViewManagement={canViewManagement} />
             </Box>
           ) : (
-            <DataTable
-              columns={columns}
-              rows={leaves}
-              getRowKey={(row) => row._id}
-              renderCell={renderLeaveCell}
-              renderActions={renderLeaveActions}
-              loading={loading}
-            />
+            <>
+              {/* Search & Filter Controls */}
+              <Box sx={{ p: 2.5, borderBottom: '1px solid #F1F5F9' }}>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Search by employee name or ID..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchRounded fontSize="small" sx={{ color: 'text.secondary' }} />
+                          </InputAdornment>
+                        ),
+                        endAdornment: search && (
+                          <InputAdornment position="end">
+                            <IconButton size="small" onClick={() => setSearch('')}>
+                              <CloseRounded fontSize="small" />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="type-filter-label">Leave Type</InputLabel>
+                      <Select
+                        labelId="type-filter-label"
+                        value={typeFilter}
+                        label="Leave Type"
+                        onChange={(e) => setTypeFilter(e.target.value)}
+                      >
+                        <MenuItem value="">All Leave Types</MenuItem>
+                        {LEAVE_TYPES.map((t) => (
+                          <MenuItem key={t.key} value={t.key}>
+                            {t.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Table / Error / Empty States */}
+              {error ? (
+                <Box sx={{ p: 4 }}>
+                  <ErrorState message={error} onRetry={loadLeaves} />
+                </Box>
+              ) : leaves.length === 0 && !loading ? (
+                <Box sx={{ p: 6 }}>
+                  <EmptyState
+                    icon={EventBusyRounded}
+                    title={activeTab === 'my' ? 'No Leave History Found' : 'No Leave Requests'}
+                    description={
+                      search || typeFilter
+                        ? 'No leave requests match your search or filter criteria.'
+                        : activeTab === 'my'
+                        ? 'You have not submitted any leave requests yet.'
+                        : 'There are no leave requests in this category.'
+                    }
+                    action={
+                      canApply && (
+                        <Button
+                          variant="contained"
+                          startIcon={<AddRounded />}
+                          onClick={() => setIsApplyOpen(true)}
+                          sx={{ mt: 1, backgroundColor: '#000000', '&:hover': { backgroundColor: '#222222' } }}
+                        >
+                          Apply for Leave
+                        </Button>
+                      )
+                    }
+                  />
+                </Box>
+              ) : (
+                <DataTable
+                  columns={columns}
+                  rows={leaves}
+                  getRowKey={(row) => row._id}
+                  renderCell={renderLeaveCell}
+                  renderActions={renderLeaveActions}
+                  loading={loading}
+                />
+              )}
+            </>
           )}
         </GlassCard>
       </Stack>
