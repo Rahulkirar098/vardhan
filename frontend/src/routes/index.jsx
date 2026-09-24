@@ -17,6 +17,7 @@ import HospitalDetails from '../pages/super-admin/SuperAdminHospitalDetails';
 import PositionsPage from '../pages/admin/PositionsPage';
 import AccessManagementPage from '../pages/admin/AccessManagementPage';
 import LeaveManagementPage from '../pages/admin/LeaveManagementPage';
+import AttendancePage from '../pages/admin/AttendancePage';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
 const getUserRole = () => {
@@ -81,6 +82,15 @@ export const getDefaultRedirectForRole = (role) => {
 
     if (hasHrmsModule && hasAnyLeave) {
       return '/leaves';
+    }
+
+    const hasAnyAttendance =
+      hasPermission(PERMISSIONS.ATTENDANCE_VIEW_OWN) ||
+      hasPermission(PERMISSIONS.ATTENDANCE_VIEW) ||
+      hasPermission(PERMISSIONS.ATTENDANCE_MANAGE);
+
+    if (hasHrmsModule && hasAnyAttendance) {
+      return '/attendance';
     }
 
     if (hasPermission(PERMISSIONS.STRUCTURE_VIEW)) {
@@ -320,6 +330,22 @@ const AppRoutes = () => {
             ]}
           >
             <LeaveManagementPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/attendance"
+        element={
+          <ProtectedRoute
+            allowedRoles={['admin', 'employee']}
+            requiredModule="hrms"
+            requiredAnyPermission={[
+              PERMISSIONS.ATTENDANCE_VIEW_OWN,
+              PERMISSIONS.ATTENDANCE_VIEW,
+              PERMISSIONS.ATTENDANCE_MANAGE,
+            ]}
+          >
+            <AttendancePage />
           </ProtectedRoute>
         }
       />

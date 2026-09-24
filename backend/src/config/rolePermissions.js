@@ -14,6 +14,7 @@ const ROLE_PERMISSIONS = Object.freeze({
         PERMISSIONS.LEAVE_APPLY,
         PERMISSIONS.LEAVE_VIEW_OWN,
         PERMISSIONS.LEAVE_CANCEL_OWN,
+        PERMISSIONS.ATTENDANCE_VIEW_OWN,
     ]),
 });
 
@@ -48,6 +49,14 @@ const hasPermission = (user, permission) => {
         PERMISSIONS.LEAVE_VIEW,
         PERMISSIONS.LEAVE_APPROVE,
         PERMISSIONS.LEAVE_MANAGE,
+    ].includes(permission)) {
+        return true;
+    }
+
+    if (userSpecific.includes(PERMISSIONS.ATTENDANCE_MANAGE) && [
+        PERMISSIONS.ATTENDANCE_VIEW_OWN,
+        PERMISSIONS.ATTENDANCE_VIEW,
+        PERMISSIONS.ATTENDANCE_MANAGE,
     ].includes(permission)) {
         return true;
     }

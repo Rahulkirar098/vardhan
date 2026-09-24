@@ -33,6 +33,11 @@ const PERMISSIONS = Object.freeze({
     LEAVE_APPROVE: "leave.approve",
     LEAVE_MANAGE: "leave.manage",
 
+    // Attendance (HRMS)
+    ATTENDANCE_VIEW_OWN: "attendance.view_own",
+    ATTENDANCE_VIEW: "attendance.view",
+    ATTENDANCE_MANAGE: "attendance.manage",
+
     // Position Management
     POSITION_VIEW: "position.view",
     POSITION_CREATE: "position.create",

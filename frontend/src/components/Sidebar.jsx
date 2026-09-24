@@ -53,6 +53,10 @@ const isActivePath = (currentPath, targetPath) => {
     return currentPath.startsWith('/leaves');
   }
 
+  if (targetPath === '/attendance') {
+    return currentPath.startsWith('/attendance');
+  }
+
   if (targetPath === '/access-management') {
     return currentPath.startsWith('/access-management');
   }

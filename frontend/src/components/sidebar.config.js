@@ -7,6 +7,7 @@ import {
   BusinessCenterRounded,
   VpnKeyRounded,
   EventNoteRounded,
+  AccessTimeRounded,
 } from '@mui/icons-material';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
@@ -60,6 +61,20 @@ export const NAVIGATION_ITEMS = [
     allowedRoles: ['admin', 'employee'],
     requiredModule: 'hrms',
     requiredPermission: PERMISSIONS.EMPLOYEE_VIEW,
+  },
+  {
+    key: 'attendance',
+    label: 'Attendance',
+    section: 'WORKFORCE',
+    path: '/attendance',
+    icon: AccessTimeRounded,
+    allowedRoles: ['admin', 'employee'],
+    requiredModule: 'hrms',
+    requiredAnyPermission: [
+      PERMISSIONS.ATTENDANCE_VIEW_OWN,
+      PERMISSIONS.ATTENDANCE_VIEW,
+      PERMISSIONS.ATTENDANCE_MANAGE,
+    ],
   },
   {
     key: 'leaves',

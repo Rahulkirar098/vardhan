@@ -34,6 +34,11 @@ export const PERMISSIONS = Object.freeze({
   LEAVE_APPROVE: 'leave.approve',
   LEAVE_MANAGE: 'leave.manage',
 
+  // Attendance (HRMS)
+  ATTENDANCE_VIEW_OWN: 'attendance.view_own',
+  ATTENDANCE_VIEW: 'attendance.view',
+  ATTENDANCE_MANAGE: 'attendance.manage',
+
   // Position Management
   POSITION_VIEW: 'position.view',
   POSITION_CREATE: 'position.create',
@@ -46,6 +51,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.HOSPITAL_UPDATE,
     PERMISSIONS.STRUCTURE_VIEW,
     PERMISSIONS.EMPLOYEE_VIEW,
+    PERMISSIONS.ATTENDANCE_VIEW,
   ]),
 
   admin: Object.freeze(Object.values(PERMISSIONS)),
@@ -54,6 +60,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.LEAVE_APPLY,
     PERMISSIONS.LEAVE_VIEW_OWN,
     PERMISSIONS.LEAVE_CANCEL_OWN,
+    PERMISSIONS.ATTENDANCE_VIEW_OWN,
   ]),
 });
 
@@ -117,6 +124,14 @@ export const hasPermission = (permission, role, userPermissions) => {
     PERMISSIONS.LEAVE_VIEW,
     PERMISSIONS.LEAVE_APPROVE,
     PERMISSIONS.LEAVE_MANAGE,
+  ].includes(permission)) {
+    return true;
+  }
+
+  if (Array.isArray(assigned) && assigned.includes(PERMISSIONS.ATTENDANCE_MANAGE) && [
+    PERMISSIONS.ATTENDANCE_VIEW_OWN,
+    PERMISSIONS.ATTENDANCE_VIEW,
+    PERMISSIONS.ATTENDANCE_MANAGE,
   ].includes(permission)) {
     return true;
   }
