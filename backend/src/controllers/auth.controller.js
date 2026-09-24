@@ -43,12 +43,20 @@ const getCurrentUser = async (req, res) => {
         }
 
         let hospitalName = null;
+        let hospitalLocation = null;
         if (hospitalId) {
-            const hosp = await Hospital.findById(hospitalId).select("name code").lean();
-            if (hosp) hospitalName = hosp.name;
+            const hosp = await Hospital.findById(hospitalId).select("name code address").lean();
+            if (hosp) {
+                hospitalName = hosp.name;
+                if (hosp.address) {
+                    hospitalLocation = [hosp.address.city, hosp.address.state].filter(Boolean).join(", ") || hosp.address.city || hosp.address.state || null;
+                }
+            }
         }
 
         const positionName = employeeRecord?.positionId?.name || null;
+        const employeeCode = employeeRecord?.employeeId || (user.role === "admin" ? `ADM-${user._id.toString().slice(-4).toUpperCase()}` : null);
+        const dateOfJoining = employeeRecord?.dateOfJoining || user.createdAt || null;
 
         return res.status(200).json({
             success: true,
@@ -61,7 +69,10 @@ const getCurrentUser = async (req, res) => {
                 role: user.role,
                 hospitalId: hospitalId,
                 hospitalName: hospitalName,
+                hospitalLocation: hospitalLocation,
                 employeeId: employeeId,
+                employeeCode: employeeCode,
+                dateOfJoining: dateOfJoining,
                 positionName: positionName,
                 status: user.status,
                 permissions: user.permissions || [],
