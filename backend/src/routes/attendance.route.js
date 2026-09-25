@@ -10,6 +10,9 @@ const {
   getMyAttendance,
   getHospitalAttendance,
   getAttendanceStats,
+  createRegularizationRequest,
+  getMyRegularizationRequests,
+  cancelRegularizationRequest,
 } = require("../controllers/attendance.controller");
 
 const attendanceRoute = express.Router();
@@ -46,6 +49,27 @@ attendanceRoute.get(
   getMyAttendance
 );
 
+// Regularization: Create request
+attendanceRoute.post(
+  "/regularization",
+  authorizePermission(PERMISSIONS.ATTENDANCE_VIEW_OWN),
+  createRegularizationRequest
+);
+
+// Regularization: My requests
+attendanceRoute.get(
+  "/regularization/my",
+  authorizePermission(PERMISSIONS.ATTENDANCE_VIEW_OWN),
+  getMyRegularizationRequests
+);
+
+// Regularization: Cancel pending request
+attendanceRoute.patch(
+  "/regularization/:id/cancel",
+  authorizePermission(PERMISSIONS.ATTENDANCE_VIEW_OWN),
+  cancelRegularizationRequest
+);
+
 // Attendance stats
 attendanceRoute.get(
   "/stats",
@@ -65,3 +89,4 @@ attendanceRoute.get(
 );
 
 module.exports = { attendanceRoute };
+

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "node tests/schema.test.js && node tests/auth-foundation.test.js && node tests/structure.test.js && node tests/permission.test.js && node tests/core-platform.test.js && node tests/unified-employees.test.js && node tests/access-management.test.js && node tests/leave-management.test.js && node tests/attendance.test.js"
+    "test": "node tests/schema.test.js && node tests/auth-foundation.test.js && node tests/structure.test.js && node tests/permission.test.js && node tests/core-platform.test.js && node tests/unified-employees.test.js && node tests/access-management.test.js && node tests/leave-management.test.js && node tests/attendance.test.js && node tests/attendance-regularization.test.js"
   },
   "keywords": [],
   "author": "",

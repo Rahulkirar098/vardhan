@@ -48,6 +48,31 @@ export const attendanceService = {
     const response = await client.get('/v1/hrms/attendance/stats', { params });
     return response.data;
   },
+
+  /**
+   * Submit Attendance Regularization Request
+   */
+  createRegularization: async (data) => {
+    const response = await client.post('/v1/hrms/attendance/regularization', data);
+    return response.data;
+  },
+
+  /**
+   * Get My Regularization Requests
+   */
+  getMyRegularizations: async (params) => {
+    const response = await client.get('/v1/hrms/attendance/regularization/my', { params });
+    return response.data;
+  },
+
+  /**
+   * Cancel Pending Regularization Request
+   */
+  cancelRegularization: async (id) => {
+    const response = await client.patch(`/v1/hrms/attendance/regularization/${id}/cancel`);
+    return response.data;
+  },
 };
 
 export default attendanceService;
+

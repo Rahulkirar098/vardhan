@@ -249,6 +249,146 @@ const getAttendanceStats = async (req, res) => {
   }
 };
 
+/**
+ * Submit Regularization Request
+ * POST /api/v1/attendance/regularization
+ */
+const createRegularizationRequest = async (req, res) => {
+  try {
+    const hospitalId = req.user.hospitalId;
+    const employeeId = await resolveEmployeeId(req);
+
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: "Authenticated user does not have an active employee record in this hospital.",
+      });
+    }
+
+    const { date, dateStr, requestedStatus, requestedCheckIn, requestedCheckOut, reason } = req.body || {};
+
+    const record = await attendanceService.createRegularization({
+      hospitalId,
+      employeeId,
+      userId: req.user.id || req.user._id,
+      date,
+      dateStr,
+      requestedStatus,
+      requestedCheckIn,
+      requestedCheckOut,
+      reason,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Regularization request submitted successfully.",
+      data: record,
+    });
+  } catch (error) {
+    if (error.code === "DUPLICATE_REGULARIZATION") {
+      return res.status(409).json({ success: false, message: error.message });
+    }
+    if (error.code === "NOT_FOUND") {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.code === "FORBIDDEN") {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    if (error.code === "VALIDATION_ERROR") {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    console.error("Create Regularization Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+/**
+ * Get My Regularization Requests
+ * GET /api/v1/attendance/regularization/my
+ */
+const getMyRegularizationRequests = async (req, res) => {
+  try {
+    const hospitalId = req.user.hospitalId;
+    const employeeId = await resolveEmployeeId(req);
+
+    if (!employeeId) {
+      return res.status(200).json({
+        success: true,
+        message: "No employee record linked.",
+        data: [],
+      });
+    }
+
+    const { status, startDate, endDate, month, year } = req.query || {};
+
+    const records = await attendanceService.getMyRegularizationRequests({
+      hospitalId,
+      employeeId,
+      status,
+      startDate,
+      endDate,
+      month,
+      year,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "My regularization requests retrieved successfully.",
+      data: records,
+    });
+  } catch (error) {
+    if (error.code === "VALIDATION_ERROR") {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    console.error("Get My Regularization Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+/**
+ * Cancel Pending Regularization Request
+ * PATCH /api/v1/attendance/regularization/:id/cancel
+ */
+const cancelRegularizationRequest = async (req, res) => {
+  try {
+    const hospitalId = req.user.hospitalId;
+    const employeeId = await resolveEmployeeId(req);
+
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: "Authenticated user does not have an active employee record in this hospital.",
+      });
+    }
+
+    const regularizationId = req.params.id;
+
+    const record = await attendanceService.cancelRegularizationRequest({
+      hospitalId,
+      employeeId,
+      regularizationId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Regularization request cancelled successfully.",
+      data: record,
+    });
+  } catch (error) {
+    if (error.code === "NOT_FOUND") {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.code === "FORBIDDEN") {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    if (error.code === "VALIDATION_ERROR") {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    console.error("Cancel Regularization Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   checkIn,
   checkOut,
@@ -256,4 +396,8 @@ module.exports = {
   getMyAttendance,
   getHospitalAttendance,
   getAttendanceStats,
+  createRegularizationRequest,
+  getMyRegularizationRequests,
+  cancelRegularizationRequest,
 };
+

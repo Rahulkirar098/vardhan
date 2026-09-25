@@ -55,6 +55,7 @@ const Invitation = require("./src/models/invitation.model");
 const Position = require("./src/models/position.model");
 const Leave = require("./src/models/leave.model");
 const Attendance = require("./src/models/attendance.model");
+const AttendanceRegularization = require("./src/models/attendanceRegularization.model");
 
 if (require.main === module) {
     mongoose
@@ -68,6 +69,7 @@ if (require.main === module) {
                 await Position.syncIndexes();
                 await Leave.syncIndexes();
                 await Attendance.syncIndexes();
+                await AttendanceRegularization.syncIndexes();
             } catch (indexErr) {
                 console.error("Error syncing indexes:", indexErr);
             }

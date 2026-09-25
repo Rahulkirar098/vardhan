@@ -11,6 +11,7 @@ const Hospital = require("../src/models/hospital.model");
 const Position = require("../src/models/position.model");
 const Employee = require("../src/models/employee.model");
 const Attendance = require("../src/models/attendance.model");
+const AttendanceRegularization = require("../src/models/attendanceRegularization.model");
 const { generateToken } = require("../src/utils/jwt");
 const { hashPassword } = require("../src/utils/password");
 const { PERMISSIONS } = require("../src/config/permissions");
@@ -64,7 +65,7 @@ const request = (pathUrl, { method = "GET", headers = {}, body = null } = {}) =>
 
 const runTests = async () => {
     console.log("\n=======================================================");
-    console.log("=== VARDHAN PHASE 8B ATTENDANCE TEST SUITE ===");
+    console.log("=== VARDHAN PHASE 8C ATTENDANCE + REGULARIZATION TEST SUITE ===");
     console.log("=======================================================\n");
 
     const testTimestamp = Date.now();
@@ -411,8 +412,130 @@ const runTests = async () => {
         assert.strictEqual(hospitalBRecordsRes.body.data.length, 0, "Hospital B should not see Hospital A records");
         console.log("  ✓ 13. Tenant isolation enforced across hospitals");
 
+        // ─────────────────────────────────────────────────────────────
+        // 6. ATTENDANCE REGULARIZATION TESTS
+        // ─────────────────────────────────────────────────────────────
+        console.log("\n--- 6. ATTENDANCE REGULARIZATION ---");
+
+        // Use a past dateStr for regularization (not today, to avoid conflict with check-in)
+        const pastDateStr = "2026-01-15";
+
+        // Test 14: Employee can submit a regularization request
+        const regSubmitRes = await request("/api/v1/hrms/attendance/regularization", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${staff1Token}` },
+            body: {
+                date: pastDateStr,
+                requestedStatus: "PRESENT",
+                requestedCheckIn: `${pastDateStr}T09:00:00`,
+                requestedCheckOut: `${pastDateStr}T18:00:00`,
+                reason: "Was present but forgot to check in on the system.",
+            },
+        });
+
+        assert.strictEqual(regSubmitRes.status, 201, `Regularization submit should return 201. Got: ${regSubmitRes.status} — ${JSON.stringify(regSubmitRes.body)}`);
+        assert.strictEqual(regSubmitRes.body.success, true);
+        assert.strictEqual(regSubmitRes.body.data.status, "PENDING");
+        assert.strictEqual(regSubmitRes.body.data.requestedStatus, "PRESENT");
+        const createdRegId = regSubmitRes.body.data._id;
+        console.log("  ✓ 14. Employee can submit a regularization request (status = PENDING)");
+
+        // Test 15: Duplicate pending regularization for same date is rejected with 409
+        const dupRegRes = await request("/api/v1/hrms/attendance/regularization", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${staff1Token}` },
+            body: {
+                date: pastDateStr,
+                requestedStatus: "PRESENT",
+                reason: "Attempting a duplicate request.",
+            },
+        });
+
+        assert.strictEqual(dupRegRes.status, 409, `Duplicate regularization should return 409. Got: ${dupRegRes.status}`);
+        assert.strictEqual(dupRegRes.body.success, false);
+        console.log("  ✓ 15. Duplicate pending regularization for same date rejected (409 Conflict)");
+
+        // Test 16: Regularization with future date is rejected with 400
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const futureDateStr = tomorrow.toISOString().split("T")[0];
+
+        const futureRegRes = await request("/api/v1/hrms/attendance/regularization", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${staff1Token}` },
+            body: {
+                date: futureDateStr,
+                requestedStatus: "PRESENT",
+                reason: "Future date regularization attempt.",
+            },
+        });
+
+        assert.strictEqual(futureRegRes.status, 400, `Future date regularization should return 400. Got: ${futureRegRes.status}`);
+        assert.strictEqual(futureRegRes.body.success, false);
+        console.log("  ✓ 16. Regularization request for future date rejected (400 Bad Request)");
+
+        // Test 17: Regularization without reason is rejected with 400
+        const noReasonRegRes = await request("/api/v1/hrms/attendance/regularization", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${staff1Token}` },
+            body: {
+                date: "2026-01-10",
+                requestedStatus: "PRESENT",
+                reason: "",
+            },
+        });
+
+        assert.strictEqual(noReasonRegRes.status, 400, `Missing reason should return 400. Got: ${noReasonRegRes.status}`);
+        assert.strictEqual(noReasonRegRes.body.success, false);
+        console.log("  ✓ 17. Regularization without reason rejected (400 Bad Request)");
+
+        // Test 18: Employee can list their own regularization requests
+        const myRegRes = await request("/api/v1/hrms/attendance/regularization/my", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${staff1Token}` },
+        });
+
+        assert.strictEqual(myRegRes.status, 200);
+        assert.strictEqual(myRegRes.body.success, true);
+        assert.ok(Array.isArray(myRegRes.body.data), "Should return array");
+        assert.strictEqual(myRegRes.body.data.length, 1);
+        assert.strictEqual(myRegRes.body.data[0]._id, createdRegId);
+        console.log("  ✓ 18. Employee can list their own regularization requests");
+
+        // Test 19: Employee from Hospital B cannot see Hospital A employee's regularization
+        const myRegIsolationRes = await request("/api/v1/hrms/attendance/regularization/my", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${staff2Token}` },
+        });
+
+        assert.strictEqual(myRegIsolationRes.status, 200);
+        assert.strictEqual(myRegIsolationRes.body.data.length, 0, "Hospital B employee should not see Hospital A requests");
+        console.log("  ✓ 19. Tenant isolation: Hospital B employee cannot see Hospital A's regularizations");
+
+        // Test 20: Employee can cancel their own pending regularization request
+        const cancelRegRes = await request(`/api/v1/hrms/attendance/regularization/${createdRegId}/cancel`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${staff1Token}` },
+        });
+
+        assert.strictEqual(cancelRegRes.status, 200, `Cancel regularization should return 200. Got: ${cancelRegRes.status} — ${JSON.stringify(cancelRegRes.body)}`);
+        assert.strictEqual(cancelRegRes.body.success, true);
+        assert.strictEqual(cancelRegRes.body.data.status, "CANCELLED");
+        assert.ok(cancelRegRes.body.data.cancelledAt, "cancelledAt timestamp should be set");
+        console.log("  ✓ 20. Employee can cancel their own pending regularization request");
+
+        // Test 21: Cannot cancel an already-cancelled regularization (400)
+        const doubleCancelRes = await request(`/api/v1/hrms/attendance/regularization/${createdRegId}/cancel`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${staff1Token}` },
+        });
+
+        assert.strictEqual(doubleCancelRes.status, 400, `Cancelling already-cancelled request should return 400. Got: ${doubleCancelRes.status}`);
+        assert.strictEqual(doubleCancelRes.body.success, false);
+        console.log("  ✓ 21. Cannot cancel an already-cancelled regularization request (400 Bad Request)");
+
         console.log("\n=======================================================");
-        console.log("=== ALL 13 ATTENDANCE TESTS PASSED 100% ===");
+        console.log("=== ALL 21 ATTENDANCE + REGULARIZATION TESTS PASSED 100% ===");
         console.log("=======================================================\n");
 
     } catch (err) {

@@ -15,8 +15,10 @@ import {
 } from '@mui/material';
 import {
   AccessTimeRounded,
+  AddRounded,
   CheckCircleOutlineRounded,
   CloseRounded,
+  EditCalendarRounded,
   EventAvailableRounded,
   EventBusyRounded,
   HourglassEmptyRounded,
@@ -34,6 +36,8 @@ import StatusBadge from '../../components/StatusBadge';
 import DataTable from '../../components/DataTable';
 import EmptyState from '../../components/EmptyState';
 import InitialsAvatar from '../../components/InitialsAvatar';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import RequestRegularizationModal from '../../components/attendance/RequestRegularizationModal';
 import { UnifiedCalendar } from '../../components/calendar';
 import attendanceService from '../../services/attendance.service';
 import leaveService from '../../services/leave.service';
@@ -78,6 +82,23 @@ const formatDate = (dateStr) => {
   }
 };
 
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    return d.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return String(dateStr);
+  }
+};
+
 const formatDayFull = (dateStr) => {
   if (!dateStr) return '—';
   try {
@@ -108,24 +129,32 @@ const AttendancePage = () => {
   const [myHistory, setMyHistory] = useState([]);
   const [workforceHistory, setWorkforceHistory] = useState([]);
   const [myLeaves, setMyLeaves] = useState([]);
+  const [myRegularizations, setMyRegularizations] = useState([]);
   const [stats, setStats] = useState({ present: 0, halfDay: 0, absent: 0, workingDays: 0 });
   const [selectedDateStr, setSelectedDateStr] = useState(() => new Date().toISOString().split('T')[0]);
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
+  // Regularization modal & cancel state
+  const [isRegularizationModalOpen, setIsRegularizationModalOpen] = useState(false);
+  const [cancellingRequest, setCancellingRequest] = useState(null);
+  const [cancellingLoading, setCancellingLoading] = useState(false);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [todayRes, myRes, statsRes, leavesRes] = await Promise.all([
+      const [todayRes, myRes, statsRes, leavesRes, regRes] = await Promise.all([
         attendanceService.getToday().catch(() => ({ data: null })),
         attendanceService.getMyAttendance().catch(() => ({ data: [] })),
         attendanceService.getAttendanceStats().catch(() => ({ data: { present: 0, halfDay: 0, absent: 0, workingDays: 0 } })),
         leaveService.getMyLeaves().catch(() => ({ data: [] })),
+        attendanceService.getMyRegularizations().catch(() => ({ data: [] })),
       ]);
 
       setTodayAttendance(todayRes?.data || null);
       setMyHistory(Array.isArray(myRes?.data) ? myRes.data : []);
       setStats(statsRes?.data || { present: 0, halfDay: 0, absent: 0, workingDays: 0 });
       setMyLeaves(Array.isArray(leavesRes?.data) ? leavesRes.data : []);
+      setMyRegularizations(Array.isArray(regRes?.data) ? regRes.data : []);
 
       if (canViewWorkforce) {
         const wfRes = await attendanceService.getHospitalAttendance().catch(() => ({ data: [] }));
@@ -137,6 +166,7 @@ const AttendancePage = () => {
       setLoading(false);
     }
   }, [canViewWorkforce]);
+
 
   useEffect(() => {
     loadData();
@@ -344,6 +374,131 @@ const AttendancePage = () => {
       ),
     },
   ];
+
+  const handleCancelConfirm = async () => {
+    if (!cancellingRequest) return;
+    setCancellingLoading(true);
+    try {
+      await attendanceService.cancelRegularization(cancellingRequest._id);
+      setToast({ open: true, message: 'Regularization request cancelled successfully.', severity: 'success' });
+      setCancellingRequest(null);
+      await loadData();
+    } catch (err) {
+      setToast({
+        open: true,
+        message: err?.response?.data?.message || 'Failed to cancel regularization request.',
+        severity: 'error',
+      });
+    } finally {
+      setCancellingLoading(false);
+    }
+  };
+
+  const regularizationColumns = [
+    {
+      id: 'date',
+      label: 'Date',
+      render: (row) => (
+        <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+          {formatDate(row.dateStr || row.date)}
+        </Typography>
+      ),
+    },
+    {
+      id: 'requestedStatus',
+      label: 'Requested Status',
+      render: (row) => <StatusBadge status={row.requestedStatus} />,
+    },
+    {
+      id: 'requestedCheckIn',
+      label: 'Check In',
+      render: (row) => (
+        <Typography variant="body2" sx={{ color: '#334155' }}>
+          {formatTime(row.requestedCheckIn)}
+        </Typography>
+      ),
+    },
+    {
+      id: 'requestedCheckOut',
+      label: 'Check Out',
+      render: (row) => (
+        <Typography variant="body2" sx={{ color: '#334155' }}>
+          {formatTime(row.requestedCheckOut)}
+        </Typography>
+      ),
+    },
+    {
+      id: 'reason',
+      label: 'Reason',
+      render: (row) => (
+        <Tooltip title={row.reason || ''} arrow placement="top">
+          <Typography
+            variant="body2"
+            sx={{
+              color: '#334155',
+              maxWidth: 240,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {row.reason || '—'}
+          </Typography>
+        </Tooltip>
+      ),
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+    {
+      id: 'submittedAt',
+      label: 'Submitted',
+      render: (row) => (
+        <Typography variant="caption" sx={{ color: '#64748B' }}>
+          {formatDateTime(row.submittedAt || row.createdAt)}
+        </Typography>
+      ),
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      render: (row) => {
+        if (row.status === 'pending') {
+          return (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => setCancellingRequest(row)}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                borderRadius: '8px',
+                borderColor: '#E2E8F0',
+                color: '#DC2626',
+                py: 0.25,
+                px: 1.5,
+                '&:hover': {
+                  borderColor: '#FECACA',
+                  backgroundColor: '#FEF2F2',
+                },
+              }}
+            >
+              Cancel
+            </Button>
+          );
+        }
+        return (
+          <Typography variant="caption" sx={{ color: '#94A3B8' }}>
+            —
+          </Typography>
+        );
+      },
+    },
+  ];
+
 
   return (
     <AppLayout>
@@ -573,32 +728,90 @@ const AttendancePage = () => {
           />
         </Box>
 
-        {/* ─── 3. TABS (MY ATTENDANCE vs WORKFORCE ATTENDANCE) ──────────────── */}
-        {canViewWorkforce && (
-          <Box sx={{ borderBottom: '1px solid #E2E8F0', mb: 3 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(e, val) => setActiveTab(val)}
+        {/* ─── 3. TABS (MY ATTENDANCE vs REGULARIZATION vs WORKFORCE) ──────── */}
+        <Box sx={{ borderBottom: '1px solid #E2E8F0', mb: 3 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(e, val) => setActiveTab(val)}
+            sx={{
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.925rem',
+                minHeight: 44,
+                color: '#64748B',
+                '&.Mui-selected': { color: '#0F172A' },
+              },
+              '& .MuiTabs-indicator': { backgroundColor: '#0F172A', height: 3 },
+            }}
+          >
+            <Tab value="my" label="My Attendance" />
+            <Tab value="regularization" label="Regularization" />
+            {canViewWorkforce && <Tab value="workforce" label="Workforce Attendance" />}
+          </Tabs>
+        </Box>
+
+        {/* ─── 4. TAB CONTENT ──────────────────────────────────────────────── */}
+        {activeTab === 'regularization' ? (
+          /* ─── REGULARIZATION TAB ────────────────────────────────────────── */
+          <Box sx={{ mb: 4 }}>
+            <Paper
+              variant="outlined"
               sx={{
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.925rem',
-                  minHeight: 44,
-                  color: '#64748B',
-                  '&.Mui-selected': { color: '#0F172A' },
-                },
-                '& .MuiTabs-indicator': { backgroundColor: '#0F172A', height: 3 },
+                p: { xs: 2.25, sm: 3 },
+                mb: 3,
+                borderRadius: '16px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 6px rgba(15,23,42,0.03)',
+                display: 'flex',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                justifyContent: 'space-between',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
               }}
             >
-              <Tab value="my" label="My Attendance" />
-              <Tab value="workforce" label="Workforce Attendance" />
-            </Tabs>
-          </Box>
-        )}
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.15rem' }}>
+                  Regularization
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#64748B', mt: 0.25 }}>
+                  Request correction for attendance that was missing or incorrect.
+                </Typography>
+              </Box>
 
-        {/* ─── 4. CALENDAR & SELECTED DAY DETAILS (STABLE 2-COLUMN GRID) ───── */}
-        {activeTab === 'my' ? (
+              <Button
+                variant="contained"
+                startIcon={<AddRounded />}
+                onClick={() => setIsRegularizationModalOpen(true)}
+                sx={{
+                  backgroundColor: '#0F172A',
+                  color: '#FFFFFF',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  px: 2.5,
+                  py: 1,
+                  borderRadius: '10px',
+                  boxShadow: '0 2px 8px rgba(15,23,42,0.2)',
+                  '&:hover': { backgroundColor: '#1E293B' },
+                }}
+              >
+                + Request Regularization
+              </Button>
+            </Paper>
+
+            <DataTable
+              columns={regularizationColumns}
+              data={myRegularizations}
+              keyField="_id"
+              loading={loading}
+              emptyTitle="No regularization requests yet"
+              emptyDescription="Submit a request if your attendance was missing or incorrectly marked."
+            />
+          </Box>
+        ) : activeTab === 'my' ? (
+          /* ─── MY ATTENDANCE TAB ─────────────────────────────────────────── */
           <Box sx={{ mb: 4 }}>
             <Box
               sx={{
@@ -808,6 +1021,29 @@ const AttendancePage = () => {
         )}
       </Box>
 
+      {/* Request Regularization Modal */}
+      <RequestRegularizationModal
+        open={isRegularizationModalOpen}
+        onClose={() => setIsRegularizationModalOpen(false)}
+        onSuccess={(msg) => {
+          setToast({ open: true, message: msg, severity: 'success' });
+          loadData();
+        }}
+      />
+
+      {/* Cancel Regularization Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(cancellingRequest)}
+        title="Cancel Regularization Request"
+        message="Are you sure you want to cancel this regularization request?"
+        confirmLabel="Cancel Request"
+        confirmColor="error"
+        danger={true}
+        submitting={cancellingLoading}
+        onConfirm={handleCancelConfirm}
+        onClose={() => setCancellingRequest(null)}
+      />
+
       {/* Toast Notification */}
       <Snackbar
         open={toast.open}
@@ -828,3 +1064,4 @@ const AttendancePage = () => {
 };
 
 export default AttendancePage;
+
