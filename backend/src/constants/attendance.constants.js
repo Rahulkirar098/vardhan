@@ -11,10 +11,10 @@ const ATTENDANCE_STATUSES = Object.freeze({
 const VALID_ATTENDANCE_STATUSES = Object.freeze(Object.values(ATTENDANCE_STATUSES));
 
 const REGULARIZATION_STATUSES = Object.freeze({
-    PENDING: "pending",
-    APPROVED: "approved",
-    REJECTED: "rejected",
-    CANCELLED: "cancelled",
+    PENDING: "PENDING",
+    APPROVED: "APPROVED",
+    REJECTED: "REJECTED",
+    CANCELLED: "CANCELLED",
 });
 
 const VALID_REGULARIZATION_STATUSES = Object.freeze(Object.values(REGULARIZATION_STATUSES));

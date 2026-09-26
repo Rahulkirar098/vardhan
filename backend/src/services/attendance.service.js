@@ -529,9 +529,9 @@ const getMyRegularizationRequests = async ({
 
   const query = { hospitalId, employeeId };
 
-  if (status && VALID_REGULARIZATION_STATUSES.includes(String(status).toLowerCase())) {
-    query.status = String(status).toLowerCase();
-  }
+    if (status && VALID_REGULARIZATION_STATUSES.includes(String(status).toUpperCase())) {
+        query.status = String(status).toUpperCase();
+    }
 
   if (startDate && endDate) {
     query.dateStr = { $gte: startDate, $lte: endDate };
@@ -542,10 +542,18 @@ const getMyRegularizationRequests = async ({
     query.dateStr = { $regex: `^${year}` };
   }
 
-  const records = await AttendanceRegularization.find(query)
+  let records = await AttendanceRegularization.find(query)
     .populate("attendanceId", "status checkIn checkOut workingMinutes")
     .sort({ dateStr: -1, createdAt: -1 })
     .lean();
+
+  // Normalize status values to uppercase for legacy records
+  records = records.map((r) => {
+    if (r.status && typeof r.status === "string") {
+      r.status = r.status.toUpperCase();
+    }
+    return r;
+  });
 
   return records;
 };

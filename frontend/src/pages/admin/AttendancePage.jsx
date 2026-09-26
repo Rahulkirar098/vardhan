@@ -147,7 +147,7 @@ const AttendancePage = () => {
         attendanceService.getMyAttendance().catch(() => ({ data: [] })),
         attendanceService.getAttendanceStats().catch(() => ({ data: { present: 0, halfDay: 0, absent: 0, workingDays: 0 } })),
         leaveService.getMyLeaves().catch(() => ({ data: [] })),
-        attendanceService.getMyRegularizations().catch(() => ({ data: [] })),
+        attendanceService.getMyRegularizations().catch(() => []),
       ]);
 
       setTodayAttendance(todayRes?.data || null);
@@ -465,7 +465,7 @@ const AttendancePage = () => {
       id: 'actions',
       label: 'Actions',
       render: (row) => {
-        if (row.status === 'pending') {
+        if (row.status === 'PENDING') {
           return (
             <Button
               size="small"

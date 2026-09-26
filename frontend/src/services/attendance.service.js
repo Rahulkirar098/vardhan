@@ -62,7 +62,7 @@ export const attendanceService = {
    */
   getMyRegularizations: async (params) => {
     const response = await client.get('/v1/hrms/attendance/regularization/my', { params });
-    return response.data;
+    return response.data.data;
   },
 
   /**
