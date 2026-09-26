@@ -147,14 +147,14 @@ const AttendancePage = () => {
         attendanceService.getMyAttendance().catch(() => ({ data: [] })),
         attendanceService.getAttendanceStats().catch(() => ({ data: { present: 0, halfDay: 0, absent: 0, workingDays: 0 } })),
         leaveService.getMyLeaves().catch(() => ({ data: [] })),
-        attendanceService.getMyRegularizations().catch(() => []),
+        attendanceService.getMyRegularizations(),
       ]);
 
       setTodayAttendance(todayRes?.data || null);
       setMyHistory(Array.isArray(myRes?.data) ? myRes.data : []);
       setStats(statsRes?.data || { present: 0, halfDay: 0, absent: 0, workingDays: 0 });
       setMyLeaves(Array.isArray(leavesRes?.data) ? leavesRes.data : []);
-      setMyRegularizations(Array.isArray(regRes?.data) ? regRes.data : []);
+      setMyRegularizations(Array.isArray(regRes) ? regRes : []);
 
       if (canViewWorkforce) {
         const wfRes = await attendanceService.getHospitalAttendance().catch(() => ({ data: [] }));
