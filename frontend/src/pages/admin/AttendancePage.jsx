@@ -259,7 +259,7 @@ const AttendancePage = () => {
   // Table Columns
   const myColumns = [
     {
-      id: 'dateStr',
+      key: 'dateStr',
       label: 'Date',
       render: (row) => (
         <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
@@ -268,12 +268,12 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'status',
+      key: 'status',
       label: 'Status',
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
-      id: 'checkIn',
+      key: 'checkIn',
       label: 'Check In',
       render: (row) => (
         <Typography variant="body2" sx={{ color: '#334155' }}>
@@ -282,7 +282,7 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'checkOut',
+      key: 'checkOut',
       label: 'Check Out',
       render: (row) => (
         <Typography variant="body2" sx={{ color: '#334155' }}>
@@ -291,7 +291,7 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'workingMinutes',
+      key: 'workingMinutes',
       label: 'Working Hours',
       render: (row) => (
         <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
@@ -300,7 +300,7 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'notes',
+      key: 'notes',
       label: 'Notes',
       render: (row) => (
         <Typography variant="caption" sx={{ color: '#64748B' }}>
@@ -312,7 +312,7 @@ const AttendancePage = () => {
 
   const workforceColumns = [
     {
-      id: 'employee',
+      key: 'employee',
       label: 'Employee',
       render: (row) => {
         const emp = row.employeeId || {};
@@ -333,7 +333,7 @@ const AttendancePage = () => {
       },
     },
     {
-      id: 'dateStr',
+      key: 'dateStr',
       label: 'Date',
       render: (row) => (
         <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
@@ -342,12 +342,12 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'status',
+      key: 'status',
       label: 'Status',
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
-      id: 'checkIn',
+      key: 'checkIn',
       label: 'Check In',
       render: (row) => (
         <Typography variant="body2" sx={{ color: '#334155' }}>
@@ -356,7 +356,7 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'checkOut',
+      key: 'checkOut',
       label: 'Check Out',
       render: (row) => (
         <Typography variant="body2" sx={{ color: '#334155' }}>
@@ -365,7 +365,7 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'workingMinutes',
+      key: 'workingMinutes',
       label: 'Duration',
       render: (row) => (
         <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
@@ -396,7 +396,7 @@ const AttendancePage = () => {
 
   const regularizationColumns = [
     {
-      id: 'date',
+      key: 'date',
       label: 'Date',
       render: (row) => (
         <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
@@ -405,12 +405,12 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'requestedStatus',
+      key: 'requestedStatus',
       label: 'Requested Status',
       render: (row) => <StatusBadge status={row.requestedStatus} />,
     },
     {
-      id: 'requestedCheckIn',
+      key: 'requestedCheckIn',
       label: 'Check In',
       render: (row) => (
         <Typography variant="body2" sx={{ color: '#334155' }}>
@@ -419,7 +419,7 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'requestedCheckOut',
+      key: 'requestedCheckOut',
       label: 'Check Out',
       render: (row) => (
         <Typography variant="body2" sx={{ color: '#334155' }}>
@@ -428,7 +428,7 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'reason',
+      key: 'reason',
       label: 'Reason',
       render: (row) => (
         <Tooltip title={row.reason || ''} arrow placement="top">
@@ -448,12 +448,12 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'status',
+      key: 'status',
       label: 'Status',
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
-      id: 'submittedAt',
+      key: 'submittedAt',
       label: 'Submitted',
       render: (row) => (
         <Typography variant="caption" sx={{ color: '#64748B' }}>
@@ -462,7 +462,7 @@ const AttendancePage = () => {
       ),
     },
     {
-      id: 'actions',
+      key: 'actions',
       label: 'Actions',
       render: (row) => {
         if (row.status === 'PENDING') {
@@ -803,8 +803,13 @@ const AttendancePage = () => {
 
             <DataTable
               columns={regularizationColumns}
-              data={myRegularizations}
-              keyField="_id"
+              rows={myRegularizations}
+              getRowKey={(row) => row._id}
+              renderCell={(row, column) =>
+                typeof column.render === 'function'
+                  ? column.render(row)
+                  : row?.[column.key]
+              }
               loading={loading}
               emptyTitle="No regularization requests yet"
               emptyDescription="Submit a request if your attendance was missing or incorrectly marked."
@@ -995,8 +1000,13 @@ const AttendancePage = () => {
               </Typography>
               <DataTable
                 columns={myColumns}
-                data={myHistory}
-                keyField="_id"
+                rows={myHistory}
+                getRowKey={(row) => row._id}
+                renderCell={(row, column) =>
+                  typeof column.render === 'function'
+                    ? column.render(row)
+                    : row?.[column.key]
+                }
                 loading={loading}
                 emptyTitle="No attendance records yet"
                 emptyDescription="Your check-in and working duration history will appear here."
@@ -1011,8 +1021,13 @@ const AttendancePage = () => {
             </Typography>
             <DataTable
               columns={workforceColumns}
-              data={workforceHistory}
-              keyField="_id"
+              rows={workforceHistory}
+              getRowKey={(row) => row._id}
+              renderCell={(row, column) =>
+                typeof column.render === 'function'
+                  ? column.render(row)
+                  : row?.[column.key]
+              }
               loading={loading}
               emptyTitle="No workforce records found"
               emptyDescription="Attendance records for your hospital workforce will appear here."
