@@ -15,6 +15,7 @@ const positionRoute = require("./src/routes/position.route");
 const { accessManagementRoute } = require("./src/routes/accessManagement.route");
 const { leaveRoute } = require("./src/routes/leave.route");
 const { attendanceRoute } = require("./src/routes/attendance.route");
+const rosterRoute = require("./src/routes/roster.routes");
 
 const app = express();
 
@@ -42,6 +43,10 @@ app.use("/api/v1/hrms/attendance", attendanceRoute);
 app.use("/api/hrms/attendance", attendanceRoute);
 app.use("/api/v1/attendance", attendanceRoute);
 app.use("/api/attendance", attendanceRoute);
+app.use("/api/v1/rosters", rosterRoute);
+app.use("/api/rosters", rosterRoute);
+app.use("/api/v1/hrms/rosters", rosterRoute);
+app.use("/api/hrms/rosters", rosterRoute);
 app.use("/api/v1/hrms", employeeRoute);
 app.use("/api/hrms", employeeRoute);
 app.use("/api/positions", positionRoute);
@@ -56,6 +61,9 @@ const Position = require("./src/models/position.model");
 const Leave = require("./src/models/leave.model");
 const Attendance = require("./src/models/attendance.model");
 const AttendanceRegularization = require("./src/models/attendanceRegularization.model");
+const RosterTemplate = require("./src/models/rosterTemplate.model");
+const Roster = require("./src/models/roster.model");
+const RosterAssignment = require("./src/models/rosterAssignment.model");
 
 if (require.main === module) {
     mongoose
@@ -70,6 +78,9 @@ if (require.main === module) {
                 await Leave.syncIndexes();
                 await Attendance.syncIndexes();
                 await AttendanceRegularization.syncIndexes();
+                await RosterTemplate.syncIndexes();
+                await Roster.syncIndexes();
+                await RosterAssignment.syncIndexes();
             } catch (indexErr) {
                 console.error("Error syncing indexes:", indexErr);
             }
