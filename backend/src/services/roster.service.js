@@ -79,30 +79,54 @@ const deleteTemplate = async ({ templateId, hospitalId }) => {
 
 // ─── ROSTERS ─────────────────────────────────────────────────────────────────
 
-const listRosters = async ({ hospitalId, status }) => {
+const listRosters = async ({ hospitalId, status, userId, isManager }) => {
     const query = { hospitalId };
+
     if (status && ["DRAFT", "PUBLISHED"].includes(String(status).toUpperCase())) {
         query.status = String(status).toUpperCase();
+    }
+
+    if (!isManager) {
+        // Non-managers see all PUBLISHED rosters OR DRAFT rosters explicitly shared with them
+        query.$or = [
+            { status: "PUBLISHED" },
+            { status: "DRAFT", sharedWith: userId },
+        ];
     }
 
     return Roster.find(query)
         .populate("templateId", "title columns dutyAreas")
         .populate("createdBy", "name email")
         .populate("publishedBy", "name email")
+        .populate("sharedWith", "name email")
         .sort({ startDate: -1 })
         .lean();
 };
 
-const getRosterById = async ({ rosterId, hospitalId }) => {
+const getRosterById = async ({ rosterId, hospitalId, userId, isManager }) => {
     if (!isValidObjectId(rosterId)) return null;
 
     const roster = await Roster.findOne({ _id: rosterId, hospitalId })
         .populate("templateId")
         .populate("createdBy", "name email")
         .populate("publishedBy", "name email")
+        .populate("sharedWith", "name email employeeId")
+        .populate("comments.userId", "name email")
         .lean();
 
     if (!roster) return null;
+
+    if (!isManager && roster.status === "DRAFT") {
+        const isShared =
+            Array.isArray(roster.sharedWith) &&
+            roster.sharedWith.some((u) => u._id.toString() === userId.toString());
+
+        if (!isShared) {
+            const err = new Error("You do not have permission to view this draft roster.");
+            err.code = "FORBIDDEN";
+            throw err;
+        }
+    }
 
     const assignments = await RosterAssignment.find({ rosterId: roster._id, hospitalId })
         .populate({
@@ -160,7 +184,7 @@ const createRoster = async ({ hospitalId, userId, templateId, title, startDate, 
     return roster;
 };
 
-const updateRosterDraft = async ({ rosterId, hospitalId, title, startDate, endDate }) => {
+const updateRosterDraft = async ({ rosterId, hospitalId, userId, title, startDate, endDate }) => {
     if (!isValidObjectId(rosterId)) {
         const err = new Error("Invalid roster ID.");
         err.code = "VALIDATION_ERROR";
@@ -174,15 +198,10 @@ const updateRosterDraft = async ({ rosterId, hospitalId, title, startDate, endDa
         throw err;
     }
 
-    if (roster.status === "PUBLISHED") {
-        const err = new Error("Published rosters cannot be modified directly.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
     if (title !== undefined) roster.title = String(title).trim();
     if (startDate) roster.startDate = new Date(startDate);
     if (endDate) roster.endDate = new Date(endDate);
+    roster.updatedBy = userId;
 
     await roster.save();
     return roster;
@@ -199,12 +218,6 @@ const deleteRosterDraft = async ({ rosterId, hospitalId }) => {
     if (!roster) {
         const err = new Error("Roster not found.");
         err.code = "NOT_FOUND";
-        throw err;
-    }
-
-    if (roster.status === "PUBLISHED") {
-        const err = new Error("Published rosters cannot be deleted.");
-        err.code = "VALIDATION_ERROR";
         throw err;
     }
 
@@ -230,16 +243,103 @@ const publishRoster = async ({ rosterId, hospitalId, userId }) => {
         throw err;
     }
 
-    if (roster.status === "PUBLISHED") {
-        return roster;
-    }
-
     roster.status = "PUBLISHED";
     roster.publishedBy = userId;
     roster.publishedAt = new Date();
+    roster.updatedBy = userId;
     await roster.save();
 
     return roster;
+};
+
+// ─── REVIEW SHARING & FEEDBACK ───────────────────────────────────────────────
+
+const shareRosterForReview = async ({ rosterId, hospitalId, userIds, userId }) => {
+    if (!isValidObjectId(rosterId)) {
+        const err = new Error("Invalid roster ID.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const roster = await Roster.findOne({ _id: rosterId, hospitalId });
+    if (!roster) {
+        const err = new Error("Roster not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    const validUserIds = (userIds || []).filter((id) => isValidObjectId(id));
+    roster.sharedWith = validUserIds;
+    roster.updatedBy = userId;
+    await roster.save();
+
+    return Roster.findById(roster._id)
+        .populate("sharedWith", "name email")
+        .lean();
+};
+
+const addReviewComment = async ({ rosterId, hospitalId, userId, comment }) => {
+    if (!isValidObjectId(rosterId)) {
+        const err = new Error("Invalid roster ID.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (!comment || !String(comment).trim()) {
+        const err = new Error("Comment text is required.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const roster = await Roster.findOne({ _id: rosterId, hospitalId });
+    if (!roster) {
+        const err = new Error("Roster not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    roster.comments.push({
+        userId,
+        comment: String(comment).trim(),
+        createdAt: new Date(),
+    });
+
+    await roster.save();
+
+    return Roster.findById(roster._id)
+        .populate("comments.userId", "name email")
+        .lean();
+};
+
+const resolveReviewComment = async ({ rosterId, commentId, hospitalId, userId }) => {
+    if (!isValidObjectId(rosterId) || !isValidObjectId(commentId)) {
+        const err = new Error("Invalid roster or comment ID.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const roster = await Roster.findOne({ _id: rosterId, hospitalId });
+    if (!roster) {
+        const err = new Error("Roster not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    const commentItem = roster.comments.id(commentId);
+    if (!commentItem) {
+        const err = new Error("Review comment not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    commentItem.resolved = true;
+    commentItem.resolvedBy = userId;
+    commentItem.resolvedAt = new Date();
+    await roster.save();
+
+    return Roster.findById(roster._id)
+        .populate("comments.userId", "name email")
+        .lean();
 };
 
 // ─── ASSIGNMENTS ─────────────────────────────────────────────────────────────
@@ -273,12 +373,6 @@ const addAssignment = async ({
     if (!roster) {
         const err = new Error("Roster not found.");
         err.code = "NOT_FOUND";
-        throw err;
-    }
-
-    if (roster.status === "PUBLISHED") {
-        const err = new Error("Cannot add assignments to a published roster.");
-        err.code = "VALIDATION_ERROR";
         throw err;
     }
 
@@ -339,6 +433,10 @@ const addAssignment = async ({
         createdBy: userId,
     });
 
+    // Mark roster as updated
+    roster.updatedBy = userId;
+    await roster.save();
+
     const populatedAssignment = await RosterAssignment.findById(assignment._id)
         .populate({
             path: "employeeId",
@@ -356,6 +454,7 @@ const addAssignment = async ({
 const updateAssignment = async ({
     assignmentId,
     hospitalId,
+    userId,
     columnId,
     shiftTitle,
     startTime,
@@ -376,13 +475,6 @@ const updateAssignment = async ({
         throw err;
     }
 
-    const roster = await Roster.findById(assignment.rosterId).select("status").lean();
-    if (roster && roster.status === "PUBLISHED") {
-        const err = new Error("Cannot edit assignments on a published roster.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
     if (columnId !== undefined) assignment.columnId = columnId;
     if (shiftTitle !== undefined) assignment.shiftTitle = String(shiftTitle).trim();
     if (startTime !== undefined) assignment.startTime = String(startTime).trim();
@@ -391,6 +483,9 @@ const updateAssignment = async ({
     if (notes !== undefined) assignment.notes = notes ? String(notes).trim() : null;
 
     await assignment.save();
+
+    // Mark roster updated
+    await Roster.updateOne({ _id: assignment.rosterId }, { updatedBy: userId });
 
     return RosterAssignment.findById(assignment._id)
         .populate({
@@ -401,7 +496,7 @@ const updateAssignment = async ({
         .lean();
 };
 
-const deleteAssignment = async ({ assignmentId, hospitalId }) => {
+const deleteAssignment = async ({ assignmentId, hospitalId, userId }) => {
     if (!isValidObjectId(assignmentId)) {
         const err = new Error("Invalid assignment ID.");
         err.code = "VALIDATION_ERROR";
@@ -415,14 +510,12 @@ const deleteAssignment = async ({ assignmentId, hospitalId }) => {
         throw err;
     }
 
-    const roster = await Roster.findById(assignment.rosterId).select("status").lean();
-    if (roster && roster.status === "PUBLISHED") {
-        const err = new Error("Cannot delete assignments from a published roster.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
+    await RosterAssignment.deleteOne({ _id: assignment._id });
+
+    if (userId) {
+        await Roster.updateOne({ _id: assignment.rosterId }, { updatedBy: userId });
     }
 
-    await RosterAssignment.deleteOne({ _id: assignment._id });
     return { success: true };
 };
 
@@ -487,10 +580,14 @@ module.exports = {
     updateRosterDraft,
     deleteRosterDraft,
     publishRoster,
+    // Review Sharing & Feedback
+    shareRosterForReview,
+    addReviewComment,
+    resolveReviewComment,
     // Assignments
     addAssignment,
     updateAssignment,
     deleteAssignment,
-    // Employee Personal Roster
+    // My Roster
     getMyRoster,
 };

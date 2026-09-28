@@ -1,17 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   Grid,
   IconButton,
+  InputAdornment,
   InputLabel,
+  List,
+  ListItem,
+  ListItemText,
   MenuItem,
   Paper,
   Select,
@@ -34,14 +41,22 @@ import {
   AddRounded,
   ArrowBackRounded,
   CalendarMonthRounded,
+  ChatBubbleOutlineRounded,
   CheckCircleOutlineRounded,
+  CheckRounded,
+  CloseRounded,
+  CommentOutlined,
   DeleteOutlineRounded,
   EditOutlined,
   EventNoteRounded,
   GroupAddRounded,
+  PersonAddOutlined,
   PersonOutlineRounded,
   PublishRounded,
   ScheduleRounded,
+  SearchRounded,
+  ShareOutlined,
+  ShareRounded,
   VisibilityOutlined,
   WarningAmberRounded,
 } from '@mui/icons-material';
@@ -73,27 +88,22 @@ export default function RosterManagementPage() {
     [canManage]
   );
 
-  const canViewOwn = useMemo(
-    () => hasPermission(PERMISSIONS.ROSTER_VIEW_OWN) || canViewWorkforce,
-    [canViewWorkforce]
-  );
-
-  // Tab State: 'templates' | 'drafts' | 'published' | 'my-roster'
+  // Active Tab: 'published-matrix' | 'drafts' | 'templates' | 'my-roster'
   const [activeTab, setActiveTab] = useState(
-    canManage ? 'templates' : canViewWorkforce ? 'published' : 'my-roster'
+    canManage ? 'drafts' : 'published-matrix'
   );
 
-  // Loading & Error States
+  // Loading & Toast States
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ open: false, message: '', severity: 'info' });
 
-  // Data States
+  // Data Collections
   const [templates, setTemplates] = useState([]);
   const [rosters, setRosters] = useState([]);
   const [myAssignments, setMyAssignments] = useState([]);
   const [activeEmployees, setActiveEmployees] = useState([]);
 
-  // Selected Active Roster (for editor view)
+  // Selected Active Roster (for Matrix View & Editing)
   const [activeRoster, setActiveRoster] = useState(null);
   const [activeRosterDate, setActiveRosterDate] = useState('');
 
@@ -103,20 +113,21 @@ export default function RosterManagementPage() {
   const [templateForm, setTemplateForm] = useState({
     title: '',
     columns: [
-      { id: 'col-1', title: 'Morning', startTime: '08:00', endTime: '14:00', order: 1 },
-      { id: 'col-2', title: 'Afternoon', startTime: '14:00', endTime: '20:00', order: 2 },
-      { id: 'col-3', title: 'Night', startTime: '20:00', endTime: '08:00', order: 3 },
+      { id: 'col-1', title: 'MORNING', startTime: '08:00', endTime: '14:00', order: 1 },
+      { id: 'col-2', title: 'AFTERNOON', startTime: '14:00', endTime: '20:00', order: 2 },
+      { id: 'col-3', title: 'NIGHT', startTime: '20:00', endTime: '08:00', order: 3 },
     ],
     dutyAreas: [
-      { id: 'da-1', name: 'General Ward', order: 1 },
-      { id: 'da-2', name: 'NICU 2nd Floor', order: 2 },
-      { id: 'da-3', name: 'PICU', order: 3 },
-      { id: 'da-4', name: 'ICU', order: 4 },
-      { id: 'da-5', name: 'OT', order: 5 },
+      { id: 'da-1', name: 'GENERAL WARD FEMALE + MALE + DAY CARE WARD', order: 1 },
+      { id: 'da-2', name: 'PRIVATE WARD + LABOUR ROOM (2ND FLOOR)', order: 2 },
+      { id: 'da-3', name: 'NICU 2ND FLOOR', order: 3 },
+      { id: 'da-4', name: 'PICU', order: 4 },
+      { id: 'da-5', name: 'ICU 3RD FLOOR + PRIVATE WARD', order: 5 },
+      { id: 'da-6', name: 'OT', order: 6 },
     ],
   });
 
-  // Create Roster from Template Modal
+  // Create Roster Modal
   const [createRosterModalOpen, setCreateRosterModalOpen] = useState(false);
   const [selectedTemplateForRoster, setSelectedTemplateForRoster] = useState(null);
   const [createRosterForm, setCreateRosterForm] = useState({
@@ -144,21 +155,33 @@ export default function RosterManagementPage() {
   });
   const [leaveWarning, setLeaveWarning] = useState(null);
 
-  // Delete Confirm Dialogs
+  // Share for Review Modal
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedReviewerIds, setSelectedReviewerIds] = useState([]);
+  const [reviewerSearch, setReviewerSearch] = useState('');
+
+  // Review Feedback Drawer / Modal
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [newCommentText, setNewCommentText] = useState('');
+
+  // Confirmation for Published Roster Edit
+  const [publishEditConfirm, setPublishEditConfirm] = useState({ open: false, pendingAction: null });
+
+  // Delete Confirm Dialog
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, type: '', id: '', title: '' });
 
   const showToast = (message, severity = 'info') => {
     setToast({ open: true, message, severity });
   };
 
-  // --- Fetching Functions ---
+  // --- Data Fetching ---
   const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
       const res = await rosterService.getTemplates();
       setTemplates(res.data || []);
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to fetch roster templates', 'error');
+      showToast(err.response?.data?.message || 'Failed to load templates', 'error');
     } finally {
       setLoading(false);
     }
@@ -168,13 +191,20 @@ export default function RosterManagementPage() {
     try {
       setLoading(true);
       const res = await rosterService.getRosters();
-      setRosters(res.data || []);
+      const list = res.data || [];
+      setRosters(list);
+
+      // Auto-select latest published roster for workforce matrix view if none selected
+      const published = list.filter((r) => r.status === 'PUBLISHED');
+      if (published.length > 0 && !activeRoster) {
+        handleOpenRosterDetails(published[0]._id);
+      }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to fetch rosters', 'error');
+      showToast(err.response?.data?.message || 'Failed to load rosters', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeRoster]);
 
   const fetchMyRoster = useCallback(async () => {
     try {
@@ -182,7 +212,7 @@ export default function RosterManagementPage() {
       const res = await rosterService.getMyRoster();
       setMyAssignments(res.data || []);
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to fetch your roster', 'error');
+      showToast(err.response?.data?.message || 'Failed to load your personal roster', 'error');
     } finally {
       setLoading(false);
     }
@@ -191,8 +221,8 @@ export default function RosterManagementPage() {
   const fetchActiveEmployees = useCallback(async () => {
     try {
       const res = await employeeService.listEmployees({ status: 'ACTIVE' });
-      const empList = res?.data?.data?.employees || res?.data?.employees || res?.data?.data || res?.data || [];
-      setActiveEmployees(Array.isArray(empList) ? empList : []);
+      const list = res?.data?.data?.employees || res?.data?.employees || res?.data?.data || res?.data || [];
+      setActiveEmployees(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error('Failed to load active employees:', err);
       setActiveEmployees([]);
@@ -200,22 +230,15 @@ export default function RosterManagementPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'templates' && canManage) {
-      fetchTemplates();
-    } else if ((activeTab === 'drafts' || activeTab === 'published') && canManage) {
+    if (canViewWorkforce) {
       fetchRosters();
-    } else if (activeTab === 'my-roster') {
-      fetchMyRoster();
-    }
-  }, [activeTab, canManage, fetchTemplates, fetchRosters, fetchMyRoster]);
-
-  useEffect(() => {
-    if (canManage) {
+      fetchTemplates();
       fetchActiveEmployees();
     }
-  }, [canManage, fetchActiveEmployees]);
+    fetchMyRoster();
+  }, [canViewWorkforce, fetchRosters, fetchTemplates, fetchActiveEmployees, fetchMyRoster]);
 
-  // Load Full Roster Details
+  // Load Single Roster Details
   const handleOpenRosterDetails = async (rosterId) => {
     try {
       setLoading(true);
@@ -226,6 +249,7 @@ export default function RosterManagementPage() {
         const startIso = new Date(rosterData.startDate).toISOString().split('T')[0];
         setActiveRosterDate(startIso);
       }
+      setSelectedReviewerIds(rosterData.sharedWith?.map((u) => u._id || u) || []);
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to load roster details', 'error');
     } finally {
@@ -233,22 +257,23 @@ export default function RosterManagementPage() {
     }
   };
 
-  // --- Template Management ---
+  // --- Template Builder ---
   const handleOpenNewTemplate = () => {
     setEditingTemplate(null);
     setTemplateForm({
-      title: 'Nursing Roster Template',
+      title: 'HOSPITAL NURSING ROSTER TEMPLATE',
       columns: [
-        { id: `col-${Date.now()}-1`, title: 'Morning', startTime: '08:00', endTime: '14:00', order: 1 },
-        { id: `col-${Date.now()}-2`, title: 'Afternoon', startTime: '14:00', endTime: '20:00', order: 2 },
-        { id: `col-${Date.now()}-3`, title: 'Night', startTime: '20:00', endTime: '08:00', order: 3 },
+        { id: `col-${Date.now()}-1`, title: 'MORNING', startTime: '08:00', endTime: '14:00', order: 1 },
+        { id: `col-${Date.now()}-2`, title: 'AFTERNOON', startTime: '14:00', endTime: '20:00', order: 2 },
+        { id: `col-${Date.now()}-3`, title: 'NIGHT', startTime: '20:00', endTime: '08:00', order: 3 },
       ],
       dutyAreas: [
-        { id: `da-${Date.now()}-1`, name: 'General Ward', order: 1 },
-        { id: `da-${Date.now()}-2`, name: 'NICU 2nd Floor', order: 2 },
-        { id: `da-${Date.now()}-3`, name: 'PICU', order: 3 },
-        { id: `da-${Date.now()}-4`, name: 'ICU', order: 4 },
-        { id: `da-${Date.now()}-5`, name: 'OT', order: 5 },
+        { id: `da-${Date.now()}-1`, name: 'GENERAL WARD FEMALE + GENERAL WARD MALE + DAY CARE WARD', order: 1 },
+        { id: `da-${Date.now()}-2`, name: 'PRIVATE WARD + LABOUR ROOM (2ND FLOOR)', order: 2 },
+        { id: `da-${Date.now()}-3`, name: 'NICU 2ND FLOOR', order: 3 },
+        { id: `da-${Date.now()}-4`, name: 'PICU', order: 4 },
+        { id: `da-${Date.now()}-5`, name: 'ICU 3RD FLOOR + PRIVATE WARD', order: 5 },
+        { id: `da-${Date.now()}-6`, name: 'OT', order: 6 },
       ],
     });
     setTemplateModalOpen(true);
@@ -264,80 +289,11 @@ export default function RosterManagementPage() {
     setTemplateModalOpen(true);
   };
 
-  const handleAddTemplateColumn = () => {
-    setTemplateForm((prev) => ({
-      ...prev,
-      columns: [
-        ...prev.columns,
-        {
-          id: `col-${Date.now()}`,
-          title: `Shift ${prev.columns.length + 1}`,
-          startTime: '08:00',
-          endTime: '16:00',
-          order: prev.columns.length + 1,
-        },
-      ],
-    }));
-  };
-
-  const handleRemoveTemplateColumn = (colId) => {
-    setTemplateForm((prev) => ({
-      ...prev,
-      columns: prev.columns.filter((c) => c.id !== colId),
-    }));
-  };
-
-  const handleUpdateTemplateColumn = (index, field, value) => {
-    setTemplateForm((prev) => {
-      const cols = [...prev.columns];
-      cols[index] = { ...cols[index], [field]: value };
-      return { ...prev, columns: cols };
-    });
-  };
-
-  const handleAddTemplateDutyArea = () => {
-    setTemplateForm((prev) => ({
-      ...prev,
-      dutyAreas: [
-        ...prev.dutyAreas,
-        {
-          id: `da-${Date.now()}`,
-          name: `Duty Area ${prev.dutyAreas.length + 1}`,
-          order: prev.dutyAreas.length + 1,
-        },
-      ],
-    }));
-  };
-
-  const handleRemoveTemplateDutyArea = (daId) => {
-    setTemplateForm((prev) => ({
-      ...prev,
-      dutyAreas: prev.dutyAreas.filter((d) => d.id !== daId),
-    }));
-  };
-
-  const handleUpdateTemplateDutyArea = (index, value) => {
-    setTemplateForm((prev) => {
-      const das = [...prev.dutyAreas];
-      das[index] = { ...das[index], name: value };
-      return { ...prev, dutyAreas: das };
-    });
-  };
-
   const handleSaveTemplate = async () => {
     if (!templateForm.title.trim()) {
       showToast('Template Title is required', 'warning');
       return;
     }
-    if (templateForm.columns.length === 0) {
-      showToast('At least one column/shift is required', 'warning');
-      return;
-    }
-    if (templateForm.dutyAreas.length === 0) {
-      showToast('At least one duty area is required', 'warning');
-      return;
-    }
-
     try {
       setLoading(true);
       if (editingTemplate) {
@@ -356,13 +312,13 @@ export default function RosterManagementPage() {
     }
   };
 
-  // --- Use Template to Create Roster ---
+  // --- Create Roster from Template ---
   const handleOpenUseTemplate = (tmpl) => {
     setSelectedTemplateForRoster(tmpl);
     const today = new Date().toISOString().split('T')[0];
     const tenDays = new Date(Date.now() + 9 * 86400000).toISOString().split('T')[0];
     setCreateRosterForm({
-      title: `${tmpl.title} (${today} to ${tenDays})`,
+      title: `${tmpl.title} (${today} TO ${tenDays})`,
       startDate: today,
       endDate: tenDays,
     });
@@ -370,15 +326,10 @@ export default function RosterManagementPage() {
   };
 
   const handleCreateRosterFromTemplate = async () => {
-    if (!createRosterForm.title.trim()) {
-      showToast('Roster Title is required', 'warning');
+    if (!createRosterForm.title.trim() || !createRosterForm.startDate || !createRosterForm.endDate) {
+      showToast('Title and dates are required', 'warning');
       return;
     }
-    if (!createRosterForm.startDate || !createRosterForm.endDate) {
-      showToast('Start and End Date are required', 'warning');
-      return;
-    }
-
     try {
       setLoading(true);
       const payload = {
@@ -388,20 +339,20 @@ export default function RosterManagementPage() {
         endDate: createRosterForm.endDate,
       };
       const res = await rosterService.createRoster(payload);
-      showToast('Draft Roster created successfully', 'success');
+      showToast('Draft Roster created', 'success');
       setCreateRosterModalOpen(false);
       setActiveRoster(res.data);
       setActiveRosterDate(createRosterForm.startDate);
       setActiveTab('drafts');
       fetchRosters();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to create roster from template', 'error');
+      showToast(err.response?.data?.message || 'Failed to create roster', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Assignment Management ---
+  // --- Add Nurse Assignment ---
   const handleOpenAddAssignment = (dutyAreaName, shift) => {
     setAssignmentTarget({ dutyArea: dutyAreaName, shift, editingAssignment: null });
     setLeaveWarning(null);
@@ -424,35 +375,54 @@ export default function RosterManagementPage() {
       return;
     }
 
-    try {
-      setLoading(true);
-      const res = await rosterService.addAssignment(activeRoster._id, assignmentForm);
-      showToast('Assignment added to roster', 'success');
-
-      if (res.data?.leaveWarning) {
-        setLeaveWarning(res.data.leaveWarning);
+    const saveProc = async () => {
+      try {
+        setLoading(true);
+        const res = await rosterService.addAssignment(activeRoster._id, assignmentForm);
+        showToast('Assignment added to roster', 'success');
+        if (res.data?.leaveWarning) {
+          setLeaveWarning(res.data.leaveWarning);
+        }
+        handleOpenRosterDetails(activeRoster._id);
+        setAssignmentModalOpen(false);
+      } catch (err) {
+        showToast(err.response?.data?.message || 'Failed to add assignment', 'error');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      // Refresh active roster
-      handleOpenRosterDetails(activeRoster._id);
-      setAssignmentModalOpen(false);
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to add assignment', 'error');
-    } finally {
-      setLoading(false);
+    if (activeRoster?.status === 'PUBLISHED') {
+      setPublishEditConfirm({
+        open: true,
+        pendingAction: saveProc,
+      });
+    } else {
+      await saveProc();
     }
   };
 
   const handleDeleteAssignment = async (assignmentId) => {
-    try {
-      setLoading(true);
-      await rosterService.deleteAssignment(activeRoster._id, assignmentId);
-      showToast('Assignment removed', 'info');
-      handleOpenRosterDetails(activeRoster._id);
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to remove assignment', 'error');
-    } finally {
-      setLoading(false);
+    const deleteProc = async () => {
+      try {
+        setLoading(true);
+        await rosterService.deleteAssignment(activeRoster._id, assignmentId);
+        showToast('Assignment removed from roster', 'info');
+        handleOpenRosterDetails(activeRoster._id);
+      } catch (err) {
+        showToast(err.response?.data?.message || 'Failed to remove assignment', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (activeRoster?.status === 'PUBLISHED') {
+      setPublishEditConfirm({
+        open: true,
+        pendingAction: deleteProc,
+      });
+    } else {
+      await deleteProc();
     }
   };
 
@@ -461,7 +431,7 @@ export default function RosterManagementPage() {
     try {
       setLoading(true);
       await rosterService.publishRoster(rosterId);
-      showToast('Roster published successfully! Assigned employees can now view their duty schedule.', 'success');
+      showToast('Roster published successfully! Changes are visible to all employees.', 'success');
       if (activeRoster && activeRoster._id === rosterId) {
         handleOpenRosterDetails(rosterId);
       }
@@ -473,7 +443,51 @@ export default function RosterManagementPage() {
     }
   };
 
-  // --- Delete Template / Roster Confirmation ---
+  // --- Review Sharing ---
+  const handleSaveShareReview = async () => {
+    try {
+      setLoading(true);
+      await rosterService.shareRosterForReview(activeRoster._id, selectedReviewerIds);
+      showToast('Roster shared for review successfully', 'success');
+      setShareModalOpen(false);
+      handleOpenRosterDetails(activeRoster._id);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to share roster for review', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Review Feedback Comment ---
+  const handleAddComment = async () => {
+    if (!newCommentText.trim()) return;
+    try {
+      setLoading(true);
+      await rosterService.addReviewComment(activeRoster._id, newCommentText);
+      showToast('Feedback comment added', 'success');
+      setNewCommentText('');
+      handleOpenRosterDetails(activeRoster._id);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to post comment', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResolveComment = async (commentId) => {
+    try {
+      setLoading(true);
+      await rosterService.resolveReviewComment(activeRoster._id, commentId);
+      showToast('Comment marked resolved', 'success');
+      handleOpenRosterDetails(activeRoster._id);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to resolve comment', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Delete Roster or Template ---
   const handleConfirmDelete = async () => {
     const { type, id } = deleteConfirm;
     try {
@@ -492,13 +506,13 @@ export default function RosterManagementPage() {
       }
       setDeleteConfirm({ open: false, type: '', id: '', title: '' });
     } catch (err) {
-      showToast(err.response?.data?.message || 'Delete operation failed', 'error');
+      showToast(err.response?.data?.message || 'Delete failed', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Computed Date Range for Active Roster Editor
+  // Computed Date Range for Active Roster Matrix
   const activeRosterDates = useMemo(() => {
     if (!activeRoster?.startDate || !activeRoster?.endDate) return [];
     const list = [];
@@ -511,7 +525,7 @@ export default function RosterManagementPage() {
     return list;
   }, [activeRoster]);
 
-  // Compute Assignments map for selected active date in editor
+  // Compute Assignments Map for active selected date in matrix view
   const assignmentsByCell = useMemo(() => {
     if (!activeRoster?.assignments || !activeRosterDate) return {};
     const map = {};
@@ -526,45 +540,64 @@ export default function RosterManagementPage() {
     return map;
   }, [activeRoster, activeRosterDate]);
 
-  // Transform My Roster assignments into Calendar Events for UnifiedCalendar
+  // Transform My Roster into Calendar Events for UnifiedCalendar
   const myRosterCalendarEvents = useMemo(() => {
-    return myAssignments.map((ass) => {
-      const empName = ass.employeeId
-        ? `${ass.employeeId.firstName || ''} ${ass.employeeId.lastName || ''}`.trim()
-        : 'Me';
-      return {
-        id: ass._id,
-        title: `${ass.shiftTitle} (${ass.startTime} - ${ass.endTime}) - ${ass.dutyArea}`,
-        startDate: ass.date,
-        endDate: ass.date,
-        type: 'duty_roster',
-        dutyArea: ass.dutyArea,
-        shiftTitle: ass.shiftTitle,
-        times: `${ass.startTime} to ${ass.endTime}`,
-        employeeName: empName,
-        status: 'published',
-      };
-    });
+    return myAssignments.map((ass) => ({
+      id: ass.id || ass._id,
+      title: `${ass.shiftTitle} (${ass.startTime} - ${ass.endTime}) - ${ass.dutyArea}`,
+      startDate: ass.date,
+      endDate: ass.date,
+      type: 'duty_roster',
+      dutyArea: ass.dutyArea,
+      shiftTitle: ass.shiftTitle,
+      times: `${ass.startTime} to ${ass.endTime}`,
+      status: 'published',
+    }));
   }, [myAssignments]);
 
-  const draftsList = useMemo(
-    () => rosters.filter((r) => r.status === 'DRAFT'),
-    [rosters]
-  );
+  // Format Header Month & Year (e.g., SEPTEMBER 2026)
+  const headerMonthYearStr = useMemo(() => {
+    if (!activeRoster?.startDate) return 'DUTY ROSTER';
+    const d = new Date(activeRoster.startDate);
+    const month = d.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+    const year = d.getFullYear();
+    return `${month} (${year})`;
+  }, [activeRoster]);
 
-  const publishedList = useMemo(
-    () => rosters.filter((r) => r.status === 'PUBLISHED'),
-    [rosters]
-  );
+  // Format Header Period Range (e.g., 11/09/26 TO 20/09/26)
+  const headerPeriodStr = useMemo(() => {
+    if (!activeRoster?.startDate || !activeRoster?.endDate) return '';
+    const formatD = (dStr) => {
+      const d = new Date(dStr);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = String(d.getFullYear()).slice(-2);
+      return `${day}/${month}/${year}`;
+    };
+    return `${formatD(activeRoster.startDate)} TO ${formatD(activeRoster.endDate)}`;
+  }, [activeRoster]);
+
+  const draftsList = useMemo(() => rosters.filter((r) => r.status === 'DRAFT'), [rosters]);
+  const publishedList = useMemo(() => rosters.filter((r) => r.status === 'PUBLISHED'), [rosters]);
+
+  const filteredReviewerEmployees = useMemo(() => {
+    const q = reviewerSearch.toLowerCase().trim();
+    if (!q) return activeEmployees;
+    return activeEmployees.filter(
+      (e) =>
+        `${e.firstName} ${e.lastName}`.toLowerCase().includes(q) ||
+        (e.employeeId && e.employeeId.toLowerCase().includes(q))
+    );
+  }, [activeEmployees, reviewerSearch]);
 
   return (
-    <AppLayout title="Roster Management">
+    <AppLayout title="Hospital Duty Roster">
       <Box sx={{ p: { xs: 2, md: 3 } }}>
         <PageHeader
           title="Hospital Duty Roster"
-          subtitle="Hospital-wide duty planning, custom roster templates, and employee shift schedules."
+          subtitle="Hospital-wide duty planning, custom shift matrix layouts, and staff allocations."
           action={
-            canManage && activeTab === 'templates' && (
+            canManage && (
               <Button
                 variant="contained"
                 startIcon={<AddRounded />}
@@ -583,14 +616,23 @@ export default function RosterManagementPage() {
             value={activeTab}
             onChange={(e, val) => {
               setActiveTab(val);
-              setActiveRoster(null);
+              if (val === 'published-matrix' && publishedList.length > 0) {
+                handleOpenRosterDetails(publishedList[0]._id);
+              }
             }}
             indicatorColor="primary"
             textColor="primary"
             variant="scrollable"
             scrollButtons="auto"
           >
-            {canViewWorkforce && <Tab icon={<EventNoteRounded />} iconPosition="start" label="Templates" value="templates" />}
+            {canViewWorkforce && (
+              <Tab
+                icon={<PublishRounded />}
+                iconPosition="start"
+                label={`Published Roster Matrix (${publishedList.length})`}
+                value="published-matrix"
+              />
+            )}
             {canManage && (
               <Tab
                 icon={<EditOutlined />}
@@ -599,165 +641,119 @@ export default function RosterManagementPage() {
                 value="drafts"
               />
             )}
-            {canViewWorkforce && (
+            {canManage && (
               <Tab
-                icon={<PublishRounded />}
+                icon={<EventNoteRounded />}
                 iconPosition="start"
-                label={`Published Rosters (${publishedList.length})`}
-                value="published"
+                label={`Roster Templates (${templates.length})`}
+                value="templates"
               />
             )}
-            {canViewOwn && (
-              <Tab icon={<CalendarMonthRounded />} iconPosition="start" label="My Roster" value="my-roster" />
-            )}
+            <Tab icon={<CalendarMonthRounded />} iconPosition="start" label="My Roster" value="my-roster" />
           </Tabs>
         </Paper>
 
-        {/* ─── TAB 1: TEMPLATES ─── */}
-        {activeTab === 'templates' && canViewWorkforce && (
-          <Box>
-            {templates.length === 0 && !loading ? (
-              <EmptyState
-                icon={EventNoteRounded}
-                title="No Roster Templates Created"
-                description="Create a hospital duty roster template defining your preferred shift hours and duty area layout."
-                action={
-                  <Button variant="contained" startIcon={<AddRounded />} onClick={handleOpenNewTemplate}>
-                    Create First Template
-                  </Button>
-                }
-              />
-            ) : (
-              <Grid container spacing={3}>
-                {templates.map((tmpl) => (
-                  <Grid item xs={12} md={6} lg={4} key={tmpl._id}>
-                    <GlassCard sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                        <Box>
-                          <Typography variant="h6" fontWeight="bold">
-                            {tmpl.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Created: {new Date(tmpl.createdAt).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-                        <Stack direction="row" spacing={0.5}>
-                          <IconButton size="small" onClick={() => handleOpenEditTemplate(tmpl)}>
-                            <EditOutlined fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() =>
-                              setDeleteConfirm({
-                                open: true,
-                                type: 'template',
-                                id: tmpl._id,
-                                title: tmpl.title,
-                              })
-                            }
-                          >
-                            <DeleteOutlineRounded fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      </Stack>
-
-                      {/* Shifts Preview */}
-                      <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="600">
-                        Configured Shifts ({tmpl.columns?.length || 0})
-                      </Typography>
-                      <Stack direction="row" spacing={1} flexWrap="wrap" gap={1} mb={2}>
-                        {tmpl.columns?.map((col) => (
-                          <Chip
-                            key={col.id || col.title}
-                            size="small"
-                            icon={<ScheduleRounded fontSize="small" />}
-                            label={`${col.title} (${col.startTime} - ${col.endTime})`}
-                            variant="outlined"
-                          />
-                        ))}
-                      </Stack>
-
-                      {/* Duty Areas Preview */}
-                      <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="600">
-                        Duty Areas ({tmpl.dutyAreas?.length || 0})
-                      </Typography>
-                      <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5} mb={3}>
-                        {tmpl.dutyAreas?.map((da) => (
-                          <Chip key={da.id || da.name} size="small" label={da.name} color="default" />
-                        ))}
-                      </Stack>
-
-                      <Box sx={{ mt: 'auto', pt: 1 }}>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          color="primary"
-                          startIcon={<GroupAddRounded />}
-                          onClick={() => handleOpenUseTemplate(tmpl)}
-                        >
-                          Use Template to Create Roster
-                        </Button>
-                      </Box>
-                    </GlassCard>
-                  </Grid>
-                ))}
-              </Grid>
-            )}
-          </Box>
-        )}
-
-        {/* ─── TAB 2: DRAFT ROSTERS & ACTIVE ROSTER EDITOR ─── */}
-        {activeTab === 'drafts' && canManage && (
+        {/* ─── TAB 1: PUBLISHED ROSTER MATRIX ─── */}
+        {activeTab === 'published-matrix' && (
           <Box>
             {activeRoster ? (
-              /* Active Roster Editor View */
               <Box>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <Button
-                      startIcon={<ArrowBackRounded />}
-                      onClick={() => setActiveRoster(null)}
-                      variant="outlined"
-                    >
-                      Back to Rosters
-                    </Button>
-                    <Box>
-                      <Typography variant="h5" fontWeight="bold">
-                        {activeRoster.title}
+                {/* Roster Selection Bar if multiple published rosters exist */}
+                {publishedList.length > 1 && (
+                  <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Typography variant="body2" fontWeight="bold">
+                        Select Published Roster:
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Range: {new Date(activeRoster.startDate).toLocaleDateString()} to{' '}
-                        {new Date(activeRoster.endDate).toLocaleDateString()}
-                      </Typography>
-                    </Box>
+                      <FormControl size="small" sx={{ minWidth: 260 }}>
+                        <Select
+                          value={activeRoster._id}
+                          onChange={(e) => handleOpenRosterDetails(e.target.value)}
+                        >
+                          {publishedList.map((r) => (
+                            <MenuItem key={r._id} value={r._id}>
+                              {r.title}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  </Paper>
+                )}
+
+                {/* REAL HOSPITAL ROSTER HEADER BANNER */}
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    border: '2px solid #000000',
+                    bgcolor: '#FFFFFF',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography variant="h4" fontWeight="900" sx={{ letterSpacing: 1.5, color: '#000000' }}>
+                    {headerMonthYearStr}
+                  </Typography>
+                  <Typography variant="h6" fontWeight="700" sx={{ mt: 0.5, color: '#333333' }}>
+                    {headerPeriodStr}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 600 }}>
+                    {activeRoster.title}
+                  </Typography>
+
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2} flexWrap="wrap" gap={1}>
                     <StatusBadge status={activeRoster.status} />
-                  </Stack>
 
-                  <Stack direction="row" spacing={2}>
-                    {activeRoster.status === 'DRAFT' && (
-                      <Button
-                        variant="contained"
-                        color="success"
-                        startIcon={<PublishRounded />}
-                        onClick={() => handlePublishRoster(activeRoster._id)}
-                      >
-                        Publish Roster
-                      </Button>
-                    )}
-                  </Stack>
-                </Stack>
+                    <Stack direction="row" spacing={1}>
+                      {activeRoster.comments?.length > 0 && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="info"
+                          startIcon={<CommentOutlined />}
+                          onClick={() => setFeedbackModalOpen(true)}
+                        >
+                          Feedback Comments ({activeRoster.comments.length})
+                        </Button>
+                      )}
 
-                {/* Date Selector Tabs */}
+                      {canManage && (
+                        <>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<ShareOutlined />}
+                            onClick={() => setShareModalOpen(true)}
+                          >
+                            Share for Review
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="primary"
+                            startIcon={<EditOutlined />}
+                            onClick={() => showToast('Editing published roster matrix. Changes will be live immediately.', 'info')}
+                          >
+                            Edit Roster Matrix
+                          </Button>
+                        </>
+                      )}
+                    </Stack>
+                  </Stack>
+                </Paper>
+
+                {/* Date Navigator Bar */}
                 <Paper sx={{ p: 1.5, mb: 3, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, px: 1 }} color="text.secondary">
-                    Select Roster Date:
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, px: 1, display: 'block', fontWeight: 700 }}>
+                    SELECT DUTY DATE:
                   </Typography>
                   <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 1 }}>
                     {activeRosterDates.map((dStr) => {
                       const isSelected = activeRosterDate === dStr;
                       const dateObj = new Date(dStr);
-                      const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                      const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
                       const formattedStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
                       return (
@@ -766,12 +762,12 @@ export default function RosterManagementPage() {
                           variant={isSelected ? 'contained' : 'outlined'}
                           color={isSelected ? 'primary' : 'inherit'}
                           onClick={() => setActiveRosterDate(dStr)}
-                          sx={{ minWidth: 100, flexDirection: 'column', py: 1 }}
+                          sx={{ minWidth: 105, flexDirection: 'column', py: 1, borderRadius: 1.5 }}
                         >
-                          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                          <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 700 }}>
                             {dayName}
                           </Typography>
-                          <Typography variant="body2" fontWeight="bold">
+                          <Typography variant="body2" fontWeight="900">
                             {formattedStr}
                           </Typography>
                         </Button>
@@ -780,22 +776,35 @@ export default function RosterManagementPage() {
                   </Stack>
                 </Paper>
 
-                {/* Interactive Roster Table Grid */}
+                {/* REAL HOSPITAL ROSTER MATRIX GRID */}
                 {activeRoster.templateId ? (
-                  <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: theme.shadows[2] }}>
-                    <Table>
-                      <TableHead sx={{ bgcolor: theme.palette.action.hover }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold', width: '220px' }}>
-                            Duty Area / Shift
-                          </TableCell>
+                  <TableContainer
+                    component={Paper}
+                    sx={{
+                      borderRadius: 2,
+                      border: '2px solid #000000',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      overflowX: 'auto',
+                    }}
+                  >
+                    <Table sx={{ borderCollapse: 'collapse', minWidth: 800 }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#1E293B' }}>
                           {activeRoster.templateId.columns?.map((col) => (
-                            <TableCell key={col.id} align="center" sx={{ fontWeight: 'bold', minWidth: '220px' }}>
-                              <Typography variant="subtitle2" fontWeight="bold">
-                                {col.title}
+                            <TableCell
+                              key={col.id || col.title}
+                              align="center"
+                              sx={{
+                                color: '#FFFFFF',
+                                borderRight: '1px solid #475569',
+                                py: 2,
+                              }}
+                            >
+                              <Typography variant="subtitle1" fontWeight="900" sx={{ letterSpacing: 1 }}>
+                                {col.title?.toUpperCase()}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {col.startTime} → {col.endTime}
+                              <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 700 }}>
+                                {col.startTime} TO {col.endTime}
                               </Typography>
                             </TableCell>
                           ))}
@@ -803,354 +812,323 @@ export default function RosterManagementPage() {
                       </TableHead>
                       <TableBody>
                         {activeRoster.templateId.dutyAreas?.map((da) => (
-                          <TableRow key={da.id} hover>
-                            <TableCell sx={{ fontWeight: '600', bgcolor: theme.palette.background.default }}>
-                              {da.name}
-                            </TableCell>
+                          <Box component="tbody" key={da.id || da.name}>
+                            {/* DUTY AREA FULL-WIDTH ROW HEADER */}
+                            <TableRow sx={{ bgcolor: '#F1F5F9', borderTop: '2px solid #000000', borderBottom: '1px solid #000000' }}>
+                              <TableCell
+                                colSpan={activeRoster.templateId.columns?.length || 1}
+                                sx={{
+                                  py: 1.25,
+                                  px: 2,
+                                  fontWeight: '900',
+                                  color: '#0F172A',
+                                  fontSize: '0.95rem',
+                                  letterSpacing: 0.5,
+                                }}
+                              >
+                                {da.name?.toUpperCase()}
+                              </TableCell>
+                            </TableRow>
 
-                            {activeRoster.templateId.columns?.map((col) => {
-                              const cellKey = `${da.name}__${col.title}`;
-                              const cellAssignments = assignmentsByCell[cellKey] || [];
+                            {/* SHIFT COLUMNS FOR THIS DUTY AREA */}
+                            <TableRow sx={{ borderBottom: '2px solid #000000' }}>
+                              {activeRoster.templateId.columns?.map((col) => {
+                                const cellKey = `${da.name}__${col.title}`;
+                                const cellAssignments = assignmentsByCell[cellKey] || [];
 
-                              return (
-                                <TableCell key={col.id} align="center" sx={{ verticalAlign: 'top', p: 1.5 }}>
-                                  <Stack spacing={1}>
-                                    {cellAssignments.map((ass) => {
-                                      const emp = ass.employeeId;
-                                      const nameStr = emp
-                                        ? `${emp.firstName || ''} ${emp.lastName || ''}`.trim()
-                                        : 'Unknown Employee';
-                                      const codeStr = emp?.employeeId ? `(${emp.employeeId})` : '';
+                                return (
+                                  <TableCell
+                                    key={col.id || col.title}
+                                    sx={{
+                                      verticalAlign: 'top',
+                                      p: 2,
+                                      width: `${100 / (activeRoster.templateId.columns?.length || 1)}%`,
+                                      borderRight: '1px solid #CBD5E1',
+                                      bgcolor: '#FFFFFF',
+                                    }}
+                                  >
+                                    <Stack spacing={1.5}>
+                                      {cellAssignments.map((ass) => {
+                                        const emp = ass.employeeId;
+                                        const fullName = emp
+                                          ? `${emp.firstName || ''} ${emp.lastName || ''}`.trim().toUpperCase()
+                                          : 'UNKNOWN STAFF';
+                                        const isCustomTime =
+                                          ass.startTime !== col.startTime || ass.endTime !== col.endTime;
 
-                                      return (
-                                        <Paper
-                                          key={ass._id}
-                                          variant="outlined"
-                                          sx={{
-                                            p: 1,
-                                            textAlign: 'left',
-                                            borderColor: theme.palette.primary.light,
-                                            bgcolor: theme.palette.action.hover,
-                                          }}
-                                        >
-                                          <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                            <Stack direction="row" alignItems="center" spacing={1}>
-                                              <InitialsAvatar name={nameStr} size={28} />
+                                        return (
+                                          <Box
+                                            key={ass._id}
+                                            sx={{
+                                              p: 1.25,
+                                              borderLeft: '4px solid #0284C7',
+                                              bgcolor: '#F8FAFC',
+                                              border: '1px solid #E2E8F0',
+                                              borderLeftWidth: '4px',
+                                              borderRadius: 1,
+                                            }}
+                                          >
+                                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                                               <Box>
-                                                <Typography variant="body2" fontWeight="600">
-                                                  {nameStr}
+                                                <Typography variant="body2" fontWeight="800" sx={{ color: '#0F172A' }}>
+                                                  {fullName}
                                                 </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                  {codeStr} • {ass.startTime}-{ass.endTime}
-                                                </Typography>
+                                                {isCustomTime && (
+                                                  <Typography variant="caption" fontWeight="700" color="primary">
+                                                    {ass.startTime} TO {ass.endTime}
+                                                  </Typography>
+                                                )}
+                                                {ass.notes && (
+                                                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontStyle: 'italic' }}>
+                                                    Note: {ass.notes}
+                                                  </Typography>
+                                                )}
                                               </Box>
-                                            </Stack>
-                                            {activeRoster.status === 'DRAFT' && (
-                                              <IconButton
-                                                size="small"
-                                                color="error"
-                                                onClick={() => handleDeleteAssignment(ass._id)}
-                                              >
-                                                <DeleteOutlineRounded fontSize="small" />
-                                              </IconButton>
-                                            )}
-                                          </Stack>
-                                          {ass.notes && (
-                                            <Typography variant="caption" color="info.main" sx={{ display: 'block', mt: 0.5 }}>
-                                              Note: {ass.notes}
-                                            </Typography>
-                                          )}
-                                        </Paper>
-                                      );
-                                    })}
 
-                                    {activeRoster.status === 'DRAFT' && (
-                                      <Button
-                                        size="small"
-                                        startIcon={<AddRounded />}
-                                        onClick={() => handleOpenAddAssignment(da.name, col)}
-                                        sx={{ textTransform: 'none', borderRadius: 1 }}
-                                      >
-                                        + Add Nurse
-                                      </Button>
-                                    )}
-                                  </Stack>
-                                </TableCell>
-                              );
-                            })}
-                          </TableRow>
+                                              {canManage && (
+                                                <IconButton
+                                                  size="small"
+                                                  color="error"
+                                                  onClick={() => handleDeleteAssignment(ass._id)}
+                                                >
+                                                  <CloseRounded fontSize="small" />
+                                                </IconButton>
+                                              )}
+                                            </Stack>
+                                          </Box>
+                                        );
+                                      })}
+
+                                      {cellAssignments.length === 0 && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                          No Staff Assigned
+                                        </Typography>
+                                      )}
+
+                                      {canManage && (
+                                        <Button
+                                          size="small"
+                                          variant="outlined"
+                                          startIcon={<AddRounded />}
+                                          onClick={() => handleOpenAddAssignment(da.name, col)}
+                                          sx={{ textTransform: 'none', mt: 1, fontWeight: 700 }}
+                                        >
+                                          + Add Employee
+                                        </Button>
+                                      )}
+                                    </Stack>
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          </Box>
                         ))}
                       </TableBody>
                     </Table>
                   </TableContainer>
                 ) : (
-                  <Alert severity="warning">Template layout information missing for this roster.</Alert>
+                  <Alert severity="warning">Roster template layout definition not found.</Alert>
                 )}
               </Box>
             ) : (
-              /* Draft Rosters List */
-              <Box>
-                {draftsList.length === 0 ? (
-                  <EmptyState
-                    icon={EditOutlined}
-                    title="No Active Draft Rosters"
-                    description="Select a saved template to generate a new hospital roster draft."
-                    action={
-                      <Button variant="contained" onClick={() => setActiveTab('templates')}>
-                        View Templates
-                      </Button>
-                    }
-                  />
-                ) : (
-                  <Grid container spacing={3}>
-                    {draftsList.map((r) => (
-                      <Grid item xs={12} md={6} lg={4} key={r._id}>
-                        <GlassCard sx={{ p: 3 }}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                            <Box>
-                              <Typography variant="h6" fontWeight="bold">
-                                {r.title}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {new Date(r.startDate).toLocaleDateString()} to{' '}
-                                {new Date(r.endDate).toLocaleDateString()}
-                              </Typography>
-                            </Box>
-                            <StatusBadge status={r.status} />
-                          </Stack>
-
-                          <Typography variant="body2" color="text.secondary" mb={3}>
-                            Assigned Staff Entries: <strong>{r.assignments?.length || 0}</strong>
-                          </Typography>
-
-                          <Stack direction="row" spacing={1}>
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              startIcon={<EditOutlined />}
-                              onClick={() => handleOpenRosterDetails(r._id)}
-                              fullWidth
-                            >
-                              Edit Draft
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              color="success"
-                              onClick={() => handlePublishRoster(r._id)}
-                            >
-                              Publish
-                            </Button>
-                            <IconButton
-                              color="error"
-                              onClick={() =>
-                                setDeleteConfirm({
-                                  open: true,
-                                  type: 'roster',
-                                  id: r._id,
-                                  title: r.title,
-                                })
-                              }
-                            >
-                              <DeleteOutlineRounded />
-                            </IconButton>
-                          </Stack>
-                        </GlassCard>
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
-              </Box>
+              <EmptyState
+                icon={EventNoteRounded}
+                title="No Published Duty Rosters"
+                description="When draft rosters are published by HR or Admin, the workforce duty matrix will appear here."
+              />
             )}
           </Box>
         )}
 
-        {/* ─── TAB 3: PUBLISHED ROSTERS ─── */}
-        {activeTab === 'published' && canViewWorkforce && (
-          <Box>
-            {activeRoster ? (
-              /* Published Roster Detail View */
-              <Box>
-                <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-                  <Button startIcon={<ArrowBackRounded />} onClick={() => setActiveRoster(null)} variant="outlined">
-                    Back to Published List
-                  </Button>
-                  <Typography variant="h5" fontWeight="bold">
-                    {activeRoster.title}
-                  </Typography>
-                  <StatusBadge status={activeRoster.status} />
-                </Stack>
-
-                {/* Reuse Date Selector & Readonly Table */}
-                <Paper sx={{ p: 1.5, mb: 3, borderRadius: 2 }}>
-                  <Stack direction="row" spacing={1} sx={{ overflowX: 'auto' }}>
-                    {activeRosterDates.map((dStr) => (
-                      <Button
-                        key={dStr}
-                        variant={activeRosterDate === dStr ? 'contained' : 'outlined'}
-                        onClick={() => setActiveRosterDate(dStr)}
-                        size="small"
-                      >
-                        {dStr}
-                      </Button>
-                    ))}
-                  </Stack>
-                </Paper>
-
-                <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-                  <Table>
-                    <TableHead sx={{ bgcolor: theme.palette.action.hover }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Duty Area</TableCell>
-                        {activeRoster.templateId?.columns?.map((col) => (
-                          <TableCell key={col.id} align="center" sx={{ fontWeight: 'bold' }}>
-                            {col.title} ({col.startTime} - {col.endTime})
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {activeRoster.templateId?.dutyAreas?.map((da) => (
-                        <TableRow key={da.id}>
-                          <TableCell sx={{ fontWeight: '600' }}>{da.name}</TableCell>
-                          {activeRoster.templateId?.columns?.map((col) => {
-                            const cellKey = `${da.name}__${col.title}`;
-                            const cellAssignments = assignmentsByCell[cellKey] || [];
-                            return (
-                              <TableCell key={col.id} align="center">
-                                {cellAssignments.map((ass) => (
-                                  <Chip
-                                    key={ass._id}
-                                    avatar={
-                                      <InitialsAvatar
-                                        name={`${ass.employeeId?.firstName || ''} ${ass.employeeId?.lastName || ''}`}
-                                        size={24}
-                                      />
-                                    }
-                                    label={`${ass.employeeId?.firstName || 'Employee'} ${ass.employeeId?.lastName || ''}`}
-                                    variant="outlined"
-                                    sx={{ m: 0.5 }}
-                                  />
-                                ))}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
+        {/* ─── TAB 2: DRAFT ROSTERS ─── */}
+        {activeTab === 'drafts' && canManage && (
+          <Grid container spacing={3}>
+            {draftsList.length === 0 ? (
+              <Grid item xs={12}>
+                <EmptyState
+                  icon={EditOutlined}
+                  title="No Active Draft Rosters"
+                  description="Use a saved template to generate a new hospital duty roster draft."
+                  action={
+                    <Button variant="contained" onClick={() => setActiveTab('templates')}>
+                      View Roster Templates
+                    </Button>
+                  }
+                />
+              </Grid>
             ) : (
-              <Grid container spacing={3}>
-                {publishedList.length === 0 ? (
-                  <EmptyState
-                    icon={CheckCircleOutlineRounded}
-                    title="No Published Rosters"
-                    description="When draft rosters are published by HR/Admin, they will appear here."
-                  />
-                ) : (
-                  publishedList.map((r) => (
-                    <Grid item xs={12} md={6} lg={4} key={r._id}>
-                      <GlassCard sx={{ p: 3 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                          <Box>
-                            <Typography variant="h6" fontWeight="bold">
-                              {r.title}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Published: {new Date(r.publishedAt || r.updatedAt).toLocaleDateString()}
-                            </Typography>
-                          </Box>
-                          <StatusBadge status={r.status} />
-                        </Stack>
+              draftsList.map((r) => (
+                <Grid item xs={12} md={6} lg={4} key={r._id}>
+                  <GlassCard sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                      <Box>
+                        <Typography variant="h6" fontWeight="bold">
+                          {r.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Period: {new Date(r.startDate).toLocaleDateString()} to{' '}
+                          {new Date(r.endDate).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <StatusBadge status={r.status} />
+                    </Stack>
+
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                      Assigned Entries: <strong>{r.assignments?.length || 0}</strong> • Shared Reviewers:{' '}
+                      <strong>{r.sharedWith?.length || 0}</strong>
+                    </Typography>
+
+                    <Stack spacing={1} sx={{ mt: 'auto' }}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<EditOutlined />}
+                        onClick={() => {
+                          handleOpenRosterDetails(r._id);
+                          setActiveTab('published-matrix');
+                        }}
+                      >
+                        Open Draft Matrix
+                      </Button>
+                      <Stack direction="row" spacing={1}>
                         <Button
                           variant="outlined"
-                          startIcon={<VisibilityOutlined />}
-                          onClick={() => handleOpenRosterDetails(r._id)}
+                          size="small"
+                          startIcon={<ShareOutlined />}
+                          onClick={() => {
+                            setActiveRoster(r);
+                            setSelectedReviewerIds(r.sharedWith?.map((u) => u._id || u) || []);
+                            setShareModalOpen(true);
+                          }}
                           fullWidth
                         >
-                          View Schedule Grid
+                          Share for Review
                         </Button>
-                      </GlassCard>
-                    </Grid>
-                  ))
-                )}
-              </Grid>
+                        <Button
+                          variant="contained"
+                          color="success"
+                          size="small"
+                          startIcon={<PublishRounded />}
+                          onClick={() => handlePublishRoster(r._id)}
+                          fullWidth
+                        >
+                          Publish
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </GlassCard>
+                </Grid>
+              ))
             )}
-          </Box>
+          </Grid>
         )}
 
-        {/* ─── TAB 4: MY ROSTER (Employee View) ─── */}
-        {activeTab === 'my-roster' && (
-          <Box>
-            <Paper sx={{ p: 3, borderRadius: 2, mb: 3 }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                My Published Duty Assignments
-              </Typography>
-              <Typography variant="body2" color="text.secondary" mb={3}>
-                Below is your personal duty roster schedule published by hospital management.
-              </Typography>
-
-              {myAssignments.length === 0 ? (
+        {/* ─── TAB 3: TEMPLATES ─── */}
+        {activeTab === 'templates' && canManage && (
+          <Grid container spacing={3}>
+            {templates.length === 0 ? (
+              <Grid item xs={12}>
                 <EmptyState
-                  icon={CalendarMonthRounded}
-                  title="No Duty Assignments Found"
-                  description="You currently have no published duty assignments in the system."
+                  icon={EventNoteRounded}
+                  title="No Roster Templates Created"
+                  description="Create a hospital roster template defining shift hours and duty area layouts."
+                  action={
+                    <Button variant="contained" startIcon={<AddRounded />} onClick={handleOpenNewTemplate}>
+                      Create Template
+                    </Button>
+                  }
                 />
-              ) : (
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={7}>
-                    <Typography variant="subtitle1" fontWeight="bold" mb={2}>
-                      Duty Schedule List
+              </Grid>
+            ) : (
+              templates.map((tmpl) => (
+                <Grid item xs={12} md={6} lg={4} key={tmpl._id}>
+                  <GlassCard sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                      <Box>
+                        <Typography variant="h6" fontWeight="bold">
+                          {tmpl.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Configured Shifts: {tmpl.columns?.length || 0} | Duty Areas: {tmpl.dutyAreas?.length || 0}
+                        </Typography>
+                      </Box>
+                      <IconButton size="small" onClick={() => handleOpenEditTemplate(tmpl)}>
+                        <EditOutlined fontSize="small" />
+                      </IconButton>
+                    </Stack>
+
+                    <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="700">
+                      Shifts
                     </Typography>
-                    <Stack spacing={2}>
-                      {myAssignments.map((ass) => (
-                        <Paper
-                          key={ass._id}
-                          variant="outlined"
-                          sx={{ p: 2, borderRadius: 2, borderColor: theme.palette.primary.light }}
-                        >
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box>
-                              <Typography variant="subtitle1" fontWeight="bold" color="primary">
-                                {new Date(ass.date).toLocaleDateString('en-US', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </Typography>
-                              <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
-                                <Chip
-                                  icon={<ScheduleRounded fontSize="small" />}
-                                  label={`${ass.shiftTitle} (${ass.startTime} - ${ass.endTime})`}
-                                  size="small"
-                                  color="primary"
-                                />
-                                <Chip label={ass.dutyArea} size="small" variant="outlined" />
-                              </Stack>
-                            </Box>
-                            {ass.notes && (
-                              <Typography variant="caption" color="text.secondary">
-                                Note: {ass.notes}
-                              </Typography>
-                            )}
-                          </Stack>
-                        </Paper>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" gap={0.5} mb={2}>
+                      {tmpl.columns?.map((c) => (
+                        <Chip key={c.id || c.title} size="small" label={`${c.title} (${c.startTime}-${c.endTime})`} variant="outlined" />
                       ))}
                     </Stack>
-                  </Grid>
 
-                  <Grid item xs={12} md={5}>
-                    <Typography variant="subtitle1" fontWeight="bold" mb={2}>
-                      Calendar View
-                    </Typography>
-                    <UnifiedCalendar events={myRosterCalendarEvents} initialView="month" />
-                  </Grid>
+                    <Button
+                      variant="contained"
+                      startIcon={<GroupAddRounded />}
+                      onClick={() => handleOpenUseTemplate(tmpl)}
+                      sx={{ mt: 'auto' }}
+                    >
+                      Use Template to Create Roster
+                    </Button>
+                  </GlassCard>
                 </Grid>
-              )}
-            </Paper>
-          </Box>
+              ))
+            )}
+          </Grid>
+        )}
+
+        {/* ─── TAB 4: MY ROSTER (Employee Personal Schedule) ─── */}
+        {activeTab === 'my-roster' && (
+          <Paper sx={{ p: 3, borderRadius: 2 }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              My Duty Assignments
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              Personal published shift schedule assigned by hospital management.
+            </Typography>
+
+            {myAssignments.length === 0 ? (
+              <EmptyState
+                icon={CalendarMonthRounded}
+                title="No Personal Duty Assignments Found"
+                description="You currently have no published shift assignments."
+              />
+            ) : (
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={7}>
+                  <Stack spacing={2}>
+                    {myAssignments.map((ass) => (
+                      <Paper key={ass.id || ass._id} variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: '#0284C7' }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                              {new Date(ass.date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </Typography>
+                            <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+                              <Chip icon={<ScheduleRounded fontSize="small" />} label={`${ass.shiftTitle} (${ass.startTime} - ${ass.endTime})`} size="small" color="primary" />
+                              <Chip label={ass.dutyArea} size="small" variant="outlined" />
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                </Grid>
+                <Grid item xs={12} md={5}>
+                  <UnifiedCalendar events={myRosterCalendarEvents} initialView="month" />
+                </Grid>
+              </Grid>
+            )}
+          </Paper>
         )}
 
         {/* ─── MODAL 1: TEMPLATE BUILDER ─── */}
@@ -1165,19 +1143,31 @@ export default function RosterManagementPage() {
               label="Template Title"
               value={templateForm.title}
               onChange={(e) => setTemplateForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="e.g. September Nursing Roster (11/09/26 TO 20/09/26)"
+              placeholder="e.g. HOSPITAL NURSING ROSTER TEMPLATE"
               fullWidth
               required
             />
 
-            {/* Configurable Columns / Shifts */}
+            {/* Configurable Shift Columns */}
             <Box>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                 <Typography variant="subtitle1" fontWeight="bold">
                   Configurable Shift Columns
                 </Typography>
-                <Button size="small" startIcon={<AddRounded />} onClick={handleAddTemplateColumn}>
-                  Add Column
+                <Button
+                  size="small"
+                  startIcon={<AddRounded />}
+                  onClick={() =>
+                    setTemplateForm((p) => ({
+                      ...p,
+                      columns: [
+                        ...p.columns,
+                        { id: `col-${Date.now()}`, title: `SHIFT ${p.columns.length + 1}`, startTime: '08:00', endTime: '16:00', order: p.columns.length + 1 },
+                      ],
+                    }))
+                  }
+                >
+                  Add Shift
                 </Button>
               </Stack>
               <Stack spacing={1.5}>
@@ -1190,7 +1180,11 @@ export default function RosterManagementPage() {
                           size="small"
                           fullWidth
                           value={col.title}
-                          onChange={(e) => handleUpdateTemplateColumn(idx, 'title', e.target.value)}
+                          onChange={(e) => {
+                            const cols = [...templateForm.columns];
+                            cols[idx].title = e.target.value.toUpperCase();
+                            setTemplateForm((p) => ({ ...p, columns: cols }));
+                          }}
                         />
                       </Grid>
                       <Grid item xs={5} sm={3}>
@@ -1201,7 +1195,11 @@ export default function RosterManagementPage() {
                           fullWidth
                           InputLabelProps={{ shrink: true }}
                           value={col.startTime}
-                          onChange={(e) => handleUpdateTemplateColumn(idx, 'startTime', e.target.value)}
+                          onChange={(e) => {
+                            const cols = [...templateForm.columns];
+                            cols[idx].startTime = e.target.value;
+                            setTemplateForm((p) => ({ ...p, columns: cols }));
+                          }}
                         />
                       </Grid>
                       <Grid item xs={5} sm={3}>
@@ -1212,7 +1210,11 @@ export default function RosterManagementPage() {
                           fullWidth
                           InputLabelProps={{ shrink: true }}
                           value={col.endTime}
-                          onChange={(e) => handleUpdateTemplateColumn(idx, 'endTime', e.target.value)}
+                          onChange={(e) => {
+                            const cols = [...templateForm.columns];
+                            cols[idx].endTime = e.target.value;
+                            setTemplateForm((p) => ({ ...p, columns: cols }));
+                          }}
                         />
                       </Grid>
                       <Grid item xs={2} sm={2} align="right">
@@ -1220,7 +1222,12 @@ export default function RosterManagementPage() {
                           color="error"
                           size="small"
                           disabled={templateForm.columns.length <= 1}
-                          onClick={() => handleRemoveTemplateColumn(col.id)}
+                          onClick={() =>
+                            setTemplateForm((p) => ({
+                              ...p,
+                              columns: p.columns.filter((c) => c.id !== col.id),
+                            }))
+                          }
                         >
                           <DeleteOutlineRounded fontSize="small" />
                         </IconButton>
@@ -1231,13 +1238,25 @@ export default function RosterManagementPage() {
               </Stack>
             </Box>
 
-            {/* Configurable Duty Areas */}
+            {/* Configurable Duty Area Rows */}
             <Box>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                 <Typography variant="subtitle1" fontWeight="bold">
                   Duty Area Rows
                 </Typography>
-                <Button size="small" startIcon={<AddRounded />} onClick={handleAddTemplateDutyArea}>
+                <Button
+                  size="small"
+                  startIcon={<AddRounded />}
+                  onClick={() =>
+                    setTemplateForm((p) => ({
+                      ...p,
+                      dutyAreas: [
+                        ...p.dutyAreas,
+                        { id: `da-${Date.now()}`, name: `DUTY AREA ${p.dutyAreas.length + 1}`, order: p.dutyAreas.length + 1 },
+                      ],
+                    }))
+                  }
+                >
                   Add Row
                 </Button>
               </Stack>
@@ -1251,7 +1270,11 @@ export default function RosterManagementPage() {
                           size="small"
                           fullWidth
                           value={da.name}
-                          onChange={(e) => handleUpdateTemplateDutyArea(idx, e.target.value)}
+                          onChange={(e) => {
+                            const das = [...templateForm.dutyAreas];
+                            das[idx].name = e.target.value.toUpperCase();
+                            setTemplateForm((p) => ({ ...p, dutyAreas: das }));
+                          }}
                         />
                       </Grid>
                       <Grid item xs={2} align="right">
@@ -1259,7 +1282,12 @@ export default function RosterManagementPage() {
                           color="error"
                           size="small"
                           disabled={templateForm.dutyAreas.length <= 1}
-                          onClick={() => handleRemoveTemplateDutyArea(da.id)}
+                          onClick={() =>
+                            setTemplateForm((p) => ({
+                              ...p,
+                              dutyAreas: p.dutyAreas.filter((d) => d.id !== da.id),
+                            }))
+                          }
                         >
                           <DeleteOutlineRounded fontSize="small" />
                         </IconButton>
@@ -1296,7 +1324,6 @@ export default function RosterManagementPage() {
               fullWidth
               required
             />
-
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <TextField
@@ -1321,7 +1348,6 @@ export default function RosterManagementPage() {
                 />
               </Grid>
             </Grid>
-
             <Box align="right" pt={2}>
               <Button onClick={() => setCreateRosterModalOpen(false)} sx={{ mr: 1 }}>
                 Cancel
@@ -1333,11 +1359,11 @@ export default function RosterManagementPage() {
           </Stack>
         </Modal>
 
-        {/* ─── MODAL 3: ADD NURSE / EMPLOYEE ASSIGNMENT ─── */}
+        {/* ─── MODAL 3: ADD NURSE ASSIGNMENT ─── */}
         <Modal
           open={assignmentModalOpen}
           onClose={() => setAssignmentModalOpen(false)}
-          title={`Assign Employee to ${assignmentTarget.dutyArea}`}
+          title={`Assign Staff to ${assignmentTarget.dutyArea}`}
           maxWidth="sm"
         >
           <Stack spacing={2.5} sx={{ pt: 1 }}>
@@ -1356,7 +1382,7 @@ export default function RosterManagementPage() {
               >
                 {(Array.isArray(activeEmployees) ? activeEmployees : []).map((emp) => (
                   <MenuItem key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId || 'Emp'}) - {emp.positionId?.name || 'Staff'}
+                    {emp.firstName} {emp.lastName} ({emp.employeeId || 'Staff'}) - {emp.positionId?.name || 'Staff'}
                   </MenuItem>
                 ))}
               </Select>
@@ -1386,12 +1412,10 @@ export default function RosterManagementPage() {
             </Grid>
 
             <TextField
-              label="Assignment Notes (Optional)"
+              label="Notes (Optional)"
               value={assignmentForm.notes}
               onChange={(e) => setAssignmentForm((p) => ({ ...p, notes: e.target.value }))}
               fullWidth
-              multiline
-              rows={2}
             />
 
             <Box align="right" pt={1}>
@@ -1399,25 +1423,168 @@ export default function RosterManagementPage() {
                 Cancel
               </Button>
               <Button variant="contained" onClick={handleSaveAssignment} loading={loading}>
-                Assign Employee
+                Assign Staff
               </Button>
             </Box>
           </Stack>
         </Modal>
 
-        {/* Delete Confirmation Dialog */}
+        {/* ─── MODAL 4: SHARE ROSTER FOR REVIEW ─── */}
+        <Modal
+          open={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          title="Share Roster for Review"
+          maxWidth="sm"
+        >
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Select workforce employees who can review this draft roster and leave feedback comments.
+            </Typography>
+
+            <TextField
+              size="small"
+              placeholder="Search employee..."
+              value={reviewerSearch}
+              onChange={(e) => setReviewerSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchRounded fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Paper variant="outlined" sx={{ maxHeight: 260, overflowY: 'auto' }}>
+              <List size="small">
+                {filteredReviewerEmployees.map((emp) => {
+                  const uId = emp.userId?._id || emp.userId || emp._id;
+                  const isChecked = selectedReviewerIds.includes(uId);
+
+                  return (
+                    <ListItem
+                      key={emp._id}
+                      button
+                      onClick={() => {
+                        setSelectedReviewerIds((prev) =>
+                          prev.includes(uId) ? prev.filter((id) => id !== uId) : [...prev, uId]
+                        );
+                      }}
+                    >
+                      <Checkbox checked={isChecked} edge="start" tabIndex={-1} disableRipple />
+                      <ListItemText
+                        primary={`${emp.firstName} ${emp.lastName}`}
+                        secondary={`${emp.employeeId || 'Staff'} • ${emp.positionId?.name || 'Position'}`}
+                      />
+                    </ListItem>
+                  );
+                })}
+              </List>
+            </Paper>
+
+            <Box align="right" pt={2}>
+              <Button onClick={() => setShareModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSaveShareReview} loading={loading}>
+                Share with Selected ({selectedReviewerIds.length})
+              </Button>
+            </Box>
+          </Stack>
+        </Modal>
+
+        {/* ─── MODAL 5: REVIEW FEEDBACK COMMENTS ─── */}
+        <Modal
+          open={feedbackModalOpen}
+          onClose={() => setFeedbackModalOpen(false)}
+          title="Roster Review Feedback Comments"
+          maxWidth="sm"
+        >
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Box sx={{ maxHeight: 260, overflowY: 'auto' }}>
+              {activeRoster?.comments?.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', py: 2, textAlign: 'center' }}>
+                  No feedback comments yet.
+                </Typography>
+              ) : (
+                <Stack spacing={1.5}>
+                  {activeRoster?.comments?.map((c) => (
+                    <Paper key={c._id} variant="outlined" sx={{ p: 1.5, bgcolor: c.resolved ? '#F0FDF4' : '#F8FAFC' }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {c.userId?.name || 'Reviewer'}
+                          </Typography>
+                          <Typography variant="body2">{c.comment}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(c.createdAt).toLocaleString()}
+                          </Typography>
+                        </Box>
+                        {canManage && !c.resolved && (
+                          <Button size="small" startIcon={<CheckRounded />} onClick={() => handleResolveComment(c._id)}>
+                            Resolve
+                          </Button>
+                        )}
+                        {c.resolved && <Chip label="Resolved" size="small" color="success" sx={{ height: 20 }} />}
+                      </Stack>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+            </Box>
+
+            <Divider />
+
+            <Typography variant="subtitle2" fontWeight="bold">
+              Add Review Feedback:
+            </Typography>
+            <TextField
+              placeholder="e.g. Please change Nurse A from NICU morning to PICU morning on 15 Sep."
+              value={newCommentText}
+              onChange={(e) => setNewCommentText(e.target.value)}
+              multiline
+              rows={2}
+              fullWidth
+            />
+
+            <Box align="right" pt={1}>
+              <Button onClick={() => setFeedbackModalOpen(false)} sx={{ mr: 1 }}>
+                Close
+              </Button>
+              <Button variant="contained" onClick={handleAddComment} disabled={!newCommentText.trim()}>
+                Post Comment
+              </Button>
+            </Box>
+          </Stack>
+        </Modal>
+
+        {/* Confirmation Dialog for Editing Published Roster */}
+        <ConfirmDialog
+          open={publishEditConfirm.open}
+          title="Update Published Roster?"
+          description="This roster is already published. Any modifications to shift assignments will be visible to employees immediately."
+          confirmText="Update Roster"
+          onConfirm={() => {
+            const act = publishEditConfirm.pendingAction;
+            setPublishEditConfirm({ open: false, pendingAction: null });
+            if (act) act();
+          }}
+          onClose={() => setPublishEditConfirm({ open: false, pendingAction: null })}
+        />
+
+        {/* Global Delete Confirmation */}
         <ConfirmDialog
           open={deleteConfirm.open}
           title={`Delete ${deleteConfirm.type === 'template' ? 'Template' : 'Draft Roster'}?`}
-          description={`Are you sure you want to delete "${deleteConfirm.title}"? This action cannot be undone.`}
+          description={`Are you sure you want to delete "${deleteConfirm.title}"?`}
           onConfirm={handleConfirmDelete}
           onClose={() => setDeleteConfirm({ open: false, type: '', id: '', title: '' })}
         />
 
-        {/* Global Toast Snackbar */}
+        {/* Toast Notification */}
         <Snackbar
           open={toast.open}
-          autoHideDuration={6000}
+          autoHideDuration={5000}
           onClose={() => setToast((p) => ({ ...p, open: false }))}
         >
           <Alert severity={toast.severity} onClose={() => setToast((p) => ({ ...p, open: false }))}>

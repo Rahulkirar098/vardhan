@@ -1,5 +1,7 @@
 const rosterService = require("../services/roster.service");
 const Hospital = require("../models/hospital.model");
+const { hasPermission } = require("../config/rolePermissions");
+const { PERMISSIONS } = require("../config/permissions");
 
 const getHospitalIdFromContext = async (user) => {
     if (user.hospitalId) return user.hospitalId;
@@ -161,7 +163,15 @@ const listRosters = async (req, res) => {
         }
 
         const { status } = req.query;
-        const rosters = await rosterService.listRosters({ hospitalId, status });
+        const isManager = hasPermission(req.user, PERMISSIONS.ROSTER_MANAGE);
+        const userId = req.user.id || req.user._id;
+
+        const rosters = await rosterService.listRosters({
+            hospitalId,
+            status,
+            userId,
+            isManager,
+        });
 
         return res.status(200).json({
             success: true,
@@ -181,9 +191,14 @@ const getRosterById = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
+        const isManager = hasPermission(req.user, PERMISSIONS.ROSTER_MANAGE);
+        const userId = req.user.id || req.user._id;
+
         const roster = await rosterService.getRosterById({
             rosterId: req.params.id,
             hospitalId,
+            userId,
+            isManager,
         });
 
         if (!roster) {
@@ -196,6 +211,9 @@ const getRosterById = async (req, res) => {
             data: roster,
         });
     } catch (error) {
+        if (error.code === "FORBIDDEN") {
+            return res.status(403).json({ success: false, message: error.message });
+        }
         console.error("Get Roster Error:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
@@ -220,7 +238,7 @@ const createRoster = async (req, res) => {
 
         return res.status(201).json({
             success: true,
-            message: "Roster created successfully",
+            message: "Draft roster created successfully",
             data: roster,
         });
     } catch (error) {
@@ -246,6 +264,7 @@ const updateRosterDraft = async (req, res) => {
         const roster = await rosterService.updateRosterDraft({
             rosterId: req.params.id,
             hospitalId,
+            userId: req.user.id || req.user._id,
             title,
             startDate,
             endDate,
@@ -253,7 +272,7 @@ const updateRosterDraft = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Roster draft updated successfully",
+            message: "Roster details updated successfully",
             data: roster,
         });
     } catch (error) {
@@ -263,7 +282,7 @@ const updateRosterDraft = async (req, res) => {
         if (error.code === "NOT_FOUND") {
             return res.status(404).json({ success: false, message: error.message });
         }
-        console.error("Update Roster Draft Error:", error);
+        console.error("Update Roster Error:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
@@ -282,7 +301,7 @@ const deleteRosterDraft = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Roster draft deleted successfully",
+            message: "Draft roster deleted successfully",
         });
     } catch (error) {
         if (error.code === "VALIDATION_ERROR") {
@@ -291,7 +310,7 @@ const deleteRosterDraft = async (req, res) => {
         if (error.code === "NOT_FOUND") {
             return res.status(404).json({ success: false, message: error.message });
         }
-        console.error("Delete Roster Draft Error:", error);
+        console.error("Delete Roster Error:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
@@ -326,6 +345,103 @@ const publishRoster = async (req, res) => {
     }
 };
 
+// ─── REVIEW SHARING & FEEDBACK ───────────────────────────────────────────────
+
+const shareRosterForReview = async (req, res) => {
+    try {
+        const hospitalId = await getHospitalIdFromContext(req.user);
+        if (!hospitalId) {
+            return res.status(404).json({ success: false, message: "Hospital not found" });
+        }
+
+        const userIds = req.body.userIds || req.body.sharedWith || [];
+        const roster = await rosterService.shareRosterForReview({
+            rosterId: req.params.id,
+            hospitalId,
+            userIds,
+            userId: req.user.id || req.user._id,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Roster shared for review successfully",
+            data: roster,
+        });
+    } catch (error) {
+        if (error.code === "VALIDATION_ERROR") {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+        if (error.code === "NOT_FOUND") {
+            return res.status(404).json({ success: false, message: error.message });
+        }
+        console.error("Share Roster Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+const addReviewComment = async (req, res) => {
+    try {
+        const hospitalId = await getHospitalIdFromContext(req.user);
+        if (!hospitalId) {
+            return res.status(404).json({ success: false, message: "Hospital not found" });
+        }
+
+        const { comment } = req.body;
+        const roster = await rosterService.addReviewComment({
+            rosterId: req.params.id,
+            hospitalId,
+            userId: req.user.id || req.user._id,
+            comment,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Review comment added successfully",
+            data: roster,
+        });
+    } catch (error) {
+        if (error.code === "VALIDATION_ERROR") {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+        if (error.code === "NOT_FOUND") {
+            return res.status(404).json({ success: false, message: error.message });
+        }
+        console.error("Add Review Comment Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+const resolveReviewComment = async (req, res) => {
+    try {
+        const hospitalId = await getHospitalIdFromContext(req.user);
+        if (!hospitalId) {
+            return res.status(404).json({ success: false, message: "Hospital not found" });
+        }
+
+        const roster = await rosterService.resolveReviewComment({
+            rosterId: req.params.id,
+            commentId: req.params.commentId,
+            hospitalId,
+            userId: req.user.id || req.user._id,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Review comment resolved successfully",
+            data: roster,
+        });
+    } catch (error) {
+        if (error.code === "VALIDATION_ERROR") {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+        if (error.code === "NOT_FOUND") {
+            return res.status(404).json({ success: false, message: error.message });
+        }
+        console.error("Resolve Review Comment Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 // ─── ASSIGNMENTS ─────────────────────────────────────────────────────────────
 
 const addAssignment = async (req, res) => {
@@ -335,17 +451,7 @@ const addAssignment = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
-        const {
-            employeeId,
-            date,
-            columnId,
-            shiftTitle,
-            startTime,
-            endTime,
-            dutyArea,
-            notes,
-        } = req.body;
-
+        const { employeeId, date, columnId, shiftTitle, startTime, endTime, dutyArea, notes } = req.body;
         const result = await rosterService.addAssignment({
             hospitalId,
             userId: req.user.id || req.user._id,
@@ -362,9 +468,7 @@ const addAssignment = async (req, res) => {
 
         return res.status(201).json({
             success: true,
-            message: result.leaveWarning
-                ? `Duty assigned successfully. Warning: ${result.leaveWarning.message}`
-                : "Duty assigned successfully",
+            message: "Assignment added to roster successfully",
             data: result.assignment,
             leaveWarning: result.leaveWarning,
         });
@@ -391,6 +495,7 @@ const updateAssignment = async (req, res) => {
         const assignment = await rosterService.updateAssignment({
             assignmentId: req.params.assignmentId,
             hospitalId,
+            userId: req.user.id || req.user._id,
             columnId,
             shiftTitle,
             startTime,
@@ -401,7 +506,7 @@ const updateAssignment = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Duty assignment updated successfully",
+            message: "Assignment updated successfully",
             data: assignment,
         });
     } catch (error) {
@@ -426,11 +531,12 @@ const deleteAssignment = async (req, res) => {
         await rosterService.deleteAssignment({
             assignmentId: req.params.assignmentId,
             hospitalId,
+            userId: req.user.id || req.user._id,
         });
 
         return res.status(200).json({
             success: true,
-            message: "Duty assignment removed successfully",
+            message: "Assignment deleted successfully",
         });
     } catch (error) {
         if (error.code === "VALIDATION_ERROR") {
@@ -484,6 +590,10 @@ module.exports = {
     updateRosterDraft,
     deleteRosterDraft,
     publishRoster,
+    // Review Sharing & Feedback
+    shareRosterForReview,
+    addReviewComment,
+    resolveReviewComment,
     // Assignments
     addAssignment,
     updateAssignment,

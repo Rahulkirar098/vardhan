@@ -1,7 +1,7 @@
 # Vardhan — Project Context
 
 Status: Standardized Target Architecture
-Updated: 2026-09-22
+Updated: 2026-09-28
 Purpose: Single source of truth for developers and coding agents.
 
 ---
@@ -15,7 +15,7 @@ VARDHAN SaaS
 │   ├── Authentication (JWT with token revocation)
 │   ├── Hospital / Tenant (Tenant isolation)
 │   ├── Users (Authentication & Identity)
-│   ├── Roles (super_admin, admin, hr, employee)
+│   ├── Roles (super_admin, admin, employee)
 │   ├── Permissions (Generic granular capabilities)
 │   ├── Module Access (core, hrms, hospital_structure)
 │   ├── Access Management (Generic workforce permissions & modules)
@@ -27,10 +27,10 @@ VARDHAN SaaS
 └── MODULES
     └── HRMS
         ├── Employees (Workforce staff records)
-        └── Invitations (Single generic invitation system)
-        ├── Attendance (Future)
-        ├── Leave (Future)
-        └── Roster (Future)
+        ├── Invitations (Single generic invitation system)
+        ├── Leave Management (Apply, My Leave, Workforce Leave, Approval, Cancellation, Balance, Stats)
+        ├── Attendance & Regularization (Check-in/out, My Attendance, Workforce Attendance, Regularizations & Atomic Approval Transactions)
+        └── Roster Module (Template-first builder, Shifts, Duty Areas, Draft/Published Lifecycle, Self-Service roster.view_own, Leave Warnings, UnifiedCalendar)
 ```
 
 ---
@@ -40,7 +40,7 @@ VARDHAN SaaS
 ### User (`models/user.model.js`)
 - **Purpose:** Represents an authentication login identity.
 - **Fields:** `name`, `email`, `password`, `role`, `status`, `hospitalId`, `employeeId`, `modules[]`, `permissions[]`, `createdBy`, timestamps.
-- **Roles:** `super_admin`, `admin`, `hr`, `employee`.
+- **Roles:** `super_admin`, `admin`, `employee`. (HR is an Employee Position with `role = employee` and granted permissions).
 - **Note:** `permissions[]` stores explicit user-level permissions granted on top of role defaults. `effectivePermissions` are dynamically computed at runtime and NEVER persisted in DB.
 
 ### Employee (`models/employee.model.js`)
@@ -49,7 +49,7 @@ VARDHAN SaaS
 - **Relationship:** Every invited employee receives a Vardhan login account. `Employee.userId` <-> `User.employeeId` form a reciprocal link.
 
 ### Position (`models/position.model.js`)
-- **Purpose:** Hospital-specific designation master.
+- **Purpose:** Hospital-specific designation master (e.g. HR Manager, Staff Nurse, Medical Officer).
 - **Fields:** `hospitalId`, `name`, `defaultModules[]`, `status` (active/inactive), timestamps.
 - **Rules:**
   - Independent of system `role`. (Changing Position never alters Role; changing Role never alters Position).
@@ -61,21 +61,36 @@ VARDHAN SaaS
 
 ### Hospital Structure (`models/floor.model.js`, `models/room.model.js`)
 - **Hierarchy:** `Hospital` -> `Floor` -> `Room`.
-- Part of Core Platform, not HRMS.
+- Part of Core Platform, independent of Roster Duty Areas.
 
-### Invitation (`models/invitation.model.js`)
-- **Purpose:** Unified invitation system for all workforce roles (`employee`, `hr`).
-- **Security:** Stores SHA-256 `tokenHash` and expiration. Raw tokens are never stored in the database.
-- **Creator:** `createdBy` is automatically populated from the authenticated user.
+### Roster Models (`models/rosterTemplate.model.js`, `models/roster.model.js`, `models/rosterAssignment.model.js`)
+- **RosterTemplate:** Configurable shift columns (title, startTime, endTime, order) and duty area rows (name, order). Structure definition only.
+- **Roster:** Actual duty roster instance (`title`, `startDate`, `endDate`, `status` [DRAFT / PUBLISHED], `templateId`, `sharedWith[]`, `comments[]`). Published rosters remain editable by authorized managers (`roster.manage`).
+- **RosterAssignment:** Staff duty record (`rosterId`, `hospitalId`, `employeeId`, `date`, `columnId`, `shiftTitle`, `startTime`, `endTime`, `dutyArea`, `notes`). Identity links to `Employee` via `employeeId` without duplicating personal info.
+- **Duty Area:** Dynamic operational duty area rows (e.g. "General Ward Female + Male + Day Care", "NICU 2nd Floor", "PICU", "ICU 3rd Floor", "OT"). Does NOT depend on Floor/Room structure.
+- **Matrix Visual Structure:** Header with Month (Year) banner, date range `DD/MM/YY TO DD/MM/YY`, dynamic uppercase shift columns, full-width duty-area rows, and vertically stacked employee cells with uppercase employee names and custom actual time overrides.
+
+### Leave (`models/leave.model.js`)
+- **Purpose:** Employee leave request management with conflict warnings during roster assignment.
+
+### Attendance & Regularization (`models/attendance.model.js`, `models/attendanceRegularization.model.js`)
+- **Purpose:** Real-time clock-in/out tracking and atomic regularization approval transactions.
 
 ---
 
 ## 3. ACCESS MANAGEMENT & PERMISSION MODEL
 
-- **Generic Access Management:** Admin manages permissions and module access for ANY workforce user (`hr` or `employee`) from `/access-management`.
-- **Decoupled Responsibilities:**
-  - **Employee Edit:** Only updates employee profile fields (`firstName`, `lastName`, `email`, `phone`, `dateOfJoining`, `positionId` if authorized).
-  - **Access Management:** Exclusively manages `modules` and `permissions`.
+- **Canonical Roles:** `super_admin`, `admin`, `employee`.
+- **Default Employee Self-Service Permissions:**
+  - `leave.apply`, `leave.view_own`, `leave.cancel_own`
+  - `attendance.view_own`
+  - `roster.view` (View published workforce hospital duty roster matrix)
+- **Workforce Management Permissions:**
+  - `roster.view`: View workforce published hospital duty rosters & templates
+  - `roster.manage`: Create/edit templates, draft rosters, share drafts for review, assign staff, publish rosters, edit published rosters
+  - `leave.view`, `leave.approve`, `leave.manage`
+  - `attendance.view`, `attendance.regularization.view`, `attendance.regularization.approve`, `attendance.regularization.reject`, `attendance.regularization.manage`, `attendance.manage`
+- **Generic Access Management:** Admin manages permissions and module access for workforce users from `/access-management`.
 - **Authorization Pipeline:**
   `Authentication` -> `User` -> `Hospital Scope` -> `Role` -> `Module Access` -> `Permission` -> `Controller` -> `Service` -> `Database`
 
@@ -89,6 +104,9 @@ VARDHAN SaaS
 - `/api/v1/access-management/*` (Workforce access listing, get & update access)
 - `/api/v1/structure/*` and `/api/v1/hospitals/:id/floors/*` (Hospital Structure)
 - `/api/v1/employees/*` and `/api/v1/hrms/employees/*` (Employees & Invitations)
+- `/api/v1/hrms/leaves/*` (Leave Applications, Approvals & Cancellations)
+- `/api/v1/hrms/attendance/*` (Attendance Clock-In/Out & Regularizations)
+- `/api/v1/rosters/*` (Roster Templates, Drafts, Assignments, Publishing & My Roster)
 - `/api/v1/modules/*` (Module Catalog & Access)
 - `/api/v1/super-admin/*` (Platform administration)
 
@@ -97,12 +115,11 @@ VARDHAN SaaS
 ## 5. FRONTEND STRUCTURE
 
 - `pages/auth/` (Landing, Login, Register, ForgotPassword, ResetPassword, AcceptEmployeeInvitation)
-- `pages/admin/` (AdminDashboard, Hospital, StructurePage, FloorDetails, PositionsPage, AccessManagementPage)
-- `pages/hr/` (HRDashboard, HRProfile, MyHospital, EmployeesPage)
+- `pages/admin/` (AdminDashboard, Hospital, StructurePage, FloorDetails, PositionsPage, AccessManagementPage, LeaveManagementPage, AttendancePage, RosterManagementPage)
 - `pages/shared/` (Profile)
 - `pages/super-admin/` (SuperAdminDashboard, SuperAdminHospitals, SuperAdminHospitalDetails)
-- `components/` (AppLayout, Navbar, Sidebar, DataTable, StatCard, StatusBadge, Modal, ConfirmDialog)
-- `services/` (auth.service, employee.service, position.service, accessManagement.service, structure.service, hospital.service)
+- `components/` (AppLayout, PageHeader, Sidebar, DataTable, StatCard, StatusBadge, Modal, ConfirmDialog, UnifiedCalendar)
+- `services/` (auth.service, employee.service, position.service, accessManagement.service, structure.service, leave.service, attendance.service, roster.service)
 - `utils/` (permissions.js with centralized permission registry)
 
 ---
@@ -110,10 +127,12 @@ VARDHAN SaaS
 ## 6. VERIFICATION & TESTING
 
 All flows are covered by automated integration test suites under `backend/tests/`:
+- `roster.test.js` (Templates, roster drafts, assignments, publishing, leave conflict warnings, self-service roster.view_own, security blocking)
+- `attendance-regularization.test.js` (Atomic regularization approval transactions & rollbacks)
+- `attendance.test.js` (Clock-in/out, workforce logs, tenant isolation)
+- `leave-management.test.js` (Leave lifecycle, balance, self-service & manager approvals)
 - `access-management.test.js` (Access management, tenant isolation, privilege protection)
-- `employee-lifecycle-e2e.test.js` (Full lifecycle, invitations, edit, deactivation/reactivation)
-- `hr-profile-hospital.test.js` (HR profile, hospital assignment)
-- `core-platform.test.js` (Auth, profile, passwords, module catalog)
-- `hr-permission-flow.test.js` (Role & permission flows)
-- `phase3-role-permission.test.js` (Granular capability checks)
+- `unified-employees.test.js` (Full workforce employee lifecycle & invitations)
 - `hospital-structure.test.js` (Structure isolation & hierarchy)
+- `core-platform.test.js` (Auth, profile, passwords, module catalog)
+- `permission.test.js` & `auth-foundation.test.js` (Authorization foundation checks)

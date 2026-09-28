@@ -58,6 +58,22 @@ export const rosterService = {
     return response.data;
   },
 
+  // --- Review Sharing & Feedback ---
+  shareRosterForReview: async (id, userIds) => {
+    const response = await client.post(`/v1/rosters/${id}/share`, { userIds });
+    return response.data;
+  },
+
+  addReviewComment: async (id, comment) => {
+    const response = await client.post(`/v1/rosters/${id}/comments`, { comment });
+    return response.data;
+  },
+
+  resolveReviewComment: async (id, commentId) => {
+    const response = await client.patch(`/v1/rosters/${id}/comments/${commentId}/resolve`);
+    return response.data;
+  },
+
   // --- Assignments ---
   addAssignment: async (rosterId, data) => {
     const response = await client.post(`/v1/rosters/${rosterId}/assignments`, data);

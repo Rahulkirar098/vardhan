@@ -93,6 +93,26 @@ router.patch(
     rosterController.publishRoster
 );
 
+// ─── REVIEW SHARING & FEEDBACK ───────────────────────────────────────────────
+
+router.post(
+    "/:id/share",
+    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
+    rosterController.shareRosterForReview
+);
+
+router.post(
+    "/:id/comments",
+    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
+    rosterController.addReviewComment
+);
+
+router.patch(
+    "/:id/comments/:commentId/resolve",
+    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
+    rosterController.resolveReviewComment
+);
+
 // ─── ASSIGNMENTS ─────────────────────────────────────────────────────────────
 
 router.post(

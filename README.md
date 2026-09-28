@@ -1,6 +1,6 @@
 # Vardhan
 
-A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management, workforce employee management, and generic access management.
+A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management, workforce employee management, leave management, attendance & regularization, template-first duty roster planning, and generic access management.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white" alt="Node.js 18+" />
@@ -36,8 +36,8 @@ VARDHAN SaaS
         ├── Employees (Workforce staff record reciprocal to User)
         ├── Invitations (Centralized invitation flow with token hashing)
         ├── Leave Management (Apply, My Leave, Approval, Balance, Stats)
-        ├── Attendance (Planned)
-        └── Roster (Planned)
+        ├── Attendance & Regularization (Clock-In/Out, Regularization Requests & Atomic Approvals)
+        └── Roster Module (Template-first builder, Shift columns, Duty Areas, Draft/Published lifecycle, Self-Service roster.view_own, Leave Warnings)
 ```
 
 ---
@@ -56,7 +56,7 @@ VARDHAN SaaS
 - Hospital Structure: Floors and generic Rooms with deletion/deactivation safety checks.
 
 ### 3. Positions Master
-- Hospital-specific position/designation master (e.g. HR Manager, Nurse, Payroll Manager, Doctor).
+- Hospital-specific position/designation master (e.g. HR Manager, Staff Nurse, Medical Officer, Doctor).
 - Configurable default module access assigned during employee onboarding.
 - Position active/inactive status lifecycle.
 
@@ -68,9 +68,25 @@ VARDHAN SaaS
 - Employee deactivation disables login without deleting historical data; reactivation restores login.
 - Employee Edit manages profile details and is strictly decoupled from Access Management.
 
-### 5. Access Management
-- Unified Access Management screen for administrators to manage permissions and module access for workforce employees (`employee` role).
-- Grouped capability permissions (Hospital Structure, Workforce, Hospital Info, Positions, Leave).
+### 5. Leave Management
+- Self-service leave applications (`leave.apply`, `leave.view_own`, `leave.cancel_own`).
+- Management queue for workforce leave approvals (`leave.view`, `leave.approve`, `leave.manage`).
+- Real-time leave balance tracking and non-blocking leave conflict detection during shift roster allocation.
+
+### 6. Attendance & Regularization
+- Employee check-in/out tracking with working duration computation.
+- Attendance regularization submission and cancellation.
+- Atomic regularization approval transactions updating attendance records cleanly.
+
+### 7. Template-First Roster Module (Phase 9)
+- **Roster Templates:** Configurable shift columns (title, start/end times) and duty area rows (independent of floor/room).
+- **Roster Lifecycle:** Draft generation from templates, shift allocations, leave conflict warnings, and publishing.
+- **Self-Service Roster Access:** `roster.view_own` grants employees access to view their own published shift schedules.
+- **Calendar Integration:** Reuses `UnifiedCalendar` component for schedule visualization.
+
+### 8. Access Management
+- Unified Access Management screen for administrators to manage permissions and module access for workforce accounts (`employee` role).
+- Grouped capability permissions (Hospital Structure, Workforce, Hospital Info, Positions, Leave, Attendance, Roster).
 - Module access toggling (`hrms`).
 - Privilege escalation protections preventing ordinary administrators from altering system-level admin accounts or self-modifying access.
 
@@ -136,7 +152,7 @@ npm run dev
 cd backend
 npm test
 ```
-All 7 backend integration test suites verify authentication, employee lifecycle, access management, hospital isolation, and permissions.
+All 11 backend integration test suites verify authentication, employee lifecycle, access management, hospital isolation, leave management, attendance regularization, and Phase 9 roster planning.
 
 ---
 
