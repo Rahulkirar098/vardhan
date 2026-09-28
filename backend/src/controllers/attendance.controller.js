@@ -389,6 +389,118 @@ const cancelRegularizationRequest = async (req, res) => {
   }
 };
 
+/**
+ * Get Hospital Regularization Requests (Management)
+ * GET /api/v1/attendance/regularization
+ */
+const getHospitalRegularizationRequests = async (req, res) => {
+  try {
+    const hospitalId = req.user.hospitalId;
+    const { status, startDate, endDate, employeeId, page, limit } = req.query || {};
+
+    const result = await attendanceService.getHospitalRegularizations({
+      hospitalId,
+      status,
+      startDate,
+      endDate,
+      employeeId,
+      page,
+      limit,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Hospital regularization requests retrieved successfully.",
+      data: result.records,
+      meta: {
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+      },
+    });
+  } catch (error) {
+    if (error.code === "VALIDATION_ERROR") {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    console.error("Get Hospital Regularizations Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+/**
+ * Approve Regularization Request (Management)
+ * PATCH /api/v1/attendance/regularization/:id/approve
+ */
+const approveRegularizationRequest = async (req, res) => {
+  try {
+    const hospitalId = req.user.hospitalId;
+    const regularizationId = req.params.id;
+    const reviewerId = req.user.id || req.user._id;
+
+    const record = await attendanceService.approveRegularizationRequest({
+      hospitalId,
+      regularizationId,
+      reviewerId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Regularization request approved successfully.",
+      data: record,
+    });
+  } catch (error) {
+    if (error.code === "NOT_FOUND") {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.code === "FORBIDDEN") {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    if (error.code === "VALIDATION_ERROR") {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    console.error("Approve Regularization Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+/**
+ * Reject Regularization Request (Management)
+ * PATCH /api/v1/attendance/regularization/:id/reject
+ */
+const rejectRegularizationRequest = async (req, res) => {
+  try {
+    const hospitalId = req.user.hospitalId;
+    const regularizationId = req.params.id;
+    const reviewerId = req.user.id || req.user._id;
+    const { reason, reviewReason } = req.body || {};
+
+    const record = await attendanceService.rejectRegularizationRequest({
+      hospitalId,
+      regularizationId,
+      reviewerId,
+      reviewReason: reviewReason || reason,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Regularization request rejected successfully.",
+      data: record,
+    });
+  } catch (error) {
+    if (error.code === "NOT_FOUND") {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.code === "FORBIDDEN") {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    if (error.code === "VALIDATION_ERROR") {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    console.error("Reject Regularization Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   checkIn,
   checkOut,
@@ -399,5 +511,8 @@ module.exports = {
   createRegularizationRequest,
   getMyRegularizationRequests,
   cancelRegularizationRequest,
+  getHospitalRegularizationRequests,
+  approveRegularizationRequest,
+  rejectRegularizationRequest,
 };
 

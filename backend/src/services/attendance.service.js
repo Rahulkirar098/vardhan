@@ -608,6 +608,220 @@ const cancelRegularizationRequest = async ({
   return record;
 };
 
+/**
+ * Get Hospital Workforce Regularization Requests (for Management)
+ */
+const getHospitalRegularizations = async ({
+  hospitalId,
+  status,
+  startDate,
+  endDate,
+  employeeId,
+  page = 1,
+  limit = 50,
+}) => {
+  if (!hospitalId) {
+    const error = new Error("Hospital ID is required.");
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  const query = { hospitalId };
+
+  if (status && VALID_REGULARIZATION_STATUSES.includes(String(status).toUpperCase())) {
+    query.status = String(status).toUpperCase();
+  }
+
+  if (employeeId && mongoose.Types.ObjectId.isValid(employeeId)) {
+    query.employeeId = employeeId;
+  }
+
+  if (startDate && endDate) {
+    query.dateStr = { $gte: startDate, $lte: endDate };
+  }
+
+  const skip = (Math.max(1, parseInt(page, 10)) - 1) * Math.max(1, parseInt(limit, 10));
+  const take = Math.max(1, Math.min(100, parseInt(limit, 10)));
+
+  const [records, total] = await Promise.all([
+    AttendanceRegularization.find(query)
+      .populate({
+        path: "employeeId",
+        select: "firstName lastName employeeId positionId email status",
+        populate: { path: "positionId", select: "name code" },
+      })
+      .populate("attendanceId", "status checkIn checkOut workingMinutes")
+      .populate("reviewedBy", "name email role")
+      .sort({ dateStr: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(take)
+      .lean(),
+    AttendanceRegularization.countDocuments(query),
+  ]);
+
+  return {
+    records,
+    total,
+    page: parseInt(page, 10),
+    totalPages: Math.ceil(total / take),
+  };
+};
+
+/**
+ * Approve Regularization Request (Management)
+ */
+const approveRegularizationRequest = async ({
+  hospitalId,
+  regularizationId,
+  reviewerId,
+}) => {
+  if (!hospitalId || !regularizationId) {
+    const error = new Error("Hospital ID and Regularization ID are required.");
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(regularizationId)) {
+    const error = new Error("Invalid regularization ID.");
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  const record = await AttendanceRegularization.findOne({
+    _id: regularizationId,
+    hospitalId,
+  });
+
+  if (!record) {
+    const error = new Error("Regularization request not found.");
+    error.code = "NOT_FOUND";
+    throw error;
+  }
+
+  if (record.status !== REGULARIZATION_STATUSES.PENDING) {
+    const error = new Error(`Only pending regularization requests can be approved. Current status: ${record.status}`);
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  // Calculate working minutes if checkIn and checkOut exist
+  let workingMinutes = 0;
+  if (record.requestedCheckIn && record.requestedCheckOut) {
+    const diffMs = new Date(record.requestedCheckOut).getTime() - new Date(record.requestedCheckIn).getTime();
+    workingMinutes = Math.max(0, Math.round(diffMs / (1000 * 60)));
+  }
+
+  let attendanceRecord = null;
+
+  if (record.attendanceId) {
+    // Case A: Existing Attendance record -> update it
+    attendanceRecord = await Attendance.findOne({
+      _id: record.attendanceId,
+      hospitalId,
+    });
+
+    if (attendanceRecord) {
+      attendanceRecord.status = record.requestedStatus;
+      if (record.requestedCheckIn) attendanceRecord.checkIn = record.requestedCheckIn;
+      if (record.requestedCheckOut) attendanceRecord.checkOut = record.requestedCheckOut;
+      if (workingMinutes > 0) attendanceRecord.workingMinutes = workingMinutes;
+      attendanceRecord.notes = attendanceRecord.notes
+        ? `${attendanceRecord.notes} | Regularized`
+        : "Regularized attendance";
+      await attendanceRecord.save();
+    }
+  }
+
+  if (!attendanceRecord) {
+    // Case B: Attendance record does not exist -> check or create
+    const existingDateAtt = await Attendance.findOne({
+      hospitalId,
+      employeeId: record.employeeId,
+      dateStr: record.dateStr,
+    });
+
+    if (existingDateAtt) {
+      attendanceRecord = existingDateAtt;
+      attendanceRecord.status = record.requestedStatus;
+      if (record.requestedCheckIn) attendanceRecord.checkIn = record.requestedCheckIn;
+      if (record.requestedCheckOut) attendanceRecord.checkOut = record.requestedCheckOut;
+      if (workingMinutes > 0) attendanceRecord.workingMinutes = workingMinutes;
+      attendanceRecord.notes = attendanceRecord.notes
+        ? `${attendanceRecord.notes} | Regularized`
+        : "Regularized attendance";
+      await attendanceRecord.save();
+    } else {
+      attendanceRecord = await Attendance.create({
+        hospitalId,
+        employeeId: record.employeeId,
+        dateStr: record.dateStr,
+        date: record.date,
+        status: record.requestedStatus,
+        checkIn: record.requestedCheckIn,
+        checkOut: record.requestedCheckOut,
+        workingMinutes,
+        notes: "Regularized attendance",
+      });
+    }
+
+    record.attendanceId = attendanceRecord._id;
+  }
+
+  record.status = REGULARIZATION_STATUSES.APPROVED;
+  record.reviewedBy = reviewerId || null;
+  record.reviewedAt = new Date();
+  await record.save();
+
+  return record;
+};
+
+/**
+ * Reject Regularization Request (Management)
+ */
+const rejectRegularizationRequest = async ({
+  hospitalId,
+  regularizationId,
+  reviewerId,
+  reviewReason,
+}) => {
+  if (!hospitalId || !regularizationId) {
+    const error = new Error("Hospital ID and Regularization ID are required.");
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(regularizationId)) {
+    const error = new Error("Invalid regularization ID.");
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  const record = await AttendanceRegularization.findOne({
+    _id: regularizationId,
+    hospitalId,
+  });
+
+  if (!record) {
+    const error = new Error("Regularization request not found.");
+    error.code = "NOT_FOUND";
+    throw error;
+  }
+
+  if (record.status !== REGULARIZATION_STATUSES.PENDING) {
+    const error = new Error(`Only pending regularization requests can be rejected. Current status: ${record.status}`);
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  record.status = REGULARIZATION_STATUSES.REJECTED;
+  record.reviewedBy = reviewerId || null;
+  record.reviewedAt = new Date();
+  record.reviewReason = reviewReason ? String(reviewReason).trim() : null;
+  await record.save();
+
+  return record;
+};
+
 module.exports = {
   getTodayDateStr,
   checkIn,
@@ -619,5 +833,8 @@ module.exports = {
   createRegularization,
   getMyRegularizationRequests,
   cancelRegularizationRequest,
+  getHospitalRegularizations,
+  approveRegularizationRequest,
+  rejectRegularizationRequest,
 };
 

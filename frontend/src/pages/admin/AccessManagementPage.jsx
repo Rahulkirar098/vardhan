@@ -105,6 +105,33 @@ const PERMISSION_GROUPS = [
       },
     ],
   },
+  {
+    title: 'Attendance & Regularization',
+    description: 'Self-service capabilities are default for active employees. Management permissions are Admin-controlled.',
+    subsections: [
+      {
+        title: 'SELF SERVICE',
+        subtitle: 'Default capabilities active for all active employees',
+        isDefaultGroup: true,
+        permissions: [
+          { key: 'attendance.view_own', label: 'Mark Attendance & View Own Logs — Default', description: 'Check-in/out and view own attendance logs', isDefault: true },
+        ],
+      },
+      {
+        title: 'MANAGEMENT',
+        subtitle: 'Admin-controlled permissions for workforce attendance & regularization governance',
+        isDefaultGroup: false,
+        permissions: [
+          { key: 'attendance.view', label: 'View Workforce Attendance', description: 'View attendance records across hospital workforce', isDefault: false },
+          { key: 'attendance.regularization.view', label: 'View Regularization Requests', description: 'View regularization requests across workforce', isDefault: false },
+          { key: 'attendance.regularization.approve', label: 'Approve Regularization Requests', description: 'Approve workforce regularization requests', isDefault: false },
+          { key: 'attendance.regularization.reject', label: 'Reject Regularization Requests', description: 'Reject workforce regularization requests', isDefault: false },
+          { key: 'attendance.regularization.manage', label: 'Manage Regularizations', description: 'Broader management of hospital regularization requests', isDefault: false },
+          { key: 'attendance.manage', label: 'Manage Attendance', description: 'Full management of hospital workforce attendance & regularizations', isDefault: false },
+        ],
+      },
+    ],
+  },
 ];
 
 const MODULE_OPTIONS = [

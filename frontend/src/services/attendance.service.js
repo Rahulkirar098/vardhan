@@ -72,6 +72,30 @@ export const attendanceService = {
     const response = await client.patch(`/v1/hrms/attendance/regularization/${id}/cancel`);
     return response.data;
   },
+
+  /**
+   * Get Hospital Workforce Regularization Requests (for Management)
+   */
+  getHospitalRegularizations: async (params) => {
+    const response = await client.get('/v1/hrms/attendance/regularization', { params });
+    return response.data;
+  },
+
+  /**
+   * Approve Regularization Request (for Management)
+   */
+  approveRegularization: async (id) => {
+    const response = await client.patch(`/v1/hrms/attendance/regularization/${id}/approve`);
+    return response.data;
+  },
+
+  /**
+   * Reject Regularization Request (for Management)
+   */
+  rejectRegularization: async (id, data = {}) => {
+    const response = await client.patch(`/v1/hrms/attendance/regularization/${id}/reject`, data);
+    return response.data;
+  },
 };
 
 export default attendanceService;

@@ -85,6 +85,23 @@ const attendanceRegularizationSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+
+        reviewedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+
+        reviewedAt: {
+            type: Date,
+            default: null,
+        },
+
+        reviewReason: {
+            type: String,
+            trim: true,
+            default: null,
+        },
     },
     {
         timestamps: true,

@@ -10,6 +10,7 @@ import {
   Stack,
   Tab,
   Tabs,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -17,6 +18,7 @@ import {
   AccessTimeRounded,
   AddRounded,
   CheckCircleOutlineRounded,
+  CheckRounded,
   CloseRounded,
   EditCalendarRounded,
   EventAvailableRounded,
@@ -28,6 +30,7 @@ import {
   RefreshRounded,
   ScheduleRounded,
   TodayRounded,
+  VisibilityRounded,
 } from '@mui/icons-material';
 import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
@@ -37,6 +40,7 @@ import DataTable from '../../components/DataTable';
 import EmptyState from '../../components/EmptyState';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import Modal from '../../components/Modal';
 import RequestRegularizationModal from '../../components/attendance/RequestRegularizationModal';
 import { UnifiedCalendar } from '../../components/calendar';
 import attendanceService from '../../services/attendance.service';
@@ -122,6 +126,26 @@ const AttendancePage = () => {
     hasPermission(PERMISSIONS.ATTENDANCE_VIEW) ||
     hasPermission(PERMISSIONS.ATTENDANCE_MANAGE);
 
+  const canManageRegularization =
+    currentRole === 'admin' ||
+    hasPermission(PERMISSIONS.REGULARIZATION_VIEW) ||
+    hasPermission(PERMISSIONS.REGULARIZATION_APPROVE) ||
+    hasPermission(PERMISSIONS.REGULARIZATION_REJECT) ||
+    hasPermission(PERMISSIONS.REGULARIZATION_MANAGE) ||
+    hasPermission(PERMISSIONS.ATTENDANCE_MANAGE);
+
+  const canApproveRegularization =
+    currentRole === 'admin' ||
+    hasPermission(PERMISSIONS.REGULARIZATION_APPROVE) ||
+    hasPermission(PERMISSIONS.REGULARIZATION_MANAGE) ||
+    hasPermission(PERMISSIONS.ATTENDANCE_MANAGE);
+
+  const canRejectRegularization =
+    currentRole === 'admin' ||
+    hasPermission(PERMISSIONS.REGULARIZATION_REJECT) ||
+    hasPermission(PERMISSIONS.REGULARIZATION_MANAGE) ||
+    hasPermission(PERMISSIONS.ATTENDANCE_MANAGE);
+
   const [activeTab, setActiveTab] = useState('my');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -130,6 +154,7 @@ const AttendancePage = () => {
   const [workforceHistory, setWorkforceHistory] = useState([]);
   const [myLeaves, setMyLeaves] = useState([]);
   const [myRegularizations, setMyRegularizations] = useState([]);
+  const [workforceRegularizations, setWorkforceRegularizations] = useState([]);
   const [stats, setStats] = useState({ present: 0, halfDay: 0, absent: 0, workingDays: 0 });
   const [selectedDateStr, setSelectedDateStr] = useState(() => new Date().toISOString().split('T')[0]);
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
@@ -138,6 +163,12 @@ const AttendancePage = () => {
   const [isRegularizationModalOpen, setIsRegularizationModalOpen] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(null);
   const [cancellingLoading, setCancellingLoading] = useState(false);
+
+  // Management Regularization review / details state
+  const [viewingRequest, setViewingRequest] = useState(null);
+  const [rejectingRequest, setRejectingRequest] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -160,12 +191,17 @@ const AttendancePage = () => {
         const wfRes = await attendanceService.getHospitalAttendance().catch(() => ({ data: [] }));
         setWorkforceHistory(Array.isArray(wfRes?.data) ? wfRes.data : []);
       }
+
+      if (canManageRegularization) {
+        const wfRegRes = await attendanceService.getHospitalRegularizations().catch(() => ({ data: [] }));
+        setWorkforceRegularizations(Array.isArray(wfRegRes?.data) ? wfRegRes.data : []);
+      }
     } catch {
       setToast({ open: true, message: 'Failed to load attendance data.', severity: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [canViewWorkforce]);
+  }, [canViewWorkforce, canManageRegularization]);
 
 
   useEffect(() => {
@@ -499,6 +535,170 @@ const AttendancePage = () => {
     },
   ];
 
+  const handleApproveRequest = async (id) => {
+    setActionLoading(true);
+    try {
+      await attendanceService.approveRegularization(id);
+      setToast({ open: true, message: 'Regularization request approved successfully.', severity: 'success' });
+      await loadData();
+    } catch (err) {
+      setToast({
+        open: true,
+        message: err?.response?.data?.message || 'Failed to approve regularization request.',
+        severity: 'error',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectingRequest) return;
+    setActionLoading(true);
+    try {
+      await attendanceService.rejectRegularization(rejectingRequest._id, { reviewReason: rejectReason });
+      setToast({ open: true, message: 'Regularization request rejected successfully.', severity: 'success' });
+      setRejectingRequest(null);
+      setRejectReason('');
+      await loadData();
+    } catch (err) {
+      setToast({
+        open: true,
+        message: err?.response?.data?.message || 'Failed to reject regularization request.',
+        severity: 'error',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const managementRegularizationColumns = [
+    {
+      key: 'employee',
+      label: 'Employee',
+      render: (row) => {
+        const emp = row.employeeId || {};
+        const name = emp.firstName ? `${emp.firstName} ${emp.lastName}` : 'Staff Employee';
+        return (
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <InitialsAvatar name={name} size={34} />
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }} noWrap>
+                {name}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }} noWrap>
+                {emp.employeeId || '—'} • {emp.positionId?.name || 'Staff'}
+              </Typography>
+            </Box>
+          </Stack>
+        );
+      },
+    },
+    {
+      key: 'date',
+      label: 'Date',
+      render: (row) => (
+        <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+          {formatDate(row.dateStr || row.date)}
+        </Typography>
+      ),
+    },
+    {
+      key: 'requestedStatus',
+      label: 'Requested Status',
+      render: (row) => <StatusBadge status={row.requestedStatus} />,
+    },
+    {
+      key: 'requestedCheckIn',
+      label: 'Check In',
+      render: (row) => (
+        <Typography variant="body2" sx={{ color: '#334155' }}>
+          {formatTime(row.requestedCheckIn)}
+        </Typography>
+      ),
+    },
+    {
+      key: 'requestedCheckOut',
+      label: 'Check Out',
+      render: (row) => (
+        <Typography variant="body2" sx={{ color: '#334155' }}>
+          {formatTime(row.requestedCheckOut)}
+        </Typography>
+      ),
+    },
+    {
+      key: 'reason',
+      label: 'Reason',
+      render: (row) => (
+        <Tooltip title={row.reason || ''} arrow placement="top">
+          <Typography
+            variant="body2"
+            sx={{
+              color: '#334155',
+              maxWidth: 200,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {row.reason || '—'}
+          </Typography>
+        </Tooltip>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+    {
+      key: 'submittedAt',
+      label: 'Submitted',
+      render: (row) => (
+        <Typography variant="caption" sx={{ color: '#64748B' }}>
+          {formatDateTime(row.submittedAt || row.createdAt)}
+        </Typography>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (row) => (
+        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+          <Tooltip title="View Request Details">
+            <IconButton size="small" onClick={() => setViewingRequest(row)}>
+              <VisibilityRounded fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {row.status === 'PENDING' && canApproveRegularization && (
+            <Tooltip title="Approve Request">
+              <IconButton
+                size="small"
+                color="success"
+                onClick={() => handleApproveRequest(row._id)}
+                disabled={actionLoading}
+              >
+                <CheckRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {row.status === 'PENDING' && canRejectRegularization && (
+            <Tooltip title="Reject Request">
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => setRejectingRequest(row)}
+                disabled={actionLoading}
+              >
+                <CloseRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      ),
+    },
+  ];
+
 
   return (
     <AppLayout>
@@ -747,12 +947,38 @@ const AttendancePage = () => {
           >
             <Tab value="my" label="My Attendance" />
             <Tab value="regularization" label="Regularization" />
+            {canManageRegularization && <Tab value="regularization_requests" label="Regularization Requests" />}
             {canViewWorkforce && <Tab value="workforce" label="Workforce Attendance" />}
           </Tabs>
         </Box>
 
         {/* ─── 4. TAB CONTENT ──────────────────────────────────────────────── */}
-        {activeTab === 'regularization' ? (
+        {activeTab === 'regularization_requests' && canManageRegularization ? (
+          /* ─── WORKFORCE REGULARIZATION REQUESTS (MANAGEMENT) ───────────── */
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                Hospital Regularization Requests
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B', mt: 0.25 }}>
+                Review, approve, or reject attendance regularization requests from hospital workforce.
+              </Typography>
+            </Box>
+            <DataTable
+              columns={managementRegularizationColumns}
+              rows={workforceRegularizations}
+              getRowKey={(row) => row._id}
+              renderCell={(row, column) =>
+                typeof column.render === 'function'
+                  ? column.render(row)
+                  : row?.[column.key]
+              }
+              loading={loading}
+              emptyTitle="No regularization requests found"
+              emptyDescription="Attendance regularization requests submitted by hospital employees will appear here."
+            />
+          </Box>
+        ) : activeTab === 'regularization' ? (
           /* ─── REGULARIZATION TAB ────────────────────────────────────────── */
           <Box sx={{ mb: 4 }}>
             <Paper
@@ -1058,6 +1284,198 @@ const AttendancePage = () => {
         onConfirm={handleCancelConfirm}
         onClose={() => setCancellingRequest(null)}
       />
+
+      {/* View Request Details Modal */}
+      <Modal
+        open={Boolean(viewingRequest)}
+        onClose={() => setViewingRequest(null)}
+        title="Regularization Request Details"
+        description="Inspect complete details of the regularization request."
+        disableSubmit={true}
+      >
+        {viewingRequest && (
+          <Stack spacing={2.5} sx={{ pt: 1 }}>
+            <Box sx={{ p: 2, backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+                Employee Information
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 700, color: '#0F172A', mt: 0.5 }}>
+                {viewingRequest.employeeId?.firstName
+                  ? `${viewingRequest.employeeId.firstName} ${viewingRequest.employeeId.lastName}`
+                  : 'Staff Employee'}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B' }}>
+                ID: {viewingRequest.employeeId?.employeeId || '—'} • Position: {viewingRequest.employeeId?.positionId?.name || 'Staff'}
+              </Typography>
+              {viewingRequest.employeeId?.email && (
+                <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block' }}>
+                  {viewingRequest.employeeId.email}
+                </Typography>
+              )}
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                  Attendance Date
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                  {formatDate(viewingRequest.dateStr || viewingRequest.date)}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                  Request Status
+                </Typography>
+                <Box sx={{ mt: 0.25 }}>
+                  <StatusBadge status={viewingRequest.status} />
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                  Requested Status
+                </Typography>
+                <Box sx={{ mt: 0.25 }}>
+                  <StatusBadge status={viewingRequest.requestedStatus} />
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                  Submitted At
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#334155' }}>
+                  {formatDateTime(viewingRequest.submittedAt || viewingRequest.createdAt)}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                  Requested Check In
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                  {formatTime(viewingRequest.requestedCheckIn)}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                  Requested Check Out
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                  {formatTime(viewingRequest.requestedCheckOut)}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box>
+              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                Current Attendance Record
+              </Typography>
+              {viewingRequest.attendanceId ? (
+                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: '8px', bgcolor: '#F8FAFC' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Status: <StatusBadge status={viewingRequest.attendanceId.status} />
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mt: 0.5 }}>
+                    Check In: {formatTime(viewingRequest.attendanceId.checkIn)} • Check Out: {formatTime(viewingRequest.attendanceId.checkOut)}
+                  </Typography>
+                </Paper>
+              ) : (
+                <Typography variant="body2" sx={{ color: '#94A3B8', fontStyle: 'italic' }}>
+                  No attendance record (Attendance missing for this date)
+                </Typography>
+              )}
+            </Box>
+
+            <Box>
+              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                Employee Reason
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: '8px', bgcolor: '#F8FAFC' }}>
+                <Typography variant="body2" sx={{ color: '#334155' }}>
+                  {viewingRequest.reason || 'No reason provided.'}
+                </Typography>
+              </Paper>
+            </Box>
+
+            {viewingRequest.reviewReason && (
+              <Box>
+                <Typography variant="caption" sx={{ color: '#DC2626', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                  Rejection Reason
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: '8px', bgcolor: '#FEF2F2', borderColor: '#FECACA' }}>
+                  <Typography variant="body2" sx={{ color: '#991B1B' }}>
+                    {viewingRequest.reviewReason}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+
+            {viewingRequest.status === 'PENDING' && (
+              <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ pt: 1 }}>
+                {canRejectRegularization && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() => {
+                      const req = viewingRequest;
+                      setViewingRequest(null);
+                      setRejectingRequest(req);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                )}
+                {canApproveRegularization && (
+                  <Button
+                    variant="contained"
+                    color="success"
+                    size="small"
+                    onClick={() => {
+                      const id = viewingRequest._id;
+                      setViewingRequest(null);
+                      handleApproveRequest(id);
+                    }}
+                  >
+                    Approve
+                  </Button>
+                )}
+              </Stack>
+            )}
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Reject Request Dialog */}
+      <ConfirmDialog
+        open={Boolean(rejectingRequest)}
+        title="Reject Regularization Request"
+        message="Are you sure you want to reject this regularization request? Provide an optional reason below."
+        confirmLabel="Reject Request"
+        confirmColor="error"
+        danger={true}
+        submitting={actionLoading}
+        onConfirm={handleRejectConfirm}
+        onClose={() => {
+          setRejectingRequest(null);
+          setRejectReason('');
+        }}
+      >
+        <TextField
+          fullWidth
+          size="small"
+          multiline
+          rows={3}
+          placeholder="Reason for rejection (optional)"
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          sx={{ mt: 2 }}
+        />
+      </ConfirmDialog>
 
       {/* Toast Notification */}
       <Snackbar

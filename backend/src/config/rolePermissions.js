@@ -53,10 +53,14 @@ const hasPermission = (user, permission) => {
         return true;
     }
 
-    if (userSpecific.includes(PERMISSIONS.ATTENDANCE_MANAGE) && [
+    if ((userSpecific.includes(PERMISSIONS.ATTENDANCE_MANAGE) || userSpecific.includes(PERMISSIONS.REGULARIZATION_MANAGE)) && [
         PERMISSIONS.ATTENDANCE_VIEW_OWN,
         PERMISSIONS.ATTENDANCE_VIEW,
         PERMISSIONS.ATTENDANCE_MANAGE,
+        PERMISSIONS.REGULARIZATION_VIEW,
+        PERMISSIONS.REGULARIZATION_APPROVE,
+        PERMISSIONS.REGULARIZATION_REJECT,
+        PERMISSIONS.REGULARIZATION_MANAGE,
     ].includes(permission)) {
         return true;
     }

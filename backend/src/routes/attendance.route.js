@@ -13,6 +13,9 @@ const {
   createRegularizationRequest,
   getMyRegularizationRequests,
   cancelRegularizationRequest,
+  getHospitalRegularizationRequests,
+  approveRegularizationRequest,
+  rejectRegularizationRequest,
 } = require("../controllers/attendance.controller");
 
 const attendanceRoute = express.Router();
@@ -68,6 +71,40 @@ attendanceRoute.patch(
   "/regularization/:id/cancel",
   authorizePermission(PERMISSIONS.ATTENDANCE_VIEW_OWN),
   cancelRegularizationRequest
+);
+
+// Management Regularization: List hospital workforce regularization requests
+attendanceRoute.get(
+  "/regularization",
+  authorizeAnyPermission(
+    PERMISSIONS.REGULARIZATION_VIEW,
+    PERMISSIONS.REGULARIZATION_MANAGE,
+    PERMISSIONS.ATTENDANCE_MANAGE,
+    PERMISSIONS.ATTENDANCE_VIEW
+  ),
+  getHospitalRegularizationRequests
+);
+
+// Management Regularization: Approve request
+attendanceRoute.patch(
+  "/regularization/:id/approve",
+  authorizeAnyPermission(
+    PERMISSIONS.REGULARIZATION_APPROVE,
+    PERMISSIONS.REGULARIZATION_MANAGE,
+    PERMISSIONS.ATTENDANCE_MANAGE
+  ),
+  approveRegularizationRequest
+);
+
+// Management Regularization: Reject request
+attendanceRoute.patch(
+  "/regularization/:id/reject",
+  authorizeAnyPermission(
+    PERMISSIONS.REGULARIZATION_REJECT,
+    PERMISSIONS.REGULARIZATION_MANAGE,
+    PERMISSIONS.ATTENDANCE_MANAGE
+  ),
+  rejectRegularizationRequest
 );
 
 // Attendance stats
