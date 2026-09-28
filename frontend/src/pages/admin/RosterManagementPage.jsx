@@ -786,23 +786,25 @@ export default function RosterManagementPage() {
                   >
                     <Table sx={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
                       <TableHead>
-                        <TableRow sx={{ bgcolor: '#1E293B' }}>
+                        <TableRow sx={{ bgcolor: '#F1F5F9' }}>
                           {activeRoster.templateId.columns?.map((col) => (
                             <TableCell
                               key={col.id || col.title}
                               align="center"
                               sx={{
-                                color: '#FFFFFF',
-                                borderRight: '1px solid #475569',
+                                bgcolor: '#F1F5F9',
+                                color: '#111827',
+                                borderRight: '1px solid #CBD5E1',
+                                borderBottom: '2px solid #000000',
                                 py: 1.75,
                                 px: 2,
                                 width: `${100 / (activeRoster.templateId.columns?.length || 1)}%`,
                               }}
                             >
-                              <Typography variant="subtitle1" fontWeight="900" sx={{ letterSpacing: 1 }}>
+                              <Typography variant="subtitle1" fontWeight="800" sx={{ color: '#111827', letterSpacing: 1, textTransform: 'uppercase' }}>
                                 {col.title?.toUpperCase()}
                               </Typography>
-                              <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 700, display: 'block' }}>
+                              <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mt: 0.25 }}>
                                 {col.startTime} TO {col.endTime}
                               </Typography>
                             </TableCell>
