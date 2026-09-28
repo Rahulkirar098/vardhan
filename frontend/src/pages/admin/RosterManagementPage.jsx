@@ -745,34 +745,30 @@ export default function RosterManagementPage() {
                 </Paper>
 
                 {/* Date Navigator Bar */}
-                <Paper sx={{ p: 1.5, mb: 3, borderRadius: 2 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, px: 1, display: 'block', fontWeight: 700 }}>
-                    SELECT DUTY DATE:
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 1 }}>
-                    {activeRosterDates.map((dStr) => {
-                      const isSelected = activeRosterDate === dStr;
-                      const dateObj = new Date(dStr);
-                      const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-                      const formattedStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                <Paper sx={{ p: 1.25, px: 2, mb: 2.5, borderRadius: 2, border: '1px solid #E2E8F0', bgcolor: '#F8FAFC' }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Typography variant="caption" color="text.secondary" fontWeight="800" sx={{ whiteSpace: 'nowrap', letterSpacing: 0.5 }}>
+                      SELECT DATE:
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', py: 0.5 }}>
+                      {activeRosterDates.map((dStr) => {
+                        const isSelected = activeRosterDate === dStr;
+                        const dateObj = new Date(dStr);
+                        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+                        const formattedStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-                      return (
-                        <Button
-                          key={dStr}
-                          variant={isSelected ? 'contained' : 'outlined'}
-                          color={isSelected ? 'primary' : 'inherit'}
-                          onClick={() => setActiveRosterDate(dStr)}
-                          sx={{ minWidth: 105, flexDirection: 'column', py: 1, borderRadius: 1.5 }}
-                        >
-                          <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 700 }}>
-                            {dayName}
-                          </Typography>
-                          <Typography variant="body2" fontWeight="900">
-                            {formattedStr}
-                          </Typography>
-                        </Button>
-                      );
-                    })}
+                        return (
+                          <Chip
+                            key={dStr}
+                            label={`${dayName} ${formattedStr}`}
+                            color={isSelected ? 'primary' : 'default'}
+                            variant={isSelected ? 'filled' : 'outlined'}
+                            onClick={() => setActiveRosterDate(dStr)}
+                            sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}
+                          />
+                        );
+                      })}
+                    </Stack>
                   </Stack>
                 </Paper>
 
@@ -785,9 +781,10 @@ export default function RosterManagementPage() {
                       border: '2px solid #000000',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                       overflowX: 'auto',
+                      width: '100%',
                     }}
                   >
-                    <Table sx={{ borderCollapse: 'collapse', minWidth: 800 }}>
+                    <Table sx={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
                       <TableHead>
                         <TableRow sx={{ bgcolor: '#1E293B' }}>
                           {activeRoster.templateId.columns?.map((col) => (
@@ -797,13 +794,15 @@ export default function RosterManagementPage() {
                               sx={{
                                 color: '#FFFFFF',
                                 borderRight: '1px solid #475569',
-                                py: 2,
+                                py: 1.75,
+                                px: 2,
+                                width: `${100 / (activeRoster.templateId.columns?.length || 1)}%`,
                               }}
                             >
                               <Typography variant="subtitle1" fontWeight="900" sx={{ letterSpacing: 1 }}>
                                 {col.title?.toUpperCase()}
                               </Typography>
-                              <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 700 }}>
+                              <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 700, display: 'block' }}>
                                 {col.startTime} TO {col.endTime}
                               </Typography>
                             </TableCell>
@@ -812,116 +811,124 @@ export default function RosterManagementPage() {
                       </TableHead>
                       <TableBody>
                         {activeRoster.templateId.dutyAreas?.map((da) => (
-                          <Box component="tbody" key={da.id || da.name}>
-                            {/* DUTY AREA FULL-WIDTH ROW HEADER */}
-                            <TableRow sx={{ bgcolor: '#F1F5F9', borderTop: '2px solid #000000', borderBottom: '1px solid #000000' }}>
-                              <TableCell
-                                colSpan={activeRoster.templateId.columns?.length || 1}
-                                sx={{
-                                  py: 1.25,
-                                  px: 2,
-                                  fontWeight: '900',
-                                  color: '#0F172A',
-                                  fontSize: '0.95rem',
-                                  letterSpacing: 0.5,
-                                }}
-                              >
-                                {da.name?.toUpperCase()}
-                              </TableCell>
-                            </TableRow>
+                          <TableRow key={da.id || da.name} sx={{ borderBottom: '2px solid #000000' }}>
+                            {activeRoster.templateId.columns?.map((col) => {
+                              const cellKey = `${da.name}__${col.title}`;
+                              const cellAssignments = assignmentsByCell[cellKey] || [];
 
-                            {/* SHIFT COLUMNS FOR THIS DUTY AREA */}
-                            <TableRow sx={{ borderBottom: '2px solid #000000' }}>
-                              {activeRoster.templateId.columns?.map((col) => {
-                                const cellKey = `${da.name}__${col.title}`;
-                                const cellAssignments = assignmentsByCell[cellKey] || [];
-
-                                return (
-                                  <TableCell
-                                    key={col.id || col.title}
+                              return (
+                                <TableCell
+                                  key={col.id || col.title}
+                                  sx={{
+                                    verticalAlign: 'top',
+                                    p: 2,
+                                    width: `${100 / (activeRoster.templateId.columns?.length || 1)}%`,
+                                    borderRight: '1px solid #CBD5E1',
+                                    bgcolor: '#FFFFFF',
+                                  }}
+                                >
+                                  {/* DUTY AREA HEADING INSIDE EACH SHIFT CELL */}
+                                  <Box
                                     sx={{
-                                      verticalAlign: 'top',
-                                      p: 2,
-                                      width: `${100 / (activeRoster.templateId.columns?.length || 1)}%`,
-                                      borderRight: '1px solid #CBD5E1',
-                                      bgcolor: '#FFFFFF',
+                                      bgcolor: '#F1F5F9',
+                                      p: 1,
+                                      px: 1.25,
+                                      mb: 1.5,
+                                      borderRadius: 1,
+                                      borderLeft: '4px solid #0F172A',
+                                      border: '1px solid #CBD5E1',
+                                      borderLeftWidth: '4px',
                                     }}
                                   >
-                                    <Stack spacing={1.5}>
-                                      {cellAssignments.map((ass) => {
-                                        const emp = ass.employeeId;
-                                        const fullName = emp
-                                          ? `${emp.firstName || ''} ${emp.lastName || ''}`.trim().toUpperCase()
-                                          : 'UNKNOWN STAFF';
-                                        const isCustomTime =
-                                          ass.startTime !== col.startTime || ass.endTime !== col.endTime;
+                                    <Typography
+                                      variant="subtitle2"
+                                      fontWeight="900"
+                                      sx={{
+                                        color: '#0F172A',
+                                        letterSpacing: 0.5,
+                                        textTransform: 'uppercase',
+                                        fontSize: '0.825rem',
+                                      }}
+                                    >
+                                      {da.name?.toUpperCase()}
+                                    </Typography>
+                                  </Box>
 
-                                        return (
-                                          <Box
-                                            key={ass._id}
-                                            sx={{
-                                              p: 1.25,
-                                              borderLeft: '4px solid #0284C7',
-                                              bgcolor: '#F8FAFC',
-                                              border: '1px solid #E2E8F0',
-                                              borderLeftWidth: '4px',
-                                              borderRadius: 1,
-                                            }}
-                                          >
-                                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                                              <Box>
-                                                <Typography variant="body2" fontWeight="800" sx={{ color: '#0F172A' }}>
-                                                  {fullName}
-                                                </Typography>
-                                                {isCustomTime && (
-                                                  <Typography variant="caption" fontWeight="700" color="primary">
-                                                    {ass.startTime} TO {ass.endTime}
-                                                  </Typography>
-                                                )}
-                                                {ass.notes && (
-                                                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontStyle: 'italic' }}>
-                                                    Note: {ass.notes}
-                                                  </Typography>
-                                                )}
-                                              </Box>
+                                  <Stack spacing={1}>
+                                    {cellAssignments.map((ass) => {
+                                      const emp = ass.employeeId;
+                                      const fullName = emp
+                                        ? `${emp.firstName || ''} ${emp.lastName || ''}`.trim().toUpperCase()
+                                        : 'UNKNOWN STAFF';
+                                      const isCustomTime =
+                                        ass.startTime !== col.startTime || ass.endTime !== col.endTime;
 
-                                              {canManage && (
-                                                <IconButton
-                                                  size="small"
-                                                  color="error"
-                                                  onClick={() => handleDeleteAssignment(ass._id)}
-                                                >
-                                                  <CloseRounded fontSize="small" />
-                                                </IconButton>
-                                              )}
-                                            </Stack>
-                                          </Box>
-                                        );
-                                      })}
-
-                                      {cellAssignments.length === 0 && (
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                          No Staff Assigned
-                                        </Typography>
-                                      )}
-
-                                      {canManage && (
-                                        <Button
-                                          size="small"
-                                          variant="outlined"
-                                          startIcon={<AddRounded />}
-                                          onClick={() => handleOpenAddAssignment(da.name, col)}
-                                          sx={{ textTransform: 'none', mt: 1, fontWeight: 700 }}
+                                      return (
+                                        <Box
+                                          key={ass._id}
+                                          sx={{
+                                            p: 1.25,
+                                            borderLeft: '4px solid #0284C7',
+                                            bgcolor: '#F8FAFC',
+                                            border: '1px solid #E2E8F0',
+                                            borderLeftWidth: '4px',
+                                            borderRadius: 1,
+                                          }}
                                         >
-                                          + Add Employee
-                                        </Button>
-                                      )}
-                                    </Stack>
-                                  </TableCell>
-                                );
-                              })}
-                            </TableRow>
-                          </Box>
+                                          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                                            <Box>
+                                              <Typography variant="body2" fontWeight="800" sx={{ color: '#0F172A' }}>
+                                                {fullName}
+                                              </Typography>
+                                              {isCustomTime && (
+                                                <Typography variant="caption" fontWeight="700" color="primary" sx={{ display: 'block' }}>
+                                                  {ass.startTime} TO {ass.endTime}
+                                                </Typography>
+                                              )}
+                                              {ass.notes && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontStyle: 'italic' }}>
+                                                  Note: {ass.notes}
+                                                </Typography>
+                                              )}
+                                            </Box>
+
+                                            {canManage && (
+                                              <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => handleDeleteAssignment(ass._id)}
+                                                sx={{ p: 0.25, ml: 0.5 }}
+                                              >
+                                                <CloseRounded fontSize="small" />
+                                              </IconButton>
+                                            )}
+                                          </Stack>
+                                        </Box>
+                                      );
+                                    })}
+
+                                    {cellAssignments.length === 0 && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block', py: 0.5 }}>
+                                        No Staff Assigned
+                                      </Typography>
+                                    )}
+
+                                    {canManage && (
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<AddRounded fontSize="small" />}
+                                        onClick={() => handleOpenAddAssignment(da.name, col)}
+                                        sx={{ textTransform: 'none', mt: 1, fontWeight: 700, width: '100%', justifyContent: 'flex-start' }}
+                                      >
+                                        + Add Employee
+                                      </Button>
+                                    )}
+                                  </Stack>
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
                         ))}
                       </TableBody>
                     </Table>
