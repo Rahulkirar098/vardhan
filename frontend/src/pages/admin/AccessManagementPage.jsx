@@ -134,10 +134,25 @@ const PERMISSION_GROUPS = [
   },
   {
     title: 'Roster',
-    description: 'Permissions for hospital staff duty roster planning and management.',
-    permissions: [
-      { key: 'roster.view', label: 'View Roster', description: 'View hospital duty rosters and templates' },
-      { key: 'roster.manage', label: 'Manage Roster', description: 'Create templates, draft rosters, manage shift assignments, and publish rosters' },
+    description: 'Self-service capabilities are default for active employees. Management permissions are Admin-controlled.',
+    subsections: [
+      {
+        title: 'SELF SERVICE',
+        subtitle: 'Default capabilities active for all active employees',
+        isDefaultGroup: true,
+        permissions: [
+          { key: 'roster.view_own', label: 'View Own Roster — Default', description: 'View personal published duty assignments', isDefault: true },
+        ],
+      },
+      {
+        title: 'MANAGEMENT',
+        subtitle: 'Admin-controlled permissions for workforce duty roster governance',
+        isDefaultGroup: false,
+        permissions: [
+          { key: 'roster.view', label: 'View Workforce Roster', description: 'View duty rosters and templates across hospital workforce', isDefault: false },
+          { key: 'roster.manage', label: 'Manage Roster', description: 'Create templates, draft rosters, assign duty shifts, and publish rosters', isDefault: false },
+        ],
+      },
     ],
   },
 ];

@@ -81,6 +81,12 @@ router.delete(
     rosterController.deleteRosterDraft
 );
 
+router.post(
+    "/:id/publish",
+    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
+    rosterController.publishRoster
+);
+
 router.patch(
     "/:id/publish",
     authorizePermission(PERMISSIONS.ROSTER_MANAGE),

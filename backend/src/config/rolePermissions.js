@@ -15,6 +15,7 @@ const ROLE_PERMISSIONS = Object.freeze({
         PERMISSIONS.LEAVE_VIEW_OWN,
         PERMISSIONS.LEAVE_CANCEL_OWN,
         PERMISSIONS.ATTENDANCE_VIEW_OWN,
+        PERMISSIONS.ROSTER_VIEW_OWN,
     ]),
 });
 
@@ -29,6 +30,21 @@ const hasPermission = (user, permission) => {
     const userSpecific = user.permissions || [];
 
     if (roleDefaults.includes(permission) || userSpecific.includes(permission)) {
+        return true;
+    }
+
+    if (userSpecific.includes(PERMISSIONS.ROSTER_MANAGE) && [
+        PERMISSIONS.ROSTER_VIEW_OWN,
+        PERMISSIONS.ROSTER_VIEW,
+        PERMISSIONS.ROSTER_MANAGE,
+    ].includes(permission)) {
+        return true;
+    }
+
+    if (userSpecific.includes(PERMISSIONS.ROSTER_VIEW) && [
+        PERMISSIONS.ROSTER_VIEW_OWN,
+        PERMISSIONS.ROSTER_VIEW,
+    ].includes(permission)) {
         return true;
     }
 

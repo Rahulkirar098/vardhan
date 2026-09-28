@@ -21,7 +21,8 @@ const PERMISSIONS = Object.freeze({
     ACCESS_VIEW: "access.view",
     ACCESS_MANAGE: "access.manage",
 
-    // Future Phase Placeholders (Roster & Shifts)
+    // Roster & Shifts (HRMS)
+    ROSTER_VIEW_OWN: "roster.view_own",
     ROSTER_VIEW: "roster.view",
     ROSTER_MANAGE: "roster.manage",
 

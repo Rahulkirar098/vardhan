@@ -68,8 +68,20 @@ export default function RosterManagementPage() {
     []
   );
 
+  const canViewWorkforce = useMemo(
+    () => hasPermission(PERMISSIONS.ROSTER_VIEW) || canManage,
+    [canManage]
+  );
+
+  const canViewOwn = useMemo(
+    () => hasPermission(PERMISSIONS.ROSTER_VIEW_OWN) || canViewWorkforce,
+    [canViewWorkforce]
+  );
+
   // Tab State: 'templates' | 'drafts' | 'published' | 'my-roster'
-  const [activeTab, setActiveTab] = useState(canManage ? 'templates' : 'my-roster');
+  const [activeTab, setActiveTab] = useState(
+    canManage ? 'templates' : canViewWorkforce ? 'published' : 'my-roster'
+  );
 
   // Loading & Error States
   const [loading, setLoading] = useState(false);
@@ -578,7 +590,7 @@ export default function RosterManagementPage() {
             variant="scrollable"
             scrollButtons="auto"
           >
-            {canManage && <Tab icon={<EventNoteRounded />} iconPosition="start" label="Templates" value="templates" />}
+            {canViewWorkforce && <Tab icon={<EventNoteRounded />} iconPosition="start" label="Templates" value="templates" />}
             {canManage && (
               <Tab
                 icon={<EditOutlined />}
@@ -587,7 +599,7 @@ export default function RosterManagementPage() {
                 value="drafts"
               />
             )}
-            {canManage && (
+            {canViewWorkforce && (
               <Tab
                 icon={<PublishRounded />}
                 iconPosition="start"
@@ -595,12 +607,14 @@ export default function RosterManagementPage() {
                 value="published"
               />
             )}
-            <Tab icon={<CalendarMonthRounded />} iconPosition="start" label="My Roster" value="my-roster" />
+            {canViewOwn && (
+              <Tab icon={<CalendarMonthRounded />} iconPosition="start" label="My Roster" value="my-roster" />
+            )}
           </Tabs>
         </Paper>
 
         {/* ─── TAB 1: TEMPLATES ─── */}
-        {activeTab === 'templates' && canManage && (
+        {activeTab === 'templates' && canViewWorkforce && (
           <Box>
             {templates.length === 0 && !loading ? (
               <EmptyState
@@ -951,7 +965,7 @@ export default function RosterManagementPage() {
         )}
 
         {/* ─── TAB 3: PUBLISHED ROSTERS ─── */}
-        {activeTab === 'published' && canManage && (
+        {activeTab === 'published' && canViewWorkforce && (
           <Box>
             {activeRoster ? (
               /* Published Roster Detail View */

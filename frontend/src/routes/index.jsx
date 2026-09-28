@@ -95,6 +95,7 @@ export const getDefaultRedirectForRole = (role) => {
     }
 
     const hasAnyRoster =
+      hasPermission(PERMISSIONS.ROSTER_VIEW_OWN) ||
       hasPermission(PERMISSIONS.ROSTER_VIEW) ||
       hasPermission(PERMISSIONS.ROSTER_MANAGE);
 
@@ -365,6 +366,7 @@ const AppRoutes = () => {
             allowedRoles={['admin', 'employee']}
             requiredModule="hrms"
             requiredAnyPermission={[
+              PERMISSIONS.ROSTER_VIEW_OWN,
               PERMISSIONS.ROSTER_VIEW,
               PERMISSIONS.ROSTER_MANAGE,
             ]}

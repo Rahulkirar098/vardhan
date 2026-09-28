@@ -472,17 +472,41 @@ async function runTests() {
         });
         assert.strictEqual(res15.status, 200);
         assert.strictEqual(res15.body.data.length, 0);
-        console.log("  ✓ 15. Unassigned Nurse Anjali receives empty array for /my-roster");
+        console.log("  ✓ 15. Unassigned Nurse Anjali receives empty array for /my-roster and cannot see Nurse Priya's assignments");
+
+        // 16. Nurse with roster.view_own attempting to access workforce templates blocked (403)
+        const resTemplatesBlocked = await makeRequest("/api/v1/rosters/templates", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${nurse2Token}` },
+        });
+        assert.strictEqual(resTemplatesBlocked.status, 403);
+        console.log("  ✓ 16. Nurse with roster.view_own only is blocked from viewing templates (403 Forbidden)");
+
+        // 17. Nurse with roster.view_own attempting to access workforce rosters blocked (403)
+        const resRostersBlocked = await makeRequest("/api/v1/rosters", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${nurse2Token}` },
+        });
+        assert.strictEqual(resRostersBlocked.status, 403);
+        console.log("  ✓ 17. Nurse with roster.view_own only is blocked from viewing workforce rosters list (403 Forbidden)");
+
+        // 18. Nurse with roster.view_own attempting to publish roster blocked (403)
+        const resPublishBlocked = await makeRequest(`/api/v1/rosters/${createdRosterId}/publish`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${nurse2Token}` },
+        });
+        assert.strictEqual(resPublishBlocked.status, 403);
+        console.log("  ✓ 18. Nurse with roster.view_own only is blocked from publishing rosters (403 Forbidden)");
 
         console.log("\n--- 4. CLEANUP & TEMPLATE DELETION ---");
 
-        // 16. Delete Template
-        const res16 = await makeRequest(`/api/v1/rosters/templates/${createdTemplateId}`, {
+        // 19. Delete Template
+        const res19 = await makeRequest(`/api/v1/rosters/templates/${createdTemplateId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${hrToken}` },
         });
-        assert.strictEqual(res16.status, 200);
-        console.log("  ✓ 16. Authorized HR can delete a Roster Template");
+        assert.strictEqual(res19.status, 200);
+        console.log("  ✓ 19. Authorized HR can delete a Roster Template");
 
         console.log("\n=======================================================");
         console.log("=== ALL 16 ROSTER TESTS PASSED 100% ===");

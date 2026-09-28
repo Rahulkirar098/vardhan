@@ -22,7 +22,8 @@ export const PERMISSIONS = Object.freeze({
   ACCESS_VIEW: 'access.view',
   ACCESS_MANAGE: 'access.manage',
 
-  // Future Phase Placeholders
+  // Roster Management (HRMS)
+  ROSTER_VIEW_OWN: 'roster.view_own',
   ROSTER_VIEW: 'roster.view',
   ROSTER_MANAGE: 'roster.manage',
 
@@ -65,6 +66,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.LEAVE_VIEW_OWN,
     PERMISSIONS.LEAVE_CANCEL_OWN,
     PERMISSIONS.ATTENDANCE_VIEW_OWN,
+    PERMISSIONS.ROSTER_VIEW_OWN,
   ]),
 });
 
@@ -108,6 +110,21 @@ export const hasPermission = (permission, role, userPermissions) => {
   }
 
   if (Array.isArray(assigned) && assigned.includes(permission)) {
+    return true;
+  }
+
+  if (Array.isArray(assigned) && assigned.includes(PERMISSIONS.ROSTER_MANAGE) && [
+    PERMISSIONS.ROSTER_VIEW_OWN,
+    PERMISSIONS.ROSTER_VIEW,
+    PERMISSIONS.ROSTER_MANAGE,
+  ].includes(permission)) {
+    return true;
+  }
+
+  if (Array.isArray(assigned) && assigned.includes(PERMISSIONS.ROSTER_VIEW) && [
+    PERMISSIONS.ROSTER_VIEW_OWN,
+    PERMISSIONS.ROSTER_VIEW,
+  ].includes(permission)) {
     return true;
   }
 

@@ -101,6 +101,7 @@ export const NAVIGATION_ITEMS = [
     allowedRoles: ['admin', 'employee'],
     requiredModule: 'hrms',
     requiredAnyPermission: [
+      PERMISSIONS.ROSTER_VIEW_OWN,
       PERMISSIONS.ROSTER_VIEW,
       PERMISSIONS.ROSTER_MANAGE,
     ],
