@@ -136,6 +136,14 @@ export default function RosterManagementPage() {
     endDate: '',
   });
 
+  // Edit Roster Details Modal (Draft & Published)
+  const [editRosterModalOpen, setEditRosterModalOpen] = useState(false);
+  const [editRosterForm, setEditRosterForm] = useState({
+    title: '',
+    startDate: '',
+    endDate: '',
+  });
+
   // Add / Edit Assignment Modal
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [assignmentTarget, setAssignmentTarget] = useState({
@@ -352,7 +360,50 @@ export default function RosterManagementPage() {
     }
   };
 
-  // --- Add Nurse Assignment ---
+  // --- Edit Roster Details (Draft & Published) ---
+  const handleOpenEditRosterDetails = () => {
+    if (!activeRoster) return;
+    setEditRosterForm({
+      title: activeRoster.title || '',
+      startDate: activeRoster.startDate ? new Date(activeRoster.startDate).toISOString().split('T')[0] : '',
+      endDate: activeRoster.endDate ? new Date(activeRoster.endDate).toISOString().split('T')[0] : '',
+    });
+    setEditRosterModalOpen(true);
+  };
+
+  const handleSaveRosterDetails = async () => {
+    if (!editRosterForm.title.trim()) {
+      showToast('Roster Title is required', 'warning');
+      return;
+    }
+
+    const updateProc = async () => {
+      try {
+        setLoading(true);
+        await rosterService.updateRoster(activeRoster._id, editRosterForm);
+        showToast('Roster details updated successfully', 'success');
+        setEditRosterModalOpen(false);
+        handleOpenRosterDetails(activeRoster._id);
+        fetchRosters();
+      } catch (err) {
+        showToast(err.response?.data?.message || 'Failed to update roster details', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (activeRoster?.status === 'PUBLISHED') {
+      setEditRosterModalOpen(false);
+      setPublishEditConfirm({
+        open: true,
+        pendingAction: updateProc,
+      });
+    } else {
+      await updateProc();
+    }
+  };
+
+  // --- Add / Edit Nurse Assignment ---
   const handleOpenAddAssignment = (dutyAreaName, shift) => {
     setAssignmentTarget({ dutyArea: dutyAreaName, shift, editingAssignment: null });
     setLeaveWarning(null);
@@ -369,6 +420,23 @@ export default function RosterManagementPage() {
     setAssignmentModalOpen(true);
   };
 
+  const handleOpenEditAssignment = (ass, dutyAreaName, shift) => {
+    const empId = ass.employeeId?._id || ass.employeeId;
+    setAssignmentTarget({ dutyArea: dutyAreaName, shift, editingAssignment: ass });
+    setLeaveWarning(null);
+    setAssignmentForm({
+      employeeId: empId,
+      date: activeRosterDate,
+      columnId: shift.id || ass.columnId,
+      shiftTitle: shift.title || ass.shiftTitle,
+      startTime: ass.startTime || shift.startTime,
+      endTime: ass.endTime || shift.endTime,
+      dutyArea: dutyAreaName,
+      notes: ass.notes || '',
+    });
+    setAssignmentModalOpen(true);
+  };
+
   const handleSaveAssignment = async () => {
     if (!assignmentForm.employeeId) {
       showToast('Please select an employee', 'warning');
@@ -378,21 +446,31 @@ export default function RosterManagementPage() {
     const saveProc = async () => {
       try {
         setLoading(true);
-        const res = await rosterService.addAssignment(activeRoster._id, assignmentForm);
-        showToast('Assignment added to roster', 'success');
-        if (res.data?.leaveWarning) {
-          setLeaveWarning(res.data.leaveWarning);
+        if (assignmentTarget.editingAssignment) {
+          await rosterService.updateAssignment(
+            activeRoster._id,
+            assignmentTarget.editingAssignment._id,
+            assignmentForm
+          );
+          showToast('Assignment updated successfully', 'success');
+        } else {
+          const res = await rosterService.addAssignment(activeRoster._id, assignmentForm);
+          showToast('Assignment added to roster', 'success');
+          if (res.data?.leaveWarning) {
+            setLeaveWarning(res.data.leaveWarning);
+          }
         }
         handleOpenRosterDetails(activeRoster._id);
         setAssignmentModalOpen(false);
       } catch (err) {
-        showToast(err.response?.data?.message || 'Failed to add assignment', 'error');
+        showToast(err.response?.data?.message || 'Failed to save assignment', 'error');
       } finally {
         setLoading(false);
       }
     };
 
     if (activeRoster?.status === 'PUBLISHED') {
+      setAssignmentModalOpen(false);
       setPublishEditConfirm({
         open: true,
         pendingAction: saveProc,
@@ -734,9 +812,9 @@ export default function RosterManagementPage() {
                             variant="contained"
                             color="primary"
                             startIcon={<EditOutlined />}
-                            onClick={() => showToast('Editing published roster matrix. Changes will be live immediately.', 'info')}
+                            onClick={handleOpenEditRosterDetails}
                           >
-                            Edit Roster Matrix
+                            Edit Roster Details
                           </Button>
                         </>
                       )}
@@ -1363,6 +1441,56 @@ export default function RosterManagementPage() {
               </Button>
               <Button variant="contained" onClick={handleCreateRosterFromTemplate} loading={loading}>
                 Create Draft Roster
+              </Button>
+            </Box>
+          </Stack>
+        </Modal>
+
+        {/* ─── MODAL 2B: EDIT ROSTER DETAILS ─── */}
+        <Modal
+          open={editRosterModalOpen}
+          onClose={() => setEditRosterModalOpen(false)}
+          title="Edit Roster Details"
+          maxWidth="sm"
+        >
+          <Stack spacing={3} sx={{ pt: 1 }}>
+            <TextField
+              label="Roster Title"
+              value={editRosterForm.title}
+              onChange={(e) => setEditRosterForm((p) => ({ ...p, title: e.target.value }))}
+              fullWidth
+              required
+            />
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  label="Start Date"
+                  type="date"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={editRosterForm.startDate}
+                  onChange={(e) => setEditRosterForm((p) => ({ ...p, startDate: e.target.value }))}
+                  required
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="End Date"
+                  type="date"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={editRosterForm.endDate}
+                  onChange={(e) => setEditRosterForm((p) => ({ ...p, endDate: e.target.value }))}
+                  required
+                />
+              </Grid>
+            </Grid>
+            <Box align="right" pt={2}>
+              <Button onClick={() => setEditRosterModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSaveRosterDetails} loading={loading}>
+                Update Roster Details
               </Button>
             </Box>
           </Stack>
