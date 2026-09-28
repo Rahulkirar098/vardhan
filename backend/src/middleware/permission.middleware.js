@@ -59,7 +59,8 @@ const authorizeAnyPermission = (...requiredPermissions) => {
             return next();
         }
 
-        const isAuthorized = requiredPermissions.some((permission) =>
+        const perms = requiredPermissions.flat(Infinity);
+        const isAuthorized = perms.some((permission) =>
             hasPermission(req.user, permission)
         );
 

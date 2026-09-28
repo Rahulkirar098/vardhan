@@ -18,6 +18,7 @@ import PositionsPage from '../pages/admin/PositionsPage';
 import AccessManagementPage from '../pages/admin/AccessManagementPage';
 import LeaveManagementPage from '../pages/admin/LeaveManagementPage';
 import AttendancePage from '../pages/admin/AttendancePage';
+import RosterManagementPage from '../pages/admin/RosterManagementPage';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
 const getUserRole = () => {
@@ -91,6 +92,14 @@ export const getDefaultRedirectForRole = (role) => {
 
     if (hasHrmsModule && hasAnyAttendance) {
       return '/attendance';
+    }
+
+    const hasAnyRoster =
+      hasPermission(PERMISSIONS.ROSTER_VIEW) ||
+      hasPermission(PERMISSIONS.ROSTER_MANAGE);
+
+    if (hasHrmsModule && hasAnyRoster) {
+      return '/roster';
     }
 
     if (hasPermission(PERMISSIONS.STRUCTURE_VIEW)) {
@@ -346,6 +355,21 @@ const AppRoutes = () => {
             ]}
           >
             <AttendancePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/roster"
+        element={
+          <ProtectedRoute
+            allowedRoles={['admin', 'employee']}
+            requiredModule="hrms"
+            requiredAnyPermission={[
+              PERMISSIONS.ROSTER_VIEW,
+              PERMISSIONS.ROSTER_MANAGE,
+            ]}
+          >
+            <RosterManagementPage />
           </ProtectedRoute>
         }
       />

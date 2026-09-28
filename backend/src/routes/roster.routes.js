@@ -14,13 +14,13 @@ router.use(requireModule("hrms"));
 
 router.get(
     "/templates",
-    authorizeAnyPermission([PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE]),
+    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
     rosterController.listTemplates
 );
 
 router.get(
     "/templates/:id",
-    authorizeAnyPermission([PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE]),
+    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
     rosterController.getTemplateById
 );
 
@@ -53,7 +53,7 @@ router.get(
 
 router.get(
     "/",
-    authorizeAnyPermission([PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE]),
+    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
     rosterController.listRosters
 );
 
@@ -65,7 +65,7 @@ router.post(
 
 router.get(
     "/:id",
-    authorizeAnyPermission([PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE]),
+    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
     rosterController.getRosterById
 );
 

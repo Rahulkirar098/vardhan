@@ -85,7 +85,8 @@ async function runTests() {
     let createdTemplateId, createdRosterId, createdAssignmentId;
 
     try {
-        const tempAdminId = new mongoose.Types.ObjectId();
+        const tempAdminIdA = new mongoose.Types.ObjectId();
+        const tempAdminIdB = new mongoose.Types.ObjectId();
         const testSuffix = Date.now();
 
         hospitalA = await Hospital.create({
@@ -95,7 +96,7 @@ async function runTests() {
             email: `contact_${testSuffix}@metroA.com`,
             phone: "1234567890",
             status: "active",
-            createdBy: tempAdminId,
+            createdBy: tempAdminIdA,
         });
 
         hospitalB = await Hospital.create({
@@ -105,11 +106,11 @@ async function runTests() {
             email: `contact_${testSuffix}@cityB.com`,
             phone: "0987654321",
             status: "active",
-            createdBy: tempAdminId,
+            createdBy: tempAdminIdB,
         });
 
         const adminUserA = await User.create({
-            _id: tempAdminId,
+            _id: tempAdminIdA,
             name: "Admin Hospital A",
             email: `admin_${testSuffix}@metroA.com`,
             password: "password123",
@@ -120,6 +121,7 @@ async function runTests() {
         adminToken = generateToken({ id: adminUserA._id, role: adminUserA.role, hospitalId: hospitalA._id });
 
         const adminUserB = await User.create({
+            _id: tempAdminIdB,
             name: "Admin Hospital B",
             email: `admin_${testSuffix}@cityB.com`,
             password: "password123",
@@ -307,8 +309,8 @@ async function runTests() {
             endDate: new Date("2026-09-12"),
             totalDays: 1,
             reason: "Family event",
-            status: "APPROVED",
-            createdBy: hrUser._id,
+            status: "approved",
+            appliedBy: hrUser._id,
         });
 
         const res7 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {

@@ -93,6 +93,19 @@ export const NAVIGATION_ITEMS = [
     ],
   },
   {
+    key: 'roster',
+    label: 'Roster',
+    section: 'WORKFORCE',
+    path: '/roster',
+    icon: EventNoteRounded,
+    allowedRoles: ['admin', 'employee'],
+    requiredModule: 'hrms',
+    requiredAnyPermission: [
+      PERMISSIONS.ROSTER_VIEW,
+      PERMISSIONS.ROSTER_MANAGE,
+    ],
+  },
+  {
     key: 'access-management',
     label: 'Access Management',
     section: 'ACCESS',

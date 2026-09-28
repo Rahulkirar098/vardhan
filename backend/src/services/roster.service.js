@@ -309,7 +309,7 @@ const addAssignment = async ({
     const leaveConflict = await Leave.findOne({
         hospitalId,
         employeeId,
-        status: { $in: ["APPROVED", "PENDING"] },
+        status: { $in: ["APPROVED", "PENDING", "approved", "pending"] },
         startDate: { $lte: dateEnd },
         endDate: { $gte: dateStart },
     }).lean();
