@@ -58,74 +58,100 @@ const AppLayout = ({ children, onLogout }) => {
   const [userProfile, setUserProfile] = useState(getInitialUser);
 
   useEffect(() => {
-    auth.me().then((res) => {
-      const u = res?.data?.data;
-      if (u) {
-        const uid = u.id || u._id || '';
-        const name = u.name || 'User';
-        const email = u.email || '';
-        const role = u.role || 'employee';
-        const positionName = u.positionName || '';
-        const permissions = Array.isArray(u.permissions) ? u.permissions : [];
-        const modules = Array.isArray(u.modules) ? u.modules : ['core'];
-        const hospitalId = u.hospitalId || '';
-        const hospitalName = u.hospitalName || '';
-        const hospitalLocation = u.hospitalLocation || '';
-        const employeeId = u.employeeId || '';
+    let isMounted = true;
 
-        // Synchronize all access keys into localStorage
-        if (uid) localStorage.setItem('userId', uid);
-        localStorage.setItem('userName', name);
-        if (email) localStorage.setItem('userEmail', email);
-        localStorage.setItem('role', role);
-        localStorage.setItem('permissions', JSON.stringify(permissions));
-        localStorage.setItem('modules', JSON.stringify(modules));
+    const fetchUserProfile = async () => {
+      try {
+        const res = await auth.me();
+        const u = res?.data?.data;
+        if (u && isMounted) {
+          const uid = u.id || u._id || '';
+          const name = u.name || 'User';
+          const email = u.email || '';
+          const role = u.role || 'employee';
+          const positionName = u.positionName || '';
+          const permissions = Array.isArray(u.permissions) ? u.permissions : [];
+          const modules = Array.isArray(u.modules) ? u.modules : ['core'];
+          const hospitalId = u.hospitalId || '';
+          const hospitalName = u.hospitalName || '';
+          const hospitalLocation = u.hospitalLocation || '';
+          const employeeId = u.employeeId || '';
 
-        if (positionName) {
-          localStorage.setItem('positionName', positionName);
-        } else {
-          localStorage.removeItem('positionName');
+          // Synchronize all access keys into localStorage
+          if (uid) localStorage.setItem('userId', uid);
+          localStorage.setItem('userName', name);
+          if (email) localStorage.setItem('userEmail', email);
+          localStorage.setItem('role', role);
+          localStorage.setItem('permissions', JSON.stringify(permissions));
+          localStorage.setItem('modules', JSON.stringify(modules));
+
+          if (positionName) {
+            localStorage.setItem('positionName', positionName);
+          } else {
+            localStorage.removeItem('positionName');
+          }
+
+          if (hospitalId) {
+            localStorage.setItem('hospitalId', hospitalId);
+          } else {
+            localStorage.removeItem('hospitalId');
+          }
+
+          if (hospitalName) {
+            localStorage.setItem('hospitalName', hospitalName);
+          } else {
+            localStorage.removeItem('hospitalName');
+          }
+
+          if (hospitalLocation) {
+            localStorage.setItem('hospitalLocation', hospitalLocation);
+          } else {
+            localStorage.removeItem('hospitalLocation');
+          }
+
+          if (employeeId) {
+            localStorage.setItem('employeeId', employeeId);
+          } else {
+            localStorage.removeItem('employeeId');
+          }
+
+          setUserProfile({
+            id: uid,
+            name,
+            email,
+            role,
+            positionName,
+            permissions,
+            modules,
+            hospitalId,
+            hospitalName,
+            hospitalLocation,
+            employeeId,
+          });
         }
-
-        if (hospitalId) {
-          localStorage.setItem('hospitalId', hospitalId);
-        } else {
-          localStorage.removeItem('hospitalId');
-        }
-
-        if (hospitalName) {
-          localStorage.setItem('hospitalName', hospitalName);
-        } else {
-          localStorage.removeItem('hospitalName');
-        }
-
-        if (hospitalLocation) {
-          localStorage.setItem('hospitalLocation', hospitalLocation);
-        } else {
-          localStorage.removeItem('hospitalLocation');
-        }
-
-        if (employeeId) {
-          localStorage.setItem('employeeId', employeeId);
-        } else {
-          localStorage.removeItem('employeeId');
-        }
-
-        setUserProfile({
-          id: uid,
-          name,
-          email,
-          role,
-          positionName,
-          permissions,
-          modules,
-          hospitalId,
-          hospitalName,
-          hospitalLocation,
-          employeeId,
-        });
+      } catch {
+        // ignore
       }
-    }).catch(() => {});
+    };
+
+    fetchUserProfile();
+
+    let lastFetch = Date.now();
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastFetch > 2000) {
+        lastFetch = Date.now();
+        fetchUserProfile();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
   }, []);
 
   return (
