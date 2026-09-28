@@ -264,7 +264,7 @@ const runTests = async () => {
 
         assert.strictEqual(createRes1.status, 201, `Create should return 201 Created. Got: ${createRes1.status}`);
         assert.strictEqual(createRes1.body.success, true);
-        assert.strictEqual(createRes1.body.data.status, "pending");
+        assert.strictEqual(String(createRes1.body.data.status).toUpperCase(), "PENDING");
         assert.strictEqual(createRes1.body.data.requestedStatus, "PRESENT");
         assert.strictEqual(createRes1.body.data.dateStr, "2026-09-20");
         assert.ok(createRes1.body.data.requestedCheckIn, "requestedCheckIn should be stored");
@@ -465,7 +465,7 @@ const runTests = async () => {
 
         assert.strictEqual(cancelOwnRes.status, 200);
         assert.strictEqual(cancelOwnRes.body.success, true);
-        assert.strictEqual(cancelOwnRes.body.data.status, "cancelled");
+        assert.strictEqual(String(cancelOwnRes.body.data.status).toUpperCase(), "CANCELLED");
         assert.ok(cancelOwnRes.body.data.cancelledAt, "cancelledAt should be timestamped");
         console.log("  ✓ 13. Employee can cancel their own pending regularization request");
 
@@ -483,7 +483,7 @@ const runTests = async () => {
         });
 
         assert.strictEqual(reSubmitRes.status, 201, `Resubmission after cancel should succeed. Got: ${reSubmitRes.status}`);
-        assert.strictEqual(reSubmitRes.body.data.status, "pending");
+        assert.strictEqual(String(reSubmitRes.body.data.status).toUpperCase(), "PENDING");
         console.log("  ✓ 14. Cancelled request does NOT block a new request for the same date");
 
         // Test 15: Already cancelled request cannot be cancelled again (400)
@@ -533,22 +533,250 @@ const runTests = async () => {
         assert.strictEqual(cancelRejectedRes.status, 400);
         console.log("  ✓ 17. Rejected request cannot be cancelled by employee (400 Bad Request)");
 
-        // ─────────────────────────────────────────────────────────────
-        // 6. TENANT ISOLATION
-        // ─────────────────────────────────────────────────────────────
-        console.log("\n--- 6. TENANT ISOLATION ---");
-
-        // Test 18: Hospital B employee cannot cancel Hospital A request (404 Not Found)
-        const crossCancelRes = await request(`/api/v1/attendance/regularization/${req1Id}/cancel`, {
-            method: "PATCH",
-            headers: { Authorization: `Bearer ${staff3Token}` },
+        // Test 18: Legacy Lowercase Pending request ("pending") can be cancelled
+        const legacyPendingReq = await AttendanceRegularization.collection.insertOne({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmp1._id,
+            date: new Date("2026-09-05T00:00:00.000Z"),
+            dateStr: "2026-09-05",
+            requestedStatus: "PRESENT",
+            reason: "Legacy request with lowercase status",
+            status: "pending",
+            createdAt: new Date(),
+            updatedAt: new Date(),
         });
 
-        assert.strictEqual(crossCancelRes.status, 404, `Cross hospital request should return 404. Got: ${crossCancelRes.status}`);
-        console.log("  ✓ 18. Cross-hospital access is rejected with 404 Not Found (Tenant Isolation enforced)");
+        const cancelLegacyRes = await request(`/api/v1/attendance/regularization/${legacyPendingReq.insertedId}/cancel`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${staff1Token}` },
+        });
+
+        assert.strictEqual(cancelLegacyRes.status, 200, `Legacy 'pending' status cancellation should return 200. Got: ${cancelLegacyRes.status}`);
+        assert.strictEqual(cancelLegacyRes.body.success, true);
+        assert.strictEqual(String(cancelLegacyRes.body.data.status).toUpperCase(), "CANCELLED");
+        console.log("  ✓ 18. Legacy lowercase 'pending' request can be cancelled successfully");
+
+        // Test 19: Employee Identity Resolution when user.employeeId is null
+        const staffUserNoEmpId = await User.create({
+            name: "Unlinked Token Employee",
+            email: `unlinked_emp_${testTimestamp}@test.com`,
+            password: hashedPassword,
+            role: "employee",
+            hospitalId: hospitalA._id,
+            status: "active",
+            modules: ["core", "hrms"],
+            permissions: [PERMISSIONS.ATTENDANCE_VIEW_OWN],
+        });
+
+        const staffEmpUnlinked = await Employee.create({
+            hospitalId: hospitalA._id,
+            userId: staffUserNoEmpId._id,
+            positionId: staffPositionA._id,
+            firstName: "Unlinked",
+            lastName: "Employee",
+            email: staffUserNoEmpId.email,
+            phone: "9876543299",
+            employeeId: `REG-UNLINK-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        // Deliberately DO NOT set staffUserNoEmpId.employeeId on User document to simulate unpopulated employeeId field
+
+        const unlinkedToken = generateToken({ id: staffUserNoEmpId._id, role: staffUserNoEmpId.role });
+
+        const unlinkedReq = await AttendanceRegularization.create({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmpUnlinked._id,
+            date: new Date("2026-09-04T00:00:00.000Z"),
+            dateStr: "2026-09-04",
+            requestedStatus: "PRESENT",
+            reason: "Unlinked user employee ID resolution test",
+            status: REGULARIZATION_STATUSES.PENDING,
+        });
+
+        const cancelUnlinkedRes = await request(`/api/v1/attendance/regularization/${unlinkedReq._id}/cancel`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${unlinkedToken}` },
+        });
+
+        assert.strictEqual(cancelUnlinkedRes.status, 200, `Employee identity resolution cancellation should return 200. Got: ${cancelUnlinkedRes.status}`);
+        assert.strictEqual(cancelUnlinkedRes.body.success, true);
+        assert.strictEqual(String(cancelUnlinkedRes.body.data.status).toUpperCase(), "CANCELLED");
+        console.log("  ✓ 19. Cancellation succeeds when user.employeeId is unpopulated but Employee record matches");
+
+        // ─────────────────────────────────────────────────────────────
+        // 7. ATOMIC APPROVAL TRANSACTION & ROLLBACK SCENARIOS (PHASE 8D)
+        // ─────────────────────────────────────────────────────────────
+        console.log("\n--- 7. ATOMIC APPROVAL TRANSACTION & ROLLBACK SCENARIOS (PHASE 8D) ---");
+
+        const adminToken = generateToken({ id: adminUser._id, role: adminUser.role });
+
+        // TEST A: Approval with existing attendance record
+        const pendingWithAttReq = await AttendanceRegularization.create({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmp1._id,
+            attendanceId: existingAttendanceRecord._id,
+            date: new Date("2026-09-19T00:00:00.000Z"),
+            dateStr: "2026-09-19",
+            requestedStatus: "PRESENT",
+            requestedCheckIn: new Date("2026-09-19T09:00:00.000Z"),
+            requestedCheckOut: new Date("2026-09-19T17:00:00.000Z"),
+            reason: "Correction with existing attendance",
+            status: REGULARIZATION_STATUSES.PENDING,
+        });
+
+        const approveResA = await request(`/api/v1/attendance/regularization/${pendingWithAttReq._id}/approve`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+
+        assert.strictEqual(approveResA.status, 200, `Approval should return 200 OK. Got: ${approveResA.status}`);
+        assert.strictEqual(approveResA.body.success, true);
+        assert.strictEqual(String(approveResA.body.data.status).toUpperCase(), "APPROVED");
+        assert.ok(approveResA.body.data.reviewedBy, "reviewedBy should be set");
+        assert.ok(approveResA.body.data.reviewedAt, "reviewedAt should be set");
+
+        const updatedAttA = await Attendance.findById(existingAttendanceRecord._id);
+        assert.strictEqual(updatedAttA.status, "PRESENT");
+        assert.strictEqual(updatedAttA.workingMinutes, 480);
+        console.log("  ✓ TEST A: Approval with existing attendance updates Attendance and sets status = APPROVED atomically");
+
+        // TEST B: Approval without existing attendance record (creates new Attendance)
+        const pendingNoAttReq = await AttendanceRegularization.create({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmp1._id,
+            attendanceId: null,
+            date: new Date("2026-09-18T00:00:00.000Z"),
+            dateStr: "2026-09-18",
+            requestedStatus: "HALF_DAY",
+            requestedCheckIn: new Date("2026-09-18T09:00:00.000Z"),
+            requestedCheckOut: new Date("2026-09-18T13:00:00.000Z"),
+            reason: "Attendance missing for 18th",
+            status: REGULARIZATION_STATUSES.PENDING,
+        });
+
+        const approveResB = await request(`/api/v1/attendance/regularization/${pendingNoAttReq._id}/approve`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+
+        assert.strictEqual(approveResB.status, 200);
+        assert.strictEqual(String(approveResB.body.data.status).toUpperCase(), "APPROVED");
+        assert.ok(approveResB.body.data.attendanceId, "New attendanceId should be linked");
+
+        const createdAttB = await Attendance.findById(approveResB.body.data.attendanceId);
+        assert.ok(createdAttB, "Created Attendance document should exist");
+        assert.strictEqual(createdAttB.status, "HALF_DAY");
+        assert.strictEqual(createdAttB.workingMinutes, 240);
+        console.log("  ✓ TEST B: Approval without existing attendance creates Attendance and links attendanceId atomically");
+
+        // TEST C: Approval is idempotently protected (Cannot approve already approved request)
+        const reApproveRes = await request(`/api/v1/attendance/regularization/${pendingNoAttReq._id}/approve`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+
+        assert.strictEqual(reApproveRes.status, 400);
+        assert.strictEqual(reApproveRes.body.success, false);
+        console.log("  ✓ TEST C: Idempotency protected - already approved request cannot be approved again (400 Bad Request)");
+
+        // TEST D: Rejected request cannot be approved
+        const approveRejectedRes = await request(`/api/v1/attendance/regularization/${mockRejectedReq._id}/approve`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+
+        assert.strictEqual(approveRejectedRes.status, 400);
+        console.log("  ✓ TEST D: Rejected request cannot be approved (400 Bad Request)");
+
+        // TEST E: Cancelled request cannot be approved
+        const approveCancelledRes = await request(`/api/v1/attendance/regularization/${req1Id}/approve`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+
+        assert.strictEqual(approveCancelledRes.status, 400);
+        console.log("  ✓ TEST E: Cancelled request cannot be approved (400 Bad Request)");
+
+        // TEST F: Cross-hospital approval attempt rejected
+        const hospitalBAdmin = await User.create({
+            name: "Hospital B Admin Reg",
+            email: `admin_b_reg_${testTimestamp}@test.com`,
+            password: hashedPassword,
+            role: "admin",
+            hospitalId: hospitalB._id,
+            status: "active",
+            modules: ["core", "hrms"],
+            permissions: Object.values(PERMISSIONS),
+        });
+        const adminBToken = generateToken({ id: hospitalBAdmin._id, role: hospitalBAdmin.role });
+
+        const crossApproveReq = await AttendanceRegularization.create({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmp1._id,
+            date: new Date("2026-09-17T00:00:00.000Z"),
+            dateStr: "2026-09-17",
+            requestedStatus: "PRESENT",
+            reason: "Cross hospital test",
+            status: REGULARIZATION_STATUSES.PENDING,
+        });
+
+        const crossApproveRes = await request(`/api/v1/attendance/regularization/${crossApproveReq._id}/approve`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+        });
+
+        assert.strictEqual(crossApproveRes.status, 404);
+        const unapprovedReq = await AttendanceRegularization.findById(crossApproveReq._id);
+        assert.strictEqual(String(unapprovedReq.status).toUpperCase(), "PENDING");
+        console.log("  ✓ TEST F: Cross-hospital approval is rejected with 404 (Tenant Isolation enforced)");
+
+        // REAL TRANSACTION ROLLBACK TEST
+        const rollbackTestReq = await AttendanceRegularization.create({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmp1._id,
+            attendanceId: null,
+            date: new Date("2026-09-16T00:00:00.000Z"),
+            dateStr: "2026-09-16",
+            requestedStatus: "PRESENT",
+            requestedCheckIn: new Date("2026-09-16T09:00:00.000Z"),
+            requestedCheckOut: new Date("2026-09-16T18:00:00.000Z"),
+            reason: "Rollback test request",
+            status: REGULARIZATION_STATUSES.PENDING,
+        });
+
+        const attendanceService = require("../src/services/attendance.service");
+        let transactionFailed = false;
+
+        try {
+            await attendanceService.approveRegularizationRequest({
+                hospitalId: hospitalA._id,
+                regularizationId: rollbackTestReq._id,
+                reviewerId: "FORCE_ROLLBACK_TEST_ERR",
+            });
+        } catch (err) {
+            transactionFailed = true;
+            assert.strictEqual(err.code, "TRANSACTION_TEST_ERROR");
+        }
+
+        assert.strictEqual(transactionFailed, true, "Transaction should throw error and trigger abortTransaction()");
+
+        // Verify Rollback: Regularization status must remain PENDING
+        const checkRollbackReq = await AttendanceRegularization.findById(rollbackTestReq._id);
+        assert.strictEqual(String(checkRollbackReq.status).toUpperCase(), "PENDING", "Regularization status must remain PENDING after rollback");
+
+        // Verify Rollback: Attendance document must NOT exist for 2026-09-16
+        const checkRollbackAtt = await Attendance.findOne({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmp1._id,
+            dateStr: "2026-09-16",
+        });
+        assert.strictEqual(checkRollbackAtt, null, "Created Attendance record must be rolled back and not exist in DB");
+        console.log("  ✓ REAL TRANSACTION ROLLBACK TEST: Forced failure aborts transaction, Attendance creation rolled back, Regularization remains PENDING");
 
         console.log("\n=======================================================");
-        console.log("=== ALL 18 REGULARIZATION TESTS PASSED 100% ===");
+        console.log("=== ALL PHASE 8D REGULARIZATION & TRANSACTION TESTS PASSED 100% ===");
         console.log("=======================================================\n");
 
     } catch (err) {

@@ -595,7 +595,7 @@ const cancelRegularizationRequest = async ({
     throw error;
   }
 
-  if (record.status !== REGULARIZATION_STATUSES.PENDING) {
+  if (String(record.status).toUpperCase() !== REGULARIZATION_STATUSES.PENDING) {
     const error = new Error("Only pending regularization requests can be cancelled.");
     error.code = "VALIDATION_ERROR";
     throw error;
@@ -687,92 +687,117 @@ const approveRegularizationRequest = async ({
     throw error;
   }
 
-  const record = await AttendanceRegularization.findOne({
-    _id: regularizationId,
-    hospitalId,
-  });
+  const session = await mongoose.startSession();
 
-  if (!record) {
-    const error = new Error("Regularization request not found.");
-    error.code = "NOT_FOUND";
-    throw error;
-  }
+  try {
+    let resultRecord = null;
 
-  if (record.status !== REGULARIZATION_STATUSES.PENDING) {
-    const error = new Error(`Only pending regularization requests can be approved. Current status: ${record.status}`);
-    error.code = "VALIDATION_ERROR";
-    throw error;
-  }
-
-  // Calculate working minutes if checkIn and checkOut exist
-  let workingMinutes = 0;
-  if (record.requestedCheckIn && record.requestedCheckOut) {
-    const diffMs = new Date(record.requestedCheckOut).getTime() - new Date(record.requestedCheckIn).getTime();
-    workingMinutes = Math.max(0, Math.round(diffMs / (1000 * 60)));
-  }
-
-  let attendanceRecord = null;
-
-  if (record.attendanceId) {
-    // Case A: Existing Attendance record -> update it
-    attendanceRecord = await Attendance.findOne({
-      _id: record.attendanceId,
-      hospitalId,
-    });
-
-    if (attendanceRecord) {
-      attendanceRecord.status = record.requestedStatus;
-      if (record.requestedCheckIn) attendanceRecord.checkIn = record.requestedCheckIn;
-      if (record.requestedCheckOut) attendanceRecord.checkOut = record.requestedCheckOut;
-      if (workingMinutes > 0) attendanceRecord.workingMinutes = workingMinutes;
-      attendanceRecord.notes = attendanceRecord.notes
-        ? `${attendanceRecord.notes} | Regularized`
-        : "Regularized attendance";
-      await attendanceRecord.save();
-    }
-  }
-
-  if (!attendanceRecord) {
-    // Case B: Attendance record does not exist -> check or create
-    const existingDateAtt = await Attendance.findOne({
-      hospitalId,
-      employeeId: record.employeeId,
-      dateStr: record.dateStr,
-    });
-
-    if (existingDateAtt) {
-      attendanceRecord = existingDateAtt;
-      attendanceRecord.status = record.requestedStatus;
-      if (record.requestedCheckIn) attendanceRecord.checkIn = record.requestedCheckIn;
-      if (record.requestedCheckOut) attendanceRecord.checkOut = record.requestedCheckOut;
-      if (workingMinutes > 0) attendanceRecord.workingMinutes = workingMinutes;
-      attendanceRecord.notes = attendanceRecord.notes
-        ? `${attendanceRecord.notes} | Regularized`
-        : "Regularized attendance";
-      await attendanceRecord.save();
-    } else {
-      attendanceRecord = await Attendance.create({
+    await session.withTransaction(async () => {
+      const record = await AttendanceRegularization.findOne({
+        _id: regularizationId,
         hospitalId,
-        employeeId: record.employeeId,
-        dateStr: record.dateStr,
-        date: record.date,
-        status: record.requestedStatus,
-        checkIn: record.requestedCheckIn,
-        checkOut: record.requestedCheckOut,
-        workingMinutes,
-        notes: "Regularized attendance",
-      });
-    }
+      }).session(session);
 
-    record.attendanceId = attendanceRecord._id;
+      if (!record) {
+        const error = new Error("Regularization request not found.");
+        error.code = "NOT_FOUND";
+        throw error;
+      }
+
+      if (String(record.status).toUpperCase() !== REGULARIZATION_STATUSES.PENDING) {
+        const error = new Error(`Only pending regularization requests can be approved. Current status: ${record.status}`);
+        error.code = "VALIDATION_ERROR";
+        throw error;
+      }
+
+      // Calculate working minutes if checkIn and checkOut exist
+      let workingMinutes = 0;
+      if (record.requestedCheckIn && record.requestedCheckOut) {
+        const diffMs = new Date(record.requestedCheckOut).getTime() - new Date(record.requestedCheckIn).getTime();
+        workingMinutes = Math.max(0, Math.round(diffMs / (1000 * 60)));
+      }
+
+      let attendanceRecord = null;
+
+      if (record.attendanceId) {
+        // Case A: Existing Attendance record -> update it
+        attendanceRecord = await Attendance.findOne({
+          _id: record.attendanceId,
+          hospitalId,
+        }).session(session);
+
+        if (attendanceRecord) {
+          attendanceRecord.status = record.requestedStatus;
+          if (record.requestedCheckIn) attendanceRecord.checkIn = record.requestedCheckIn;
+          if (record.requestedCheckOut) attendanceRecord.checkOut = record.requestedCheckOut;
+          if (workingMinutes > 0) attendanceRecord.workingMinutes = workingMinutes;
+          attendanceRecord.notes = attendanceRecord.notes
+            ? `${attendanceRecord.notes} | Regularized`
+            : "Regularized attendance";
+          await attendanceRecord.save({ session });
+        }
+      }
+
+      if (!attendanceRecord) {
+        // Case B: Attendance record does not exist -> check or create
+        const existingDateAtt = await Attendance.findOne({
+          hospitalId,
+          employeeId: record.employeeId,
+          dateStr: record.dateStr,
+        }).session(session);
+
+        if (existingDateAtt) {
+          attendanceRecord = existingDateAtt;
+          attendanceRecord.status = record.requestedStatus;
+          if (record.requestedCheckIn) attendanceRecord.checkIn = record.requestedCheckIn;
+          if (record.requestedCheckOut) attendanceRecord.checkOut = record.requestedCheckOut;
+          if (workingMinutes > 0) attendanceRecord.workingMinutes = workingMinutes;
+          attendanceRecord.notes = attendanceRecord.notes
+            ? `${attendanceRecord.notes} | Regularized`
+            : "Regularized attendance";
+          await attendanceRecord.save({ session });
+        } else {
+          const createdRecords = await Attendance.create(
+            [
+              {
+                hospitalId,
+                employeeId: record.employeeId,
+                dateStr: record.dateStr,
+                date: record.date,
+                status: record.requestedStatus,
+                checkIn: record.requestedCheckIn,
+                checkOut: record.requestedCheckOut,
+                workingMinutes,
+                notes: "Regularized attendance",
+              },
+            ],
+            { session }
+          );
+          attendanceRecord = createdRecords[0];
+        }
+
+        record.attendanceId = attendanceRecord._id;
+      }
+
+      record.status = REGULARIZATION_STATUSES.APPROVED;
+      record.reviewedBy = reviewerId || null;
+      record.reviewedAt = new Date();
+
+      if (reviewerId === "FORCE_ROLLBACK_TEST_ERR") {
+        const error = new Error("Forced transaction failure for testing rollback.");
+        error.code = "TRANSACTION_TEST_ERROR";
+        throw error;
+      }
+
+      await record.save({ session });
+
+      resultRecord = record;
+    });
+
+    return resultRecord;
+  } finally {
+    await session.endSession();
   }
-
-  record.status = REGULARIZATION_STATUSES.APPROVED;
-  record.reviewedBy = reviewerId || null;
-  record.reviewedAt = new Date();
-  await record.save();
-
-  return record;
 };
 
 /**

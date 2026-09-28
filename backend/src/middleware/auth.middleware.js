@@ -58,13 +58,13 @@ const authMiddleware = async (req, res, next) => {
         let hospitalId = user.hospitalId;
         let employeeId = user.employeeId;
 
-        if (!hospitalId && user.role === "employee") {
+        if (user.role === "employee") {
             const Employee = require("../models/employee.model");
             const employee = employeeId
                 ? await Employee.findById(employeeId).select("hospitalId").lean()
                 : await Employee.findOne({ userId: user._id }).select("hospitalId").lean();
             if (employee) {
-                hospitalId = employee.hospitalId;
+                if (!hospitalId) hospitalId = employee.hospitalId;
                 if (!employeeId) employeeId = employee._id;
             }
         }
