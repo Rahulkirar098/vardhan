@@ -132,6 +132,14 @@ const PERMISSION_GROUPS = [
       },
     ],
   },
+  {
+    title: 'Roster',
+    description: 'Permissions for hospital staff duty roster planning and management.',
+    permissions: [
+      { key: 'roster.view', label: 'View Roster', description: 'View hospital duty rosters and templates' },
+      { key: 'roster.manage', label: 'Manage Roster', description: 'Create templates, draft rosters, manage shift assignments, and publish rosters' },
+    ],
+  },
 ];
 
 const MODULE_OPTIONS = [

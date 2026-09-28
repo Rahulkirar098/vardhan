@@ -245,6 +245,17 @@ async function runTests() {
         });
         assert(res10.status === 400, "TEST 10: Invalid module keys rejected with 400");
 
+        // Test 11: Admin can grant roster.view and roster.manage permissions
+        const res11 = await request("PATCH", `/api/v1/access-management/${empUserA._id}`, {
+            Authorization: `Bearer ${adminTokenA}`,
+        }, {
+            permissions: [PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE],
+            modules: ["core", "hrms"],
+        });
+        assert(res11.status === 200, "TEST 11: Admin can grant roster.view and roster.manage permissions");
+        assert(res11.body.data.permissions.includes("roster.view"), "TEST 11: Updated user permissions include roster.view");
+        assert(res11.body.data.permissions.includes("roster.manage"), "TEST 11: Updated user permissions include roster.manage");
+
     } finally {
         if (server) {
             await new Promise((resolve) => server.close(resolve));
