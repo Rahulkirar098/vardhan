@@ -31,6 +31,7 @@ import hospitalService from '../../services/hospital.service';
 import attendanceService from '../../services/attendance.service';
 import leaveService from '../../services/leave.service';
 import rosterService from '../../services/roster.service';
+import employeeService from '../../services/employee.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import ErrorState from '../../components/ErrorState';
@@ -246,6 +247,355 @@ const SectionCard = ({ title, subtitle, value, valueLabel, icon: Icon, action })
   );
 };
 
+// ─── WORKFORCE OVERVIEW GRAPH (BAR CHART) ──────────────────────────────────────
+const WorkforceOverviewGraph = ({ data = [] }) => {
+  const maxCount = useMemo(() => {
+    if (!data.length) return 1;
+    return Math.max(...data.map((d) => d.count), 1);
+  }, [data]);
+
+  return (
+    <Box
+      sx={{
+        p: 3,
+        height: '100%',
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: '14px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
+      <Box>
+        <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+          WORKFORCE OVERVIEW
+        </Typography>
+        <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.2 }}>
+          Employees by position
+        </Typography>
+
+        <Stack spacing={2} sx={{ mt: 3 }}>
+          {data.length === 0 ? (
+            <Typography sx={{ fontSize: '0.875rem', color: '#94A3B8', py: 2 }}>
+              No employee workforce data available.
+            </Typography>
+          ) : (
+            data.map((item, idx) => {
+              const pct = Math.round((item.count / maxCount) * 100);
+              const barColors = ['#0EA5E9', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#14B8A6'];
+              const color = barColors[idx % barColors.length];
+
+              return (
+                <Box key={item.position || idx}>
+                  <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155' }}>
+                      {item.position}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A' }}>
+                      {item.count}
+                    </Typography>
+                  </Stack>
+                  <Box sx={{ width: '100%', height: 8, backgroundColor: '#F1F5F9', borderRadius: 4, overflow: 'hidden' }}>
+                    <Box
+                      sx={{
+                        width: `${pct}%`,
+                        height: '100%',
+                        backgroundColor: color,
+                        borderRadius: 4,
+                        transition: 'width 500ms ease-in-out',
+                      }}
+                    />
+                  </Box>
+                </Box>
+              );
+            })
+          )}
+        </Stack>
+      </Box>
+    </Box>
+  );
+};
+
+// ─── ATTENDANCE GRAPH (DONUT CHART) ────────────────────────────────────────────
+const AttendanceDonutGraph = ({ data }) => {
+  const todayDateStr = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }, []);
+
+  const present = data?.present || 0;
+  const late = data?.late || 0;
+  const absent = data?.absent || 0;
+  const onLeave = data?.onLeave || 0;
+  const total = data?.total || (present + late + absent + onLeave);
+
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+
+  const segments = useMemo(() => {
+    if (total === 0) {
+      return [{ color: '#CBD5E1', dasharray: `${circumference} 0`, dashoffset: 0 }];
+    }
+    const items = [
+      { count: present, color: '#10B981', label: 'Present' },
+      { count: late, color: '#F59E0B', label: 'Late' },
+      { count: absent, color: '#EF4444', label: 'Absent' },
+      { count: onLeave, color: '#6366F1', label: 'On Leave' },
+    ];
+    let currentOffset = 0;
+    return items.map((item) => {
+      const segmentLen = (item.count / total) * circumference;
+      const res = {
+        ...item,
+        dasharray: `${segmentLen} ${circumference - segmentLen}`,
+        dashoffset: -currentOffset,
+      };
+      currentOffset += segmentLen;
+      return res;
+    });
+  }, [present, late, absent, onLeave, total, circumference]);
+
+  return (
+    <Box
+      sx={{
+        p: 3,
+        height: '100%',
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: '14px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
+      <Box>
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+            ATTENDANCE
+          </Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B' }}>
+            Today · {todayDateStr}
+          </Typography>
+        </Stack>
+
+        <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', my: 2.5 }}>
+          <svg width="140" height="140" viewBox="0 0 160 160">
+            <g transform="rotate(-90 80 80)">
+              {segments.map((seg, idx) => (
+                <circle
+                  key={idx}
+                  cx="80"
+                  cy="80"
+                  r={radius}
+                  fill="transparent"
+                  stroke={seg.color}
+                  strokeWidth="18"
+                  strokeDasharray={seg.dasharray}
+                  strokeDashoffset={seg.dashoffset}
+                  strokeLinecap="butt"
+                />
+              ))}
+            </g>
+          </svg>
+          <Box sx={{ position: 'absolute', textAlign: 'center' }}>
+            <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+              {total}
+            </Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600, mt: 0.2 }}>
+              Recorded
+            </Typography>
+          </Box>
+        </Box>
+
+        <Grid container spacing={1.5} sx={{ mt: 1 }}>
+          <Grid item xs={6}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#10B981' }} />
+              <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
+                Present
+              </Typography>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', ml: 'auto' }}>
+                {present}
+              </Typography>
+            </Stack>
+          </Grid>
+          <Grid item xs={6}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#F59E0B' }} />
+              <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
+                Late
+              </Typography>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', ml: 'auto' }}>
+                {late}
+              </Typography>
+            </Stack>
+          </Grid>
+          <Grid item xs={6}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#EF4444' }} />
+              <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
+                Absent
+              </Typography>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', ml: 'auto' }}>
+                {absent}
+              </Typography>
+            </Stack>
+          </Grid>
+          <Grid item xs={6}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#6366F1' }} />
+              <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
+                On Leave
+              </Typography>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', ml: 'auto' }}>
+                {onLeave}
+              </Typography>
+            </Stack>
+          </Grid>
+        </Grid>
+      </Box>
+    </Box>
+  );
+};
+
+// ─── LEAVE OVERVIEW GRAPH ──────────────────────────────────────────────────────
+const LeaveOverviewGraph = ({ data }) => {
+  const pending = data?.pending || 0;
+  const approved = data?.approved || 0;
+  const rejected = data?.rejected || 0;
+  const total = data?.total || (pending + approved + rejected);
+
+  const pendingPct = total > 0 ? Math.round((pending / total) * 100) : 0;
+  const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
+  const rejectedPct = total > 0 ? Math.round((rejected / total) * 100) : 0;
+
+  return (
+    <Box
+      sx={{
+        p: 3,
+        height: '100%',
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: '14px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
+      <Box>
+        <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+          LEAVE OVERVIEW
+        </Typography>
+        <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.2 }}>
+          Summary of leave requests & status
+        </Typography>
+
+        <Box sx={{ my: 3 }}>
+          <Stack direction="row" sx={{ height: 10, width: '100%', borderRadius: 5, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
+            {pendingPct > 0 && <Box sx={{ width: `${pendingPct}%`, backgroundColor: '#F59E0B' }} />}
+            {approvedPct > 0 && <Box sx={{ width: `${approvedPct}%`, backgroundColor: '#10B981' }} />}
+            {rejectedPct > 0 && <Box sx={{ width: `${rejectedPct}%`, backgroundColor: '#EF4444' }} />}
+          </Stack>
+        </Box>
+
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#D97706', textTransform: 'uppercase' }}>
+                Pending
+              </Typography>
+              <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#92400E', mt: 0.5 }}>
+                {pending}
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#16A34A', textTransform: 'uppercase' }}>
+                Approved
+              </Typography>
+              <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#166534', mt: 0.5 }}>
+                {approved}
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase' }}>
+                Rejected
+              </Typography>
+              <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#991B1B', mt: 0.5 }}>
+                {rejected}
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+    </Box>
+  );
+};
+
+// ─── OPERATIONAL GRAPHS CONTAINER (PERMISSION BASED REFLOW) ───────────────────
+const OperationalGraphsSection = ({
+  canViewWorkforce,
+  canViewAttendance,
+  canViewLeave,
+  workforceData,
+  attendanceData,
+  leaveData,
+}) => {
+  const visibleCards = [];
+
+  if (canViewWorkforce) {
+    visibleCards.push({
+      key: 'workforce',
+      component: <WorkforceOverviewGraph data={workforceData} />,
+    });
+  }
+
+  if (canViewAttendance) {
+    visibleCards.push({
+      key: 'attendance',
+      component: <AttendanceDonutGraph data={attendanceData} />,
+    });
+  }
+
+  if (canViewLeave) {
+    visibleCards.push({
+      key: 'leave',
+      component: <LeaveOverviewGraph data={leaveData} />,
+    });
+  }
+
+  if (visibleCards.length === 0) return null;
+
+  return (
+    <Grid container spacing={2.5}>
+      {visibleCards.map((card, idx) => {
+        let xsWidth = 12;
+        let mdWidth = 6;
+
+        if (visibleCards.length === 1) {
+          xsWidth = 12;
+          mdWidth = 12;
+        } else if (visibleCards.length === 3 && idx === 2) {
+          xsWidth = 12;
+          mdWidth = 12;
+        }
+
+        return (
+          <Grid item xs={xsWidth} md={mdWidth} key={card.key}>
+            {card.component}
+          </Grid>
+        );
+      })}
+    </Grid>
+  );
+};
+
 // ─── MAIN ADMIN DASHBOARD COMPONENT ────────────────────────────────────────────
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -283,6 +633,15 @@ const AdminDashboard = () => {
   const canViewAttendance = hasPermission(PERMISSIONS.ATTENDANCE_VIEW) || hasPermission(PERMISSIONS.ATTENDANCE_VIEW_WORKFORCE) || userRole === 'admin';
   const canAccessManagement = hasPermission(PERMISSIONS.ACCESS_VIEW) || userRole === 'admin';
   const canViewStructure = hasPermission(PERMISSIONS.STRUCTURE_VIEW) || userRole === 'admin';
+
+  // Permission-Based Graph Visibility Checks
+  const canViewWorkforceGraph = hasPermission(PERMISSIONS.EMPLOYEE_VIEW);
+  const canViewAttendanceGraph = hasPermission(PERMISSIONS.ATTENDANCE_VIEW);
+  const canViewLeaveGraph = hasPermission(PERMISSIONS.LEAVE_VIEW);
+
+  const [workforceGraphData, setWorkforceGraphData] = useState([]);
+  const [attendanceGraphData, setAttendanceGraphData] = useState(null);
+  const [leaveGraphData, setLeaveGraphData] = useState(null);
 
   const fetchOverview = useCallback(async () => {
     try {
@@ -337,13 +696,73 @@ const AdminDashboard = () => {
           setMyRegularizations(Array.isArray(rData) ? rData : []);
         }
       }
+
+      // Operational Graph Data Fetching (Strictly PERMISSION -> GRAPH DATA)
+      const graphPromises = [];
+
+      if (canViewWorkforceGraph) {
+        graphPromises.push(
+          employeeService.listEmployees({ limit: 100 })
+            .then((res) => {
+              const empList = res?.data?.data?.employees || res?.data?.employees || res?.employees || (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
+              const counts = {};
+              if (Array.isArray(empList)) {
+                empList.forEach((emp) => {
+                  const posName = (typeof emp.positionId === 'object' && emp.positionId?.name) || emp.position?.name || emp.position || emp.designation || (emp.role ? String(emp.role).toUpperCase() : 'Staff');
+                  counts[posName] = (counts[posName] || 0) + 1;
+                });
+              }
+              const formatted = Object.keys(counts)
+                .map((pos) => ({ position: pos, count: counts[pos] }))
+                .sort((a, b) => b.count - a.count);
+              setWorkforceGraphData(formatted);
+            })
+            .catch(() => {})
+        );
+      }
+
+      if (canViewAttendanceGraph) {
+        graphPromises.push(
+          attendanceService.getAttendanceStats({ scope: 'hospital' })
+            .then((res) => {
+              const data = res?.data?.data || res?.data || res || {};
+              setAttendanceGraphData({
+                present: data.present || 0,
+                late: data.halfDay || data.late || 0,
+                absent: data.absent || 0,
+                onLeave: data.onLeave || 0,
+                total: (data.present || 0) + (data.halfDay || data.late || 0) + (data.absent || 0) + (data.onLeave || 0),
+              });
+            })
+            .catch(() => {})
+        );
+      }
+
+      if (canViewLeaveGraph) {
+        graphPromises.push(
+          leaveService.getLeaveStats()
+            .then((res) => {
+              const data = res?.data?.data?.stats || res?.data?.stats || res?.data || res || {};
+              setLeaveGraphData({
+                pending: data.pending || 0,
+                approved: data.approved || 0,
+                rejected: data.rejected || 0,
+                currentlyOnLeave: data.currentlyOnLeave || 0,
+                total: data.total || 0,
+              });
+            })
+            .catch(() => {})
+        );
+      }
+
+      await Promise.allSettled(graphPromises);
     } catch (err) {
       console.error('Dashboard Overview Error:', err);
       setError(err?.response?.data?.message || 'Unable to load dashboard metrics.');
     } finally {
       setLoading(false);
     }
-  }, [userRole]);
+  }, [userRole, canViewWorkforceGraph, canViewAttendanceGraph, canViewLeaveGraph]);
 
   useEffect(() => {
     fetchOverview();
@@ -633,6 +1052,27 @@ const AdminDashboard = () => {
                 </Grid>
               </Grid>
 
+              {/* Permission-Based Operational Graphs */}
+              <OperationalGraphsSection
+                canViewWorkforce={canViewWorkforceGraph}
+                canViewAttendance={canViewAttendanceGraph}
+                canViewLeave={canViewLeaveGraph}
+                workforceData={workforceGraphData}
+                attendanceData={attendanceGraphData || {
+                  present: todayAttendanceState?.checkInTime ? 1 : 0,
+                  late: 0,
+                  absent: 0,
+                  onLeave: 0,
+                  total: todayAttendanceState?.checkInTime ? 1 : 0,
+                }}
+                leaveData={leaveGraphData || {
+                  pending: pendingLeavesCount,
+                  approved: myLeaves.filter((l) => (l.status || '').toUpperCase() === 'APPROVED').length,
+                  rejected: myLeaves.filter((l) => (l.status || '').toUpperCase() === 'REJECTED').length,
+                  total: myLeaves.length,
+                }}
+              />
+
               {/* Quick Actions Card - Outlined Secondary Style */}
               <Box sx={{ p: 3, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                 <Stack spacing={2}>
@@ -861,6 +1301,27 @@ const AdminDashboard = () => {
                 />
               </Grid>
             </Grid>
+
+            {/* Permission-Based Operational Graphs */}
+            <OperationalGraphsSection
+              canViewWorkforce={canViewWorkforceGraph}
+              canViewAttendance={canViewAttendanceGraph}
+              canViewLeave={canViewLeaveGraph}
+              workforceData={workforceGraphData}
+              attendanceData={attendanceGraphData || {
+                present: stats.todayAttendance || 0,
+                late: 0,
+                absent: Math.max(0, (stats.activeEmployees || stats.totalEmployees || 0) - (stats.todayAttendance || 0)),
+                onLeave: leaveGraphData?.currentlyOnLeave || stats.pendingLeaves || 0,
+                total: stats.totalEmployees || stats.activeEmployees || 0,
+              }}
+              leaveData={leaveGraphData || {
+                pending: stats.pendingLeaves || 0,
+                approved: leaveGraphData?.approved || 0,
+                rejected: leaveGraphData?.rejected || 0,
+                total: stats.pendingLeaves || 0,
+              }}
+            />
 
             {/* Operational Section Cards (2 Columns) */}
             <Grid container spacing={2.5}>
