@@ -55,71 +55,8 @@ export const getDefaultRedirectForRole = (role) => {
     return '/super-admin/dashboard';
   }
 
-  if (role === 'admin') {
-    return '/hospital';
-  }
-
-  if (role === 'employee') {
-    let hasHrmsModule = false;
-
-    try {
-      const storedModules = localStorage.getItem('modules');
-      const mods = storedModules ? JSON.parse(storedModules) : [];
-      hasHrmsModule = Array.isArray(mods) && mods.includes('hrms');
-    } catch {
-      hasHrmsModule = false;
-    }
-
-    if (hasHrmsModule && hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
-      return '/employees';
-    }
-
-    const hasAnyLeave =
-      hasPermission(PERMISSIONS.LEAVE_APPLY) ||
-      hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) ||
-      hasPermission(PERMISSIONS.LEAVE_VIEW) ||
-      hasPermission(PERMISSIONS.LEAVE_APPROVE) ||
-      hasPermission(PERMISSIONS.LEAVE_MANAGE);
-
-    if (hasHrmsModule && hasAnyLeave) {
-      return '/leaves';
-    }
-
-    const hasAnyAttendance =
-      hasPermission(PERMISSIONS.ATTENDANCE_VIEW_OWN) ||
-      hasPermission(PERMISSIONS.ATTENDANCE_VIEW) ||
-      hasPermission(PERMISSIONS.ATTENDANCE_MANAGE);
-
-    if (hasHrmsModule && hasAnyAttendance) {
-      return '/attendance';
-    }
-
-    const hasAnyRoster =
-      hasPermission(PERMISSIONS.ROSTER_VIEW_OWN) ||
-      hasPermission(PERMISSIONS.ROSTER_VIEW) ||
-      hasPermission(PERMISSIONS.ROSTER_MANAGE);
-
-    if (hasHrmsModule && hasAnyRoster) {
-      return '/roster';
-    }
-
-    if (hasPermission(PERMISSIONS.STRUCTURE_VIEW)) {
-      return '/structure';
-    }
-
-    if (hasPermission(PERMISSIONS.POSITION_VIEW)) {
-      return '/positions';
-    }
-
-    if (hasPermission(PERMISSIONS.HOSPITAL_VIEW)) {
-      return '/hospital';
-    }
-
-    if (hasPermission(PERMISSIONS.ACCESS_VIEW)) {
-      return '/access-management';
-    }
-
-    return '/profile';
+  if (role === 'admin' || role === 'employee') {
+    return '/dashboard';
   }
 
   return '/login';
@@ -221,7 +158,7 @@ const AppRoutes = () => {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'employee']}>
             <AdminDashboard />
           </ProtectedRoute>
         }

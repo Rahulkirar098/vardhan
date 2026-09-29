@@ -1,6 +1,11 @@
 const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
 const Invitation = require("../models/invitation.model");
+const Employee = require("../models/employee.model");
+const Leave = require("../models/leave.model");
+const Attendance = require("../models/attendance.model");
+const RosterAssignment = require("../models/rosterAssignment.model");
+const AttendanceRegularization = require("../models/attendanceRegularization.model");
 
 const getMyHospital = async (userId) => {
     const hospital = await Hospital.findOne({ createdBy: userId })
@@ -67,7 +72,16 @@ const getHospitals = async (userId) => {
 };
 
 const getHospitalOverview = async (userId) => {
-    const hospital = await Hospital.findOne({ createdBy: userId });
+    let hospital = await Hospital.findOne({ createdBy: userId });
+    if (!hospital) {
+        hospital = await Hospital.findOne({ adminId: userId });
+    }
+    if (!hospital) {
+        const user = await User.findById(userId);
+        if (user && user.hospitalId) {
+            hospital = await Hospital.findById(user.hospitalId);
+        }
+    }
 
     if (!hospital) {
         const err = new Error("Hospital not found");
@@ -75,12 +89,43 @@ const getHospitalOverview = async (userId) => {
         throw err;
     }
 
-    const [hrCount, pendingInvitationCount] = await Promise.all([
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const [
+        totalEmployees,
+        activeEmployees,
+        pendingLeaves,
+        todayAttendance,
+        todayRosterAssigned,
+        pendingRegularizations,
+        hrCount,
+        pendingInvitationCount
+    ] = await Promise.all([
+        Employee.countDocuments({ hospitalId: hospital._id }),
+        Employee.countDocuments({ hospitalId: hospital._id, employmentStatus: "ACTIVE" }),
+        Leave.countDocuments({ hospitalId: hospital._id, status: { $in: ["PENDING", "pending"] } }),
+        Attendance.countDocuments({ hospitalId: hospital._id, date: { $gte: startOfDay, $lte: endOfDay } }),
+        RosterAssignment.countDocuments({ hospitalId: hospital._id, date: { $gte: startOfDay, $lte: endOfDay } }),
+        AttendanceRegularization.countDocuments({ hospitalId: hospital._id, status: "PENDING" }),
         User.countDocuments({ hospitalId: hospital._id, role: "employee" }),
         Invitation.countDocuments({ hospitalId: hospital._id, status: "pending" }),
     ]);
 
-    return { hospital, stats: { hrCount, pendingInvitationCount } };
+    return {
+        hospital,
+        stats: {
+            totalEmployees,
+            activeEmployees,
+            pendingLeaves,
+            todayAttendance,
+            todayRosterAssigned,
+            pendingRegularizations,
+            hrCount,
+            pendingInvitationCount,
+        },
+    };
 };
 
 const updateHospital = async (userId, hospitalId, updatesData) => {

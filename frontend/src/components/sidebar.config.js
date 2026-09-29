@@ -23,7 +23,7 @@ export const NAVIGATION_ITEMS = [
     section: 'MAIN',
     path: '/dashboard',
     icon: DashboardRounded,
-    allowedRoles: ['admin'],
+    allowedRoles: ['admin', 'employee'],
   },
   {
     key: 'hospital',

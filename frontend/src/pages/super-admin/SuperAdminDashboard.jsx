@@ -1,6 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Chip,
+  Grid,
+  Skeleton,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import { ArrowForwardRounded, LocalHospitalRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
@@ -10,32 +24,51 @@ import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import ErrorState from '../../components/ErrorState';
-import Loading from '../../components/Loading';
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+};
 
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
+  const userName = localStorage.getItem('userName') || 'Super Admin';
   const [hospitals, setHospitals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchHospitals = async () => {
-      try {
-        const response = await superAdmin.getHospitals();
-        setHospitals(response?.data?.data || []);
-        setError('');
-      } catch (err) {
-        setError(err?.response?.data?.message || 'Unable to load dashboard.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchHospitals = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await superAdmin.getHospitals();
+      setHospitals(response?.data?.data || []);
+    } catch (err) {
+      console.error('Super Admin fetch error:', err);
+      setError(err?.response?.data?.message || 'Unable to load platform dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchHospitals();
   }, []);
 
   const activeCount = useMemo(
     () => hospitals.filter((hospital) => (hospital?.status || 'active') === 'active').length,
+    [hospitals],
+  );
+
+  const pendingSetupCount = useMemo(
+    () => Math.max(hospitals.length - activeCount, 0),
+    [hospitals.length, activeCount],
+  );
+
+  const recentHospitals = useMemo(
+    () => hospitals.slice(0, 5),
     [hospitals],
   );
 
@@ -45,62 +78,77 @@ const SuperAdminDashboard = () => {
       if (token) {
         await auth.logout();
       }
-    } catch (error) {
-      console.error('Super admin logout error:', error);
+    } catch (logoutError) {
+      console.error('Super admin logout error:', logoutError);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userEmail');
+      localStorage.clear();
       navigate('/login');
     }
   };
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Stack spacing={4}>
+      <Stack spacing={3.5}>
         <PageHeader
-          title="Dashboard"
-          subtitle="Overview of hospitals across the platform."
+          title={`${getGreeting()}, ${userName}`}
+          subtitle="Platform overview of registered hospitals and system operations."
         />
 
-        {error && <ErrorState message={error} />}
+        {error && <ErrorState message={error} onRetry={fetchHospitals} />}
 
         {loading ? (
-          <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
-            <Loading label="Loading dashboard…" height="auto" />
-          </Box>
+          <Grid container spacing={2.5}>
+            {[1, 2, 3].map((i) => (
+              <Grid item xs={12} sm={6} lg={4} key={i}>
+                <Skeleton variant="rounded" height={130} sx={{ borderRadius: '12px' }} />
+              </Grid>
+            ))}
+          </Grid>
         ) : (
           <>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
-                gap: 2.5,
-              }}
-            >
-              <StatCard label="Total Hospitals" value={hospitals.length} footer={<StatusBadge status="active" label="Registered" />} />
-              <StatCard label="Active Hospitals" value={activeCount} footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />} />
-              <StatCard
-                label="Pending Setup"
-                value={Math.max(hospitals.length - activeCount, 0)}
-                footer={<StatusBadge status={hospitals.length - activeCount ? 'pending' : 'inactive'} label={hospitals.length - activeCount ? 'Needs attention' : 'None'} />}
-              />
-            </Box>
+            {/* KPI Summary Grid */}
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} sm={6} lg={4}>
+                <StatCard
+                  label="Total Hospitals"
+                  value={hospitals.length}
+                  footer={<StatusBadge status="active" label="Registered Platform Hospitals" />}
+                />
+              </Grid>
 
+              <Grid item xs={12} sm={6} lg={4}>
+                <StatCard
+                  label="Active Hospitals"
+                  value={activeCount}
+                  footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} lg={4}>
+                <StatCard
+                  label="Pending Setup"
+                  value={pendingSetupCount}
+                  footer={<StatusBadge status={pendingSetupCount ? 'pending' : 'inactive'} label={pendingSetupCount ? 'Needs Setup' : 'All Set'} />}
+                />
+              </Grid>
+            </Grid>
+
+            {/* Registered Hospitals Recent Overview */}
             <GlassCard sx={{ p: 3 }}>
-              <Stack spacing={2}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
-                    Quick Actions
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Review and manage hospitals on the platform.
-                  </Typography>
-                </Box>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <Stack spacing={2.5}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
+                      Registered Hospitals
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Overview of hospitals configured on the platform.
+                    </Typography>
+                  </Box>
+
                   <Button
                     variant="contained"
+                    size="small"
                     startIcon={<LocalHospitalRounded />}
                     endIcon={<ArrowForwardRounded fontSize="small" />}
                     onClick={() => navigate('/super-admin/hospitals')}
@@ -108,6 +156,52 @@ const SuperAdminDashboard = () => {
                     View All Hospitals
                   </Button>
                 </Stack>
+
+                {recentHospitals.length === 0 ? (
+                  <Box py={3} textAlign="center">
+                    <Typography variant="body2" color="text.secondary">
+                      No hospitals registered yet.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 700 }}>Hospital Name</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Code</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Created Date</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 700 }}>Action</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {recentHospitals.map((h) => (
+                          <TableRow key={h.id || h._id} hover>
+                            <TableCell sx={{ fontWeight: 600 }}>{h.name}</TableCell>
+                            <TableCell>
+                              <Chip label={h.code || 'N/A'} size="small" variant="outlined" />
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={h.status || 'active'} />
+                            </TableCell>
+                            <TableCell color="text.secondary">
+                              {h.createdAt ? new Date(h.createdAt).toLocaleDateString() : 'N/A'}
+                            </TableCell>
+                            <TableCell align="right">
+                              <Button
+                                size="small"
+                                onClick={() => navigate('/super-admin/hospitals')}
+                              >
+                                Manage
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
               </Stack>
             </GlassCard>
           </>
