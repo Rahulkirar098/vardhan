@@ -576,6 +576,38 @@ const getMyRoster = async (req, res) => {
     }
 };
 
+const exportRosterPDF = async (req, res) => {
+    try {
+        const hospitalId = await getHospitalIdFromContext(req.user);
+        if (!hospitalId) {
+            return res.status(404).json({ success: false, message: "Hospital not found" });
+        }
+
+        const isManager = hasPermission(req.user, PERMISSIONS.ROSTER_MANAGE);
+        const userId = req.user.id || req.user._id;
+
+        const pdfResult = await rosterService.exportRosterPDF({
+            rosterId: req.params.id,
+            hospitalId,
+            userId,
+            isManager,
+        });
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${pdfResult.filename}"`);
+        return pdfResult.stream.pipe(res);
+    } catch (error) {
+        if (error.code === "FORBIDDEN") {
+            return res.status(403).json({ success: false, message: error.message });
+        }
+        if (error.code === "NOT_FOUND") {
+            return res.status(404).json({ success: false, message: error.message });
+        }
+        console.error("Export Roster PDF Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 module.exports = {
     // Templates
     listTemplates,
@@ -590,6 +622,7 @@ module.exports = {
     updateRosterDraft,
     deleteRosterDraft,
     publishRoster,
+    exportRosterPDF,
     // Review Sharing & Feedback
     shareRosterForReview,
     addReviewComment,
@@ -601,3 +634,4 @@ module.exports = {
     // My Roster
     getMyRoster,
 };
+

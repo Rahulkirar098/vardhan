@@ -47,6 +47,7 @@ import {
   CloseRounded,
   CommentOutlined,
   DeleteOutlineRounded,
+  DownloadOutlined,
   EditOutlined,
   EventNoteRounded,
   GroupAddRounded,
@@ -137,6 +138,9 @@ export default function RosterManagementPage() {
   });
 
 
+
+  // PDF Download State
+  const [downloading, setDownloading] = useState(false);
 
   // Add / Edit Assignment Modal
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
@@ -355,6 +359,36 @@ export default function RosterManagementPage() {
   };
 
 
+
+  // --- PDF Export ---
+  const handleDownloadPDF = async () => {
+    if (!activeRoster) return;
+    try {
+      setDownloading(true);
+      const response = await rosterService.downloadRosterPDF(activeRoster._id);
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      const titleClean = (activeRoster.title || 'Vardhan_Roster').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const startFmt = activeRoster.startDate ? new Date(activeRoster.startDate).toISOString().split('T')[0] : 'period';
+      const endFmt = activeRoster.endDate ? new Date(activeRoster.endDate).toISOString().split('T')[0] : 'end';
+
+      link.setAttribute('download', `${titleClean}_${startFmt}_to_${endFmt}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('Roster PDF downloaded successfully', 'success');
+    } catch (err) {
+      console.error('Download PDF Error:', err);
+      showToast(err.response?.data?.message || 'Failed to download roster PDF', 'error');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // --- Add / Edit Nurse Assignment ---
   const handleOpenAddAssignment = (dutyAreaName, shift) => {
@@ -770,6 +804,19 @@ export default function RosterManagementPage() {
                             Edit Template Layout
                           </Button>
                         </>
+                      )}
+
+                      {(activeRoster.status === 'PUBLISHED' || canManage) && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="success"
+                          startIcon={<DownloadOutlined />}
+                          onClick={handleDownloadPDF}
+                          disabled={downloading}
+                        >
+                          {downloading ? 'Downloading...' : 'Download Roster'}
+                        </Button>
                       )}
                     </Stack>
                   </Stack>

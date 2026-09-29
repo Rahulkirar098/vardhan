@@ -69,6 +69,12 @@ router.get(
     rosterController.getRosterById
 );
 
+router.get(
+    "/:id/export/pdf",
+    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
+    rosterController.exportRosterPDF
+);
+
 router.put(
     "/:id",
     authorizePermission(PERMISSIONS.ROSTER_MANAGE),
