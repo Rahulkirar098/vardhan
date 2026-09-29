@@ -460,7 +460,7 @@ const AdminDashboard = () => {
                   <Box sx={{ p: 3, height: '100%', backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                     <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                       <Box>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                           <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                             Today's Attendance
                           </Typography>
@@ -528,7 +528,7 @@ const AdminDashboard = () => {
                   <Box sx={{ p: 3, height: '100%', backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                     <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                       <Box>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                           <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                             Today's Roster Duty
                           </Typography>
@@ -703,7 +703,7 @@ const AdminDashboard = () => {
     <AppLayout onLogout={handleLogout}>
       <Stack spacing={3.5}>
         {/* Header Intro & Actions */}
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }} spacing={2}>
           <Box>
             <Typography sx={{ fontSize: { xs: '1.5rem', md: '1.875rem' }, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
               {getGreeting()}, {userName}
