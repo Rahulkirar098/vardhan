@@ -31,8 +31,10 @@ export const PERMISSIONS = Object.freeze({
   LEAVE_APPLY: 'leave.apply',
   LEAVE_VIEW_OWN: 'leave.view_own',
   LEAVE_CANCEL_OWN: 'leave.cancel_own',
+  LEAVE_VIEW_WORKFORCE: 'leave.view_workforce',
   LEAVE_VIEW: 'leave.view',
   LEAVE_APPROVE: 'leave.approve',
+  LEAVE_REJECT: 'leave.reject',
   LEAVE_MANAGE: 'leave.manage',
 
   // Attendance & Regularization (HRMS)
@@ -143,9 +145,18 @@ export const hasPermission = (permission, role, userPermissions) => {
     PERMISSIONS.LEAVE_APPLY,
     PERMISSIONS.LEAVE_VIEW_OWN,
     PERMISSIONS.LEAVE_CANCEL_OWN,
+    PERMISSIONS.LEAVE_VIEW_WORKFORCE,
     PERMISSIONS.LEAVE_VIEW,
     PERMISSIONS.LEAVE_APPROVE,
+    PERMISSIONS.LEAVE_REJECT,
     PERMISSIONS.LEAVE_MANAGE,
+  ].includes(permission)) {
+    return true;
+  }
+
+  if (Array.isArray(assigned) && (assigned.includes(PERMISSIONS.LEAVE_VIEW) || assigned.includes(PERMISSIONS.LEAVE_VIEW_WORKFORCE)) && [
+    PERMISSIONS.LEAVE_VIEW_WORKFORCE,
+    PERMISSIONS.LEAVE_VIEW,
   ].includes(permission)) {
     return true;
   }

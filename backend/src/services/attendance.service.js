@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const Attendance = require("../models/attendance.model");
 const AttendanceRegularization = require("../models/attendanceRegularization.model");
 const Employee = require("../models/employee.model");
+const Roster = require("../models/roster.model");
+const RosterAssignment = require("../models/rosterAssignment.model");
+const Leave = require("../models/leave.model");
 const {
   ATTENDANCE_STATUSES,
   REGULARIZATION_STATUSES,
@@ -138,6 +141,122 @@ const normalizeRequestedStatus = (status) => {
 
 
 /**
+ * Process automatic absence for scheduled employees whose shift end time has passed
+ */
+const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
+  const targetDateStr = dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : getTodayDateStr();
+  const startOfDay = new Date(`${targetDateStr}T00:00:00.000Z`);
+  const endOfDay = new Date(`${targetDateStr}T23:59:59.999Z`);
+  const now = new Date();
+
+  // Find all published rosters
+  const rosterQuery = { status: "PUBLISHED" };
+  if (hospitalId) rosterQuery.hospitalId = hospitalId;
+  const publishedRosters = await Roster.find(rosterQuery).select("_id hospitalId").lean();
+
+  if (!publishedRosters.length) return [];
+
+  const rosterIds = publishedRosters.map((r) => r._id);
+
+  const assignmentQuery = {
+    rosterId: { $in: rosterIds },
+    date: { $gte: startOfDay, $lte: endOfDay },
+  };
+  if (hospitalId) assignmentQuery.hospitalId = hospitalId;
+
+  const assignments = await RosterAssignment.find(assignmentQuery).populate("employeeId").lean();
+  const processed = [];
+
+  for (const assignment of assignments) {
+    const emp = assignment.employeeId;
+    if (!emp || emp.employmentStatus === "INACTIVE" || emp.status === "inactive" || emp.isDeleted) {
+      continue;
+    }
+
+    const empId = emp._id;
+    const hospId = assignment.hospitalId;
+
+    // 1. Calculate shift end timestamp
+    let shiftEndObj = null;
+    try {
+      shiftEndObj = parseTimeToDate(assignment.endTime, targetDateStr);
+    } catch {
+      shiftEndObj = null;
+    }
+
+    // Handle night shifts (e.g. 20:00 to 08:00 next day)
+    if (assignment.startTime && assignment.endTime) {
+      try {
+        const startObj = parseTimeToDate(assignment.startTime, targetDateStr);
+        if (startObj && shiftEndObj && shiftEndObj.getTime() <= startObj.getTime()) {
+          shiftEndObj = new Date(shiftEndObj.getTime() + 24 * 60 * 60 * 1000);
+        }
+      } catch {}
+    }
+
+    // RULE 8: If current server time <= shift end time, DO NOT mark absent yet
+    if (shiftEndObj && now.getTime() <= shiftEndObj.getTime()) {
+      continue;
+    }
+
+    // RULE 10: Check if employee has approved leave covering target date
+    const approvedLeave = await Leave.findOne({
+      hospitalId: hospId,
+      employeeId: empId,
+      status: { $in: ["APPROVED", "approved"] },
+      startDate: { $lte: endOfDay },
+      endDate: { $gte: startOfDay },
+    }).lean();
+
+    if (approvedLeave) {
+      // Approved leave overrides absence. Do NOT mark ABSENT.
+      continue;
+    }
+
+    // RULE 4 & 5: Check if attendance record already exists
+    const existing = await Attendance.findOne({
+      hospitalId: hospId,
+      employeeId: empId,
+      dateStr: targetDateStr,
+    });
+
+    if (existing) {
+      // If employee checked in (checkIn != null) -> DO NOT mark ABSENT
+      if (existing.checkIn) {
+        continue;
+      }
+      // If already marked ABSENT or ON_LEAVE -> skip
+      if (existing.status === ATTENDANCE_STATUSES.ABSENT || existing.status === ATTENDANCE_STATUSES.ON_LEAVE) {
+        continue;
+      }
+    }
+
+    // Mark as ABSENT
+    if (existing) {
+      existing.status = ATTENDANCE_STATUSES.ABSENT;
+      await existing.save();
+      processed.push(existing);
+    } else {
+      const newAbsence = await Attendance.create({
+        hospitalId: hospId,
+        employeeId: empId,
+        userId: emp.userId || null,
+        dateStr: targetDateStr,
+        date: startOfDay,
+        status: ATTENDANCE_STATUSES.ABSENT,
+        checkIn: null,
+        checkOut: null,
+        workingMinutes: 0,
+        notes: "Automatically marked absent after scheduled shift end.",
+      });
+      processed.push(newAbsence);
+    }
+  }
+
+  return processed;
+};
+
+/**
  * Check In employee for a date
  */
 const checkIn = async ({ hospitalId, employeeId, userId, dateStr, notes }) => {
@@ -172,6 +291,11 @@ const checkIn = async ({ hospitalId, employeeId, userId, dateStr, notes }) => {
   });
 
   if (existing) {
+    if (existing.status === ATTENDANCE_STATUSES.ABSENT) {
+      const error = new Error("Cannot check in. Employee was automatically marked absent for today. Requires regularization or manager correction.");
+      error.code = "FORBIDDEN";
+      throw error;
+    }
     const error = new Error("Already checked in for today.");
     error.code = "DUPLICATE_CHECK_IN";
     throw error;
@@ -226,7 +350,7 @@ const checkOut = async ({ hospitalId, employeeId, dateStr, notes }) => {
   const checkOutTime = new Date();
   record.checkOut = checkOutTime;
 
-  // Calculate working minutes
+  // Calculate working minutes (handles cross-midnight / night shifts via Date timestamps)
   const diffMs = checkOutTime.getTime() - new Date(record.checkIn).getTime();
   record.workingMinutes = Math.max(0, Math.round(diffMs / (1000 * 60)));
 
@@ -243,6 +367,8 @@ const checkOut = async ({ hospitalId, employeeId, dateStr, notes }) => {
  */
 const getTodayAttendance = async ({ hospitalId, employeeId, dateStr }) => {
   const effectiveDateStr = dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : getTodayDateStr();
+
+  await processAutomaticAbsence({ hospitalId, dateStr: effectiveDateStr }).catch(() => {});
 
   const record = await Attendance.findOne({
     hospitalId,
@@ -294,6 +420,9 @@ const getHospitalAttendance = async ({
   page = 1,
   limit = 50,
 }) => {
+  const effectiveDateStr = dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : getTodayDateStr();
+  await processAutomaticAbsence({ hospitalId, dateStr: effectiveDateStr }).catch(() => {});
+
   const query = { hospitalId };
 
   if (employeeId && mongoose.Types.ObjectId.isValid(employeeId)) {
@@ -849,6 +978,7 @@ const rejectRegularizationRequest = async ({
 
 module.exports = {
   getTodayDateStr,
+  processAutomaticAbsence,
   checkIn,
   checkOut,
   getTodayAttendance,

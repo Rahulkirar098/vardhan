@@ -97,6 +97,52 @@ const RosterTemplate = require("./src/models/rosterTemplate.model");
 const Roster = require("./src/models/roster.model");
 const RosterAssignment = require("./src/models/rosterAssignment.model");
 
+const attendanceService = require("./src/services/attendance.service");
+
+let automaticAbsenceTimer = null;
+const AUTOMATIC_ABSENCE_INTERVAL_MS = 60 * 1000; // 1 minute
+
+const runAutomaticAbsenceJob = async () => {
+    try {
+        if (mongoose.connection.readyState >= 1) {
+            await attendanceService.processAutomaticAbsence();
+        }
+    } catch (err) {
+        console.error("Automatic Absence Scheduler Error:", err.message || err);
+    }
+};
+
+const startAutomaticAbsenceScheduler = (intervalMs = AUTOMATIC_ABSENCE_INTERVAL_MS) => {
+    if (automaticAbsenceTimer) {
+        return automaticAbsenceTimer;
+    }
+    runAutomaticAbsenceJob();
+    automaticAbsenceTimer = setInterval(runAutomaticAbsenceJob, intervalMs);
+    if (automaticAbsenceTimer && automaticAbsenceTimer.unref) {
+        automaticAbsenceTimer.unref();
+    }
+    return automaticAbsenceTimer;
+};
+
+const stopAutomaticAbsenceScheduler = () => {
+    if (automaticAbsenceTimer) {
+        clearInterval(automaticAbsenceTimer);
+        automaticAbsenceTimer = null;
+    }
+};
+
+process.on("SIGINT", () => {
+    stopAutomaticAbsenceScheduler();
+});
+
+process.on("SIGTERM", () => {
+    stopAutomaticAbsenceScheduler();
+});
+
+app.startAutomaticAbsenceScheduler = startAutomaticAbsenceScheduler;
+app.stopAutomaticAbsenceScheduler = stopAutomaticAbsenceScheduler;
+app.runAutomaticAbsenceJob = runAutomaticAbsenceJob;
+
 if (require.main === module) {
     mongoose
         .connect(process.env.MONGODB_URI)
@@ -116,6 +162,9 @@ if (require.main === module) {
             } catch (indexErr) {
                 console.error("Error syncing indexes:", indexErr);
             }
+
+            // Start automatic absence background scheduler
+            startAutomaticAbsenceScheduler();
 
             app.listen(process.env.PORT || 3000, () => {
                 console.log(

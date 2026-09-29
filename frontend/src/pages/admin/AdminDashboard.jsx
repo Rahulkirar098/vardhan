@@ -44,35 +44,56 @@ const getGreeting = () => {
   return 'Good evening';
 };
 
-const format12h = (timeStr) => {
-  if (!timeStr) return '';
-  if (timeStr.includes(':')) {
-    const parts = timeStr.split(':');
+const format12h = (timeInput) => {
+  if (!timeInput) return '';
+  if (timeInput instanceof Date || (typeof timeInput === 'string' && (timeInput.includes('T') || timeInput.includes('Z')))) {
+    const d = new Date(timeInput);
+    if (!isNaN(d.getTime())) {
+      let h = d.getHours();
+      const m = String(d.getMinutes()).padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+    }
+  }
+  if (typeof timeInput === 'string' && timeInput.includes(':')) {
+    const parts = timeInput.split(':');
     let h = parseInt(parts[0], 10);
-    const m = parts[1] || '00';
-    if (isNaN(h)) return timeStr;
+    const m = parts[1] ? parts[1].substring(0, 2) : '00';
+    if (isNaN(h)) return timeInput;
     const ampm = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
-    return `${h}:${m} ${ampm}`;
+    return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
   }
-  return timeStr;
+  return String(timeInput);
 };
 
 const calculateWorkDuration = (inTime, outTime, minutes) => {
-  if (minutes && typeof minutes === 'number' && minutes > 0) {
+  if (typeof minutes === 'number' && minutes > 0) {
     const hrs = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
-    return `${hrs}h ${mins}m`;
+    return `${String(hrs).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`;
   }
   if (!inTime || !outTime) return '';
-  const [inH, inM] = inTime.split(':').map(Number);
-  const [outH, outM] = outTime.split(':').map(Number);
-  if (!isNaN(inH) && !isNaN(outH)) {
-    let diffMins = (outH * 60 + outM) - (inH * 60 + inM);
-    if (diffMins < 0) diffMins += 24 * 60;
-    const hrs = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-    return `${hrs}h ${mins}m`;
+  const inDate = new Date(inTime);
+  const outDate = new Date(outTime);
+  if (!isNaN(inDate.getTime()) && !isNaN(outDate.getTime())) {
+    const diffMs = Math.max(0, outDate.getTime() - inDate.getTime());
+    const totalMins = Math.floor(diffMs / 60000);
+    const hrs = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    return `${String(hrs).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`;
+  }
+  if (typeof inTime === 'string' && typeof outTime === 'string' && inTime.includes(':') && outTime.includes(':')) {
+    const [inH, inM] = inTime.split(':').map(Number);
+    const [outH, outM] = outTime.split(':').map(Number);
+    if (!isNaN(inH) && !isNaN(outH)) {
+      let diffMins = (outH * 60 + (outM || 0)) - (inH * 60 + (inM || 0));
+      if (diffMins < 0) diffMins += 24 * 60;
+      const hrs = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      return `${String(hrs).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`;
+    }
   }
   return '';
 };
@@ -827,23 +848,73 @@ const AdminDashboard = () => {
   // ───────────────────────────────────────────────────────────────────────────
   // EMPLOYEE / NURSE / HR DASHBOARD VIEW
   // ───────────────────────────────────────────────────────────────────────────
+  const checkInVal = todayAttendanceState?.checkIn || todayAttendanceState?.checkInTime;
+  const checkOutVal = todayAttendanceState?.checkOut || todayAttendanceState?.checkOutTime;
+
+  const isCheckedOut = Boolean(checkInVal && checkOutVal) || todayAttendanceState?.status === 'CHECKED_OUT';
+  const isCheckedIn = !isCheckedOut && Boolean(checkInVal);
+
+  const isAbsent = !checkInVal && todayAttendanceState?.status === 'ABSENT';
+  const isOnLeave = !checkInVal && todayAttendanceState?.status === 'ON_LEAVE';
+
+  const [liveTimerNow, setLiveTimerNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!isCheckedIn) return;
+    const timerId = setInterval(() => {
+      setLiveTimerNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [isCheckedIn]);
+
+  const liveWorkDurationStr = useMemo(() => {
+    if (!checkInVal) return '';
+    const inMs = new Date(checkInVal).getTime();
+    if (isNaN(inMs)) return '';
+    const endMs = checkOutVal ? new Date(checkOutVal).getTime() : liveTimerNow;
+    const diffMs = Math.max(0, endMs - inMs);
+    const totalMins = Math.floor(diffMs / 60000);
+    const hrs = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    return `${String(hrs).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`;
+  }, [checkInVal, checkOutVal, liveTimerNow]);
+
+  const workDurationStr = useMemo(() => {
+    if (isCheckedOut) {
+      return calculateWorkDuration(checkInVal, checkOutVal, todayAttendanceState?.workingMinutes);
+    }
+    if (isCheckedIn) {
+      return liveWorkDurationStr;
+    }
+    return '';
+  }, [isCheckedOut, isCheckedIn, checkInVal, checkOutVal, todayAttendanceState?.workingMinutes, liveWorkDurationStr]);
+
+  const isCheckoutPending = useMemo(() => {
+    if (!isCheckedIn || !todayRosterDuty?.endTime) return false;
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      let endStr = todayRosterDuty.endTime.trim();
+      let endParts = endStr.split(':').map(Number);
+      if (!isNaN(endParts[0])) {
+        let endObj = new Date(`${todayStr}T${String(endParts[0]).padStart(2, '0')}:${String(endParts[1] || 0).padStart(2, '0')}:00`);
+        if (todayRosterDuty.startTime) {
+          let startParts = todayRosterDuty.startTime.trim().split(':').map(Number);
+          if (!isNaN(startParts[0])) {
+            let startObj = new Date(`${todayStr}T${String(startParts[0]).padStart(2, '0')}:${String(startParts[1] || 0).padStart(2, '0')}:00`);
+            if (endObj.getTime() <= startObj.getTime()) {
+              endObj = new Date(endObj.getTime() + 24 * 60 * 60 * 1000);
+            }
+          }
+        }
+        return Date.now() > endObj.getTime();
+      }
+    } catch (e) {
+      return false;
+    }
+    return false;
+  }, [isCheckedIn, todayRosterDuty]);
+
   if (userRole === 'employee') {
-    const isCheckedOut =
-      todayAttendanceState?.status === 'CHECKED_OUT' ||
-      todayAttendanceState?.status === 'PRESENT' ||
-      Boolean(todayAttendanceState?.checkInTime && todayAttendanceState?.checkOutTime);
-
-    const isCheckedIn =
-      !isCheckedOut &&
-      (todayAttendanceState?.status === 'CHECKED_IN' ||
-        Boolean(todayAttendanceState?.checkInTime && !todayAttendanceState?.checkOutTime));
-
-    const workDurationStr = calculateWorkDuration(
-      todayAttendanceState?.checkInTime,
-      todayAttendanceState?.checkOutTime,
-      todayAttendanceState?.workDurationMinutes
-    );
-
     return (
       <AppLayout onLogout={handleLogout}>
         <Stack spacing={3.5}>
@@ -887,26 +958,54 @@ const AdminDashboard = () => {
                         </Stack>
 
                         <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', mt: 1 }}>
-                          {isCheckedOut ? 'Present' : isCheckedIn ? 'Checked In' : 'Not Checked In Yet'}
+                          {isCheckedOut
+                            ? 'Present'
+                            : isCheckedIn
+                            ? 'Checked In'
+                            : isAbsent
+                            ? 'Absent'
+                            : isOnLeave
+                            ? 'On Leave'
+                            : 'Not Checked In Yet'}
                         </Typography>
 
                         <Typography sx={{ fontSize: '0.85rem', color: '#64748B', mt: 0.5 }}>
                           {isCheckedOut
-                            ? `${format12h(todayAttendanceState?.checkInTime)} — ${format12h(todayAttendanceState?.checkOutTime)}`
+                            ? `${format12h(checkInVal)} — ${format12h(checkOutVal)}`
                             : isCheckedIn
-                            ? `Checked in at: ${format12h(todayAttendanceState?.checkInTime)}`
+                            ? `${format12h(checkInVal)}`
+                            : isAbsent
+                            ? 'Automatically marked absent for today\'s scheduled shift.'
+                            : isOnLeave
+                            ? 'Approved leave covering today.'
                             : 'Record your check-in time for today\'s shift.'}
                         </Typography>
 
-                        {isCheckedOut && workDurationStr && (
-                          <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600, display: 'block', mt: 0.5 }}>
+                        {(isCheckedIn || isCheckedOut) && workDurationStr && (
+                          <Typography sx={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600, display: 'block', mt: 1 }}>
                             Working: {workDurationStr}
                           </Typography>
+                        )}
+
+                        {isCheckoutPending && (
+                          <Box sx={{ mt: 1 }}>
+                            <Chip
+                              label="⚠ Checkout pending"
+                              size="small"
+                              sx={{
+                                fontWeight: 700,
+                                backgroundColor: '#FEF3C7',
+                                color: '#D97706',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                              }}
+                            />
+                          </Box>
                         )}
                       </Box>
 
                       <Box pt={1}>
-                        {!isCheckedIn && !isCheckedOut && (
+                        {!isCheckedIn && !isCheckedOut && !isAbsent && !isOnLeave && (
                           <Button
                             variant="contained"
                             startIcon={<LoginRounded />}
@@ -935,6 +1034,20 @@ const AdminDashboard = () => {
                             icon={<CheckCircleOutlineRounded />}
                             label="Shift Completed"
                             sx={{ fontWeight: 600, backgroundColor: '#DCFCE7', color: '#15803D', borderRadius: '6px' }}
+                          />
+                        )}
+
+                        {isAbsent && (
+                          <Chip
+                            label="Absent"
+                            sx={{ fontWeight: 600, backgroundColor: '#FEE2E2', color: '#DC2626', borderRadius: '6px' }}
+                          />
+                        )}
+
+                        {isOnLeave && (
+                          <Chip
+                            label="On Leave"
+                            sx={{ fontWeight: 600, backgroundColor: '#E0F2FE', color: '#0284C7', borderRadius: '6px' }}
                           />
                         )}
                       </Box>

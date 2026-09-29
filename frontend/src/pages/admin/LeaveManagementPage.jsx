@@ -778,7 +778,7 @@ const LeaveManagementPage = () => {
 
   const canApprove = hasPermission(PERMISSIONS.LEAVE_APPROVE) || currentUserRole === 'admin';
   const canApply = hasPermission(PERMISSIONS.LEAVE_APPLY) || currentUserRole === 'admin';
-  const canViewManagement = hasPermission(PERMISSIONS.LEAVE_VIEW) || currentUserRole === 'admin';
+  const canViewManagement = hasPermission(PERMISSIONS.LEAVE_VIEW_WORKFORCE) || hasPermission(PERMISSIONS.LEAVE_VIEW) || currentUserRole === 'admin';
   const canViewOwn = hasPermission(PERMISSIONS.LEAVE_VIEW_OWN) || currentUserRole === 'admin';
   const canManage = hasPermission(PERMISSIONS.LEAVE_MANAGE) || currentUserRole === 'admin';
 

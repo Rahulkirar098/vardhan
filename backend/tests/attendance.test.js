@@ -12,6 +12,9 @@ const Position = require("../src/models/position.model");
 const Employee = require("../src/models/employee.model");
 const Attendance = require("../src/models/attendance.model");
 const AttendanceRegularization = require("../src/models/attendanceRegularization.model");
+const Roster = require("../src/models/roster.model");
+const RosterAssignment = require("../src/models/rosterAssignment.model");
+const Leave = require("../src/models/leave.model");
 const { generateToken } = require("../src/utils/jwt");
 const { hashPassword } = require("../src/utils/password");
 const { PERMISSIONS } = require("../src/config/permissions");
@@ -534,8 +537,253 @@ const runTests = async () => {
         assert.strictEqual(doubleCancelRes.body.success, false);
         console.log("  ✓ 21. Cannot cancel an already-cancelled regularization request (400 Bad Request)");
 
+        // ─────────────────────────────────────────────────────────────
+        // 7. AUTOMATIC ABSENCE & SHIFT LIFECYCLE TESTS
+        // ─────────────────────────────────────────────────────────────
+        console.log("\n--- 7. AUTOMATIC ABSENCE & SHIFT LIFECYCLE TESTS ---");
+
+        const todayDateStr = new Date().toISOString().split("T")[0];
+        const todayDateObj = new Date(`${todayDateStr}T00:00:00.000Z`);
+
+        // Create Employee 3 (Hospital A) for automatic absence tests
+        const staffUser3 = await User.create({
+            name: "Staff Employee Three",
+            email: `staff3_${testTimestamp}@test.com`,
+            password: hashedPassword,
+            role: "employee",
+            hospitalId: hospitalA._id,
+            status: "active",
+            modules: ["core", "hrms"],
+            permissions: [PERMISSIONS.ATTENDANCE_VIEW_OWN],
+        });
+
+        const staffEmp3 = await Employee.create({
+            hospitalId: hospitalA._id,
+            userId: staffUser3._id,
+            positionId: staffPosition._id,
+            firstName: "Staff",
+            lastName: "Three",
+            email: staffUser3.email,
+            phone: "9876543219",
+            employeeId: `EMP3-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        staffUser3.employeeId = staffEmp3._id;
+        await staffUser3.save();
+        const staff3Token = generateToken({ id: staffUser3._id, role: staffUser3.role });
+
+        // Published Roster for Hospital A with a shift that ended in the past (e.g. 01:00 AM to 02:00 AM today)
+        const pastRoster = await Roster.create({
+            hospitalId: hospitalA._id,
+            title: `Past Roster ${testTimestamp}`,
+            startDate: todayDateObj,
+            endDate: todayDateObj,
+            status: "PUBLISHED",
+            createdBy: adminUser._id,
+        });
+
+        await RosterAssignment.create({
+            hospitalId: hospitalA._id,
+            rosterId: pastRoster._id,
+            employeeId: staffEmp3._id,
+            date: todayDateObj,
+            shiftTitle: "Past Shift",
+            startTime: "01:00",
+            endTime: "02:00",
+            dutyArea: "General Ward",
+            createdBy: adminUser._id,
+        });
+
+        // Test 22: Querying today's attendance for scheduled employee with past shift end automatically marks ABSENT
+        const autoAbsenceRes = await request("/api/v1/hrms/attendance/today", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${staff3Token}` },
+        });
+
+        assert.strictEqual(autoAbsenceRes.status, 200);
+        assert.ok(autoAbsenceRes.body.data, "Attendance record should exist for past shift");
+        assert.strictEqual(autoAbsenceRes.body.data.status, "ABSENT", "Scheduled employee after shift end should be ABSENT");
+        console.log("  ✓ 22. Scheduled employee with no check-in automatically marked ABSENT after shift end");
+
+        // Test 23: Check In after automatically marked ABSENT is rejected
+        const checkInAfterAbsentRes = await request("/api/v1/hrms/attendance/check-in", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${staff3Token}` },
+        });
+        assert.strictEqual(checkInAfterAbsentRes.status, 403, `Check-in after ABSENT should return 403. Got: ${checkInAfterAbsentRes.status}`);
+        console.log("  ✓ 23. Check In after ABSENT is rejected (requires regularization)");
+
+        // Test 24: Employee with shift in the FUTURE (not ended yet) is NOT marked absent
+        const staffUser4 = await User.create({
+            name: "Staff Employee Four",
+            email: `staff4_${testTimestamp}@test.com`,
+            password: hashedPassword,
+            role: "employee",
+            hospitalId: hospitalA._id,
+            status: "active",
+            modules: ["core", "hrms"],
+            permissions: [PERMISSIONS.ATTENDANCE_VIEW_OWN],
+        });
+        const staffEmp4 = await Employee.create({
+            hospitalId: hospitalA._id,
+            userId: staffUser4._id,
+            positionId: staffPosition._id,
+            firstName: "Staff",
+            lastName: "Four",
+            email: staffUser4.email,
+            phone: "9876543214",
+            employeeId: `EMP4-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        staffUser4.employeeId = staffEmp4._id;
+        await staffUser4.save();
+        const staff4Token = generateToken({ id: staffUser4._id, role: staffUser4.role });
+
+        await RosterAssignment.create({
+            hospitalId: hospitalA._id,
+            rosterId: pastRoster._id,
+            employeeId: staffEmp4._id,
+            date: todayDateObj,
+            shiftTitle: "Future Shift",
+            startTime: "23:00",
+            endTime: "23:59",
+            dutyArea: "ICU",
+            createdBy: adminUser._id,
+        });
+
+        const futureShiftRes = await request("/api/v1/hrms/attendance/today", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${staff4Token}` },
+        });
+        assert.strictEqual(futureShiftRes.status, 200);
+        assert.strictEqual(futureShiftRes.body.data, null, "Future shift employee before shift end should NOT be ABSENT");
+        console.log("  ✓ 24. Scheduled employee before shift end is NOT marked ABSENT");
+
+        // Test 25: Employee with approved leave is NOT marked ABSENT
+        const staffUser5 = await User.create({
+            name: "Staff Employee Five",
+            email: `staff5_${testTimestamp}@test.com`,
+            password: hashedPassword,
+            role: "employee",
+            hospitalId: hospitalA._id,
+            status: "active",
+            modules: ["core", "hrms"],
+            permissions: [PERMISSIONS.ATTENDANCE_VIEW_OWN],
+        });
+        const staffEmp5 = await Employee.create({
+            hospitalId: hospitalA._id,
+            userId: staffUser5._id,
+            positionId: staffPosition._id,
+            firstName: "Staff",
+            lastName: "Five",
+            email: staffUser5.email,
+            phone: "9876543215",
+            employeeId: `EMP5-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        staffUser5.employeeId = staffEmp5._id;
+        await staffUser5.save();
+        const staff5Token = generateToken({ id: staffUser5._id, role: staffUser5.role });
+
+        await RosterAssignment.create({
+            hospitalId: hospitalA._id,
+            rosterId: pastRoster._id,
+            employeeId: staffEmp5._id,
+            date: todayDateObj,
+            shiftTitle: "Past Shift Leave",
+            startTime: "01:00",
+            endTime: "02:00",
+            dutyArea: "Emergency",
+            createdBy: adminUser._id,
+        });
+
+        await Leave.create({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmp5._id,
+            userId: staffUser5._id,
+            appliedBy: staffUser5._id,
+            leaveType: "CASUAL",
+            startDate: todayDateObj,
+            endDate: todayDateObj,
+            totalDays: 1,
+            status: "approved",
+            reason: "Vacation",
+        });
+
+        const approvedLeaveRes = await request("/api/v1/hrms/attendance/today", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${staff5Token}` },
+        });
+        assert.strictEqual(approvedLeaveRes.status, 200);
+        assert.strictEqual(approvedLeaveRes.body.data, null, "Approved leave employee should NOT be marked ABSENT");
+        console.log("  ✓ 25. Scheduled employee with approved leave is NOT marked ABSENT");
+
+        // Test 26: Employee without roster assignment is NOT automatically ABSENT
+        const staffUser6 = await User.create({
+            name: "Staff Employee Six",
+            email: `staff6_${testTimestamp}@test.com`,
+            password: hashedPassword,
+            role: "employee",
+            hospitalId: hospitalA._id,
+            status: "active",
+            modules: ["core", "hrms"],
+            permissions: [PERMISSIONS.ATTENDANCE_VIEW_OWN],
+        });
+        const staffEmp6 = await Employee.create({
+            hospitalId: hospitalA._id,
+            userId: staffUser6._id,
+            positionId: staffPosition._id,
+            firstName: "Staff",
+            lastName: "Six",
+            email: staffUser6.email,
+            phone: "9876543216",
+            employeeId: `EMP6-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        staffUser6.employeeId = staffEmp6._id;
+        await staffUser6.save();
+        const staff6Token = generateToken({ id: staffUser6._id, role: staffUser6.role });
+
+        const noRosterRes = await request("/api/v1/hrms/attendance/today", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${staff6Token}` },
+        });
+        assert.strictEqual(noRosterRes.status, 200);
+        assert.strictEqual(noRosterRes.body.data, null, "Employee without roster assignment should NOT be ABSENT");
+        console.log("  ✓ 26. Employee without roster assignment is NOT automatically ABSENT");
+
+        // ─────────────────────────────────────────────────────────────
+        // 8. BACKGROUND SCHEDULER INTEGRATION TESTS
+        // ─────────────────────────────────────────────────────────────
+        console.log("\n--- 8. BACKGROUND SCHEDULER INTEGRATION TESTS ---");
+
+        // Test 27: Scheduler exported functions exist on app
+        assert.strictEqual(typeof app.startAutomaticAbsenceScheduler, "function", "startAutomaticAbsenceScheduler should be exported on app");
+        assert.strictEqual(typeof app.stopAutomaticAbsenceScheduler, "function", "stopAutomaticAbsenceScheduler should be exported on app");
+        assert.strictEqual(typeof app.runAutomaticAbsenceJob, "function", "runAutomaticAbsenceJob should be exported on app");
+        console.log("  ✓ 27. Scheduler control functions are exposed on app instance");
+
+        // Test 28: Scheduler invocation executes processAutomaticAbsence without error
+        await app.runAutomaticAbsenceJob();
+        console.log("  ✓ 28. Scheduler job execution runs processAutomaticAbsence() cleanly");
+
+        // Test 29: Starting scheduler returns timer and does not duplicate timers on repeated start
+        const timer1 = app.startAutomaticAbsenceScheduler(60000);
+        const timer2 = app.startAutomaticAbsenceScheduler(60000);
+        assert.strictEqual(timer1, timer2, "Repeated startAutomaticAbsenceScheduler calls must return existing timer instance");
+        app.stopAutomaticAbsenceScheduler();
+        console.log("  ✓ 29. Scheduler prevents duplicate running timer instances and cleans up properly");
+
         console.log("\n=======================================================");
-        console.log("=== ALL 21 ATTENDANCE + REGULARIZATION TESTS PASSED 100% ===");
+        console.log("=== ALL ATTENDANCE + SCHEDULER TESTS PASSED 100% ===");
         console.log("=======================================================\n");
 
     } catch (err) {

@@ -907,8 +907,93 @@ const runTests = async () => {
             console.log("  ✓ 29. Employee can apply for 2.5 multi-day partial leave");
         }
 
+        // Test 30: Normal employee without leave.view_workforce cannot access workforce "Who's On Leave"
+        {
+            const workforceRes = await request("/api/v1/hrms/leaves", {
+                headers: { Authorization: `Bearer ${staffToken}` },
+            });
+            assert.strictEqual(workforceRes.status, 403);
+            console.log("  ✓ 30. Normal employee without leave.view_workforce cannot access workforce leaves");
+        }
+
+        // Test 31: Admin grants leave.view_workforce to employee -> employee can access workforce leave view
+        {
+            const grantRes = await request(`/api/v1/access-management/${staffUserId}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${adminAToken}` },
+                body: {
+                    permissions: ["leave.view_workforce"],
+                    modules: ["hrms"],
+                },
+            });
+            assert.strictEqual(grantRes.status, 200);
+
+            // Now employee with updated permissions can access workforce leaves
+            const updatedStaffToken = generateToken({
+                id: staffUserId,
+                role: "employee",
+                hospitalId: hospitalA._id,
+                permissions: ["leave.view_workforce"],
+            });
+
+            const workforceResWithPerm = await request("/api/v1/hrms/leaves", {
+                headers: { Authorization: `Bearer ${updatedStaffToken}` },
+            });
+            assert.strictEqual(workforceResWithPerm.status, 200);
+            assert.ok(Array.isArray(workforceResWithPerm.body.data.leaves));
+            console.log("  ✓ 31. Admin can grant leave.view_workforce and employee gains workforce leave access");
+        }
+
+        // Test 32: Hospital isolation remains enforced when employee has leave.view_workforce
+        {
+            const updatedStaffToken = generateToken({
+                id: staffUserId,
+                role: "employee",
+                hospitalId: hospitalA._id,
+                permissions: ["leave.view_workforce"],
+            });
+
+            const workforceRes = await request("/api/v1/hrms/leaves", {
+                headers: { Authorization: `Bearer ${updatedStaffToken}` },
+            });
+            assert.strictEqual(workforceRes.status, 200);
+
+            // Ensure no leaves from Hospital B are returned
+            const hospitalBLeaves = workforceRes.body.data.leaves.filter(
+                (l) => String(l.hospitalId) === String(hospitalB._id)
+            );
+            assert.strictEqual(hospitalBLeaves.length, 0);
+            console.log("  ✓ 32. Hospital isolation enforced for workforce leave view");
+        }
+
+        // Test 33: Admin revokes leave.view_workforce -> employee loses workforce leave access
+        {
+            const revokeRes = await request(`/api/v1/access-management/${staffUserId}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${adminAToken}` },
+                body: {
+                    permissions: [],
+                    modules: ["hrms"],
+                },
+            });
+            assert.strictEqual(revokeRes.status, 200);
+
+            const revokedStaffToken = generateToken({
+                id: staffUserId,
+                role: "employee",
+                hospitalId: hospitalA._id,
+                permissions: [],
+            });
+
+            const workforceResRevoked = await request("/api/v1/hrms/leaves", {
+                headers: { Authorization: `Bearer ${revokedStaffToken}` },
+            });
+            assert.strictEqual(workforceResRevoked.status, 403);
+            console.log("  ✓ 33. Admin can revoke leave.view_workforce and employee loses workforce leave access");
+        }
+
         console.log("\n=======================================================");
-        console.log("=== ALL 29 LEAVE MANAGEMENT TESTS PASSED 100% ===");
+        console.log("=== ALL 33 LEAVE MANAGEMENT TESTS PASSED 100% ===");
         console.log("=======================================================\n");
 
         if (server) server.close();

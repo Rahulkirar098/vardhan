@@ -6,6 +6,7 @@ const ATTENDANCE_STATUSES = Object.freeze({
     PRESENT: "PRESENT",
     ABSENT: "ABSENT",
     HALF_DAY: "HALF_DAY",
+    ON_LEAVE: "ON_LEAVE",
 });
 
 const VALID_ATTENDANCE_STATUSES = Object.freeze(Object.values(ATTENDANCE_STATUSES));

@@ -63,9 +63,25 @@ const hasPermission = (user, permission) => {
         PERMISSIONS.LEAVE_APPLY,
         PERMISSIONS.LEAVE_VIEW_OWN,
         PERMISSIONS.LEAVE_CANCEL_OWN,
+        PERMISSIONS.LEAVE_VIEW_WORKFORCE,
         PERMISSIONS.LEAVE_VIEW,
         PERMISSIONS.LEAVE_APPROVE,
+        PERMISSIONS.LEAVE_REJECT,
         PERMISSIONS.LEAVE_MANAGE,
+    ].includes(permission)) {
+        return true;
+    }
+
+    if (userSpecific.includes(PERMISSIONS.LEAVE_APPROVE) && [
+        PERMISSIONS.LEAVE_APPROVE,
+        PERMISSIONS.LEAVE_REJECT,
+    ].includes(permission)) {
+        return true;
+    }
+
+    if ((userSpecific.includes(PERMISSIONS.LEAVE_VIEW_WORKFORCE) || userSpecific.includes(PERMISSIONS.LEAVE_VIEW)) && [
+        PERMISSIONS.LEAVE_VIEW_WORKFORCE,
+        PERMISSIONS.LEAVE_VIEW,
     ].includes(permission)) {
         return true;
     }

@@ -94,12 +94,13 @@ const PERMISSION_GROUPS = [
         ],
       },
       {
-        title: 'MANAGEMENT',
+        title: 'WORKFORCE',
         subtitle: 'Admin-controlled permissions for workforce leave governance',
         isDefaultGroup: false,
         permissions: [
-          { key: 'leave.view', label: 'View Workforce Leaves', description: 'View leave requests across hospital workforce', isDefault: false },
-          { key: 'leave.approve', label: 'Approve / Reject Leave', description: 'Approve or reject pending leave requests', isDefault: false },
+          { key: 'leave.view_workforce', label: "View Who's On Leave", description: 'View leave requests across hospital workforce', isDefault: false },
+          { key: 'leave.approve', label: 'Approve Leave', description: 'Approve pending leave requests', isDefault: false },
+          { key: 'leave.reject', label: 'Reject Leave', description: 'Reject pending leave requests', isDefault: false },
           { key: 'leave.manage', label: 'Manage Leaves', description: 'Broader management and cancellation of hospital leaves', isDefault: false },
         ],
       },

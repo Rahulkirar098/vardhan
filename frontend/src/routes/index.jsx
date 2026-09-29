@@ -271,6 +271,7 @@ const AppRoutes = () => {
             requiredAnyPermission={[
               PERMISSIONS.LEAVE_APPLY,
               PERMISSIONS.LEAVE_VIEW_OWN,
+              PERMISSIONS.LEAVE_VIEW_WORKFORCE,
               PERMISSIONS.LEAVE_VIEW,
               PERMISSIONS.LEAVE_APPROVE,
               PERMISSIONS.LEAVE_MANAGE,

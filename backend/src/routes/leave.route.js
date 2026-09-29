@@ -37,14 +37,14 @@ leaveRoute.get(
 // Stats
 leaveRoute.get(
     "/stats",
-    authorizePermission(PERMISSIONS.LEAVE_VIEW),
+    authorizeAnyPermission(PERMISSIONS.LEAVE_VIEW_WORKFORCE, PERMISSIONS.LEAVE_VIEW, PERMISSIONS.LEAVE_MANAGE),
     getLeaveStats
 );
 
 // List hospital leaves
 leaveRoute.get(
     "/",
-    authorizePermission(PERMISSIONS.LEAVE_VIEW),
+    authorizeAnyPermission(PERMISSIONS.LEAVE_VIEW_WORKFORCE, PERMISSIONS.LEAVE_VIEW, PERMISSIONS.LEAVE_MANAGE),
     getHospitalLeaves
 );
 
@@ -52,11 +52,13 @@ leaveRoute.get(
 leaveRoute.get(
     "/:id",
     authorizeAnyPermission(
+        PERMISSIONS.LEAVE_VIEW_WORKFORCE,
         PERMISSIONS.LEAVE_VIEW,
         PERMISSIONS.LEAVE_VIEW_OWN,
         PERMISSIONS.LEAVE_APPLY,
         PERMISSIONS.LEAVE_CANCEL_OWN,
         PERMISSIONS.LEAVE_APPROVE,
+        PERMISSIONS.LEAVE_REJECT,
         PERMISSIONS.LEAVE_MANAGE
     ),
     getLeaveById
@@ -65,14 +67,14 @@ leaveRoute.get(
 // Approve leave
 leaveRoute.patch(
     "/:id/approve",
-    authorizePermission(PERMISSIONS.LEAVE_APPROVE),
+    authorizeAnyPermission(PERMISSIONS.LEAVE_APPROVE, PERMISSIONS.LEAVE_MANAGE),
     approveLeave
 );
 
 // Reject leave
 leaveRoute.patch(
     "/:id/reject",
-    authorizePermission(PERMISSIONS.LEAVE_APPROVE),
+    authorizeAnyPermission(PERMISSIONS.LEAVE_APPROVE, PERMISSIONS.LEAVE_REJECT, PERMISSIONS.LEAVE_MANAGE),
     rejectLeave
 );
 

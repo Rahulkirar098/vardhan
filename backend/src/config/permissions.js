@@ -30,8 +30,10 @@ const PERMISSIONS = Object.freeze({
     LEAVE_APPLY: "leave.apply",
     LEAVE_VIEW_OWN: "leave.view_own",
     LEAVE_CANCEL_OWN: "leave.cancel_own",
+    LEAVE_VIEW_WORKFORCE: "leave.view_workforce",
     LEAVE_VIEW: "leave.view",
     LEAVE_APPROVE: "leave.approve",
+    LEAVE_REJECT: "leave.reject",
     LEAVE_MANAGE: "leave.manage",
 
     // Attendance & Regularization (HRMS)
