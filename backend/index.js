@@ -22,6 +22,38 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Serverless Mongoose Connection Middleware
+let isDbConnecting = null;
+const connectDB = async () => {
+    if (mongoose.connection.readyState >= 1) {
+        return;
+    }
+    if (!isDbConnecting) {
+        const mongoUri = process.env.MONGODB_URI;
+        if (!mongoUri) {
+            throw new Error("MONGODB_URI environment variable is missing");
+        }
+        isDbConnecting = mongoose.connect(mongoUri);
+    }
+    await isDbConnecting;
+};
+
+app.use(async (req, res, next) => {
+    if (req.path === "/") {
+        return next();
+    }
+    try {
+        await connectDB();
+        next();
+    } catch (dbErr) {
+        console.error("Database Connection Error:", dbErr.message);
+        return res.status(500).json({
+            success: false,
+            message: "Database connection failure: " + dbErr.message,
+        });
+    }
+});
+
 app.get("/", (req, res) => {
     res.send("Welcome to the API!");
 });
