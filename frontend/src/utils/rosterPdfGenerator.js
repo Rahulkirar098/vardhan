@@ -4,7 +4,6 @@ import autoTable from 'jspdf-autotable';
 /**
  * Format 24h time string (e.g. "08:00") to 12h format (e.g. "8 AM" or "8:30 PM")
  */
-
 export function formatTime12h(time24) {
   if (!time24) return '';
   const [hStr, mStr] = time24.split(':');
@@ -49,9 +48,9 @@ export function formatDatePeriod(startStr, endStr) {
 }
 
 /**
- * Generate and download PDF in browser from client-side Roster data
+ * Generate and download PDF in browser matching Hospital Reference Layout
  */
-export function generateFrontendRosterPDF(activeRoster, hospitalNameInput = 'VARDHAN HOSPITAL') {
+export function generateFrontendRosterPDF(activeRoster) {
   if (!activeRoster) return;
 
   const doc = new jsPDF({
@@ -63,13 +62,12 @@ export function generateFrontendRosterPDF(activeRoster, hospitalNameInput = 'VAR
   const pageWidth = doc.internal.pageSize.getWidth(); // ~297 mm
   const pageHeight = doc.internal.pageSize.getHeight(); // ~210 mm
   const marginX = 10;
+  const printableWidth = pageWidth - marginX * 2; // ~277 mm
 
-  const hospitalName = (hospitalNameInput || 'VARDHAN HOSPITAL').toUpperCase();
-  const rosterTitle = (activeRoster.title || 'WORKFORCE DUTY ROSTER').toUpperCase();
   const monthYear = formatMonthYear(activeRoster.startDate);
   const datePeriod = formatDatePeriod(activeRoster.startDate, activeRoster.endDate);
 
-  // Extract columns
+  // Extract columns (shifts)
   let columns = [];
   if (activeRoster.templateId && Array.isArray(activeRoster.templateId.columns) && activeRoster.templateId.columns.length > 0) {
     columns = [...activeRoster.templateId.columns].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -98,28 +96,25 @@ export function generateFrontendRosterPDF(activeRoster, hospitalNameInput = 'VAR
     if (dutyAreas.length === 0) {
       dutyAreas = [
         { id: 'da-1', name: 'GENERAL WARD' },
-        { id: 'da-2', name: 'NICU' },
-        { id: 'da-3', name: 'ICU' },
+        { id: 'da-2', name: 'NICU 2ND FLOOR' },
+        { id: 'da-3', name: 'ICU 3RD FLOOR' },
         { id: 'da-4', name: 'OT' },
       ];
     }
   }
 
-  // Construct Header Row
-  const headRow = [
-    'DUTY AREA / SECTION',
-    ...columns.map((col, idx) => {
-      const title = (col.title || `SHIFT ${idx + 1}`).toUpperCase();
-      const timeStr = col.startTime && col.endTime
-        ? `${formatTime12h(col.startTime)} TO ${formatTime12h(col.endTime)}`
-        : '';
-      return timeStr ? `${title}\n${timeStr}` : title;
-    }),
-  ];
+  // Construct Header Row - EXACTLY columns.length columns (NO 4th Duty Area column!)
+  const headRow = columns.map((col, idx) => {
+    const title = (col.title || `SHIFT ${idx + 1}`).toUpperCase();
+    const timeStr = col.startTime && col.endTime
+      ? `${formatTime12h(col.startTime)} TO ${formatTime12h(col.endTime)}`
+      : '';
+    return timeStr ? `${title} ${timeStr}` : title;
+  });
 
-  // Helper to get assignments matching dutyArea and column
   const assignmentsList = activeRoster.assignments || [];
 
+  // Helper to match assignments
   function getCellAssignments(dutyAreaName, col) {
     return assignmentsList.filter((ass) => {
       const matchArea =
@@ -135,115 +130,106 @@ export function generateFrontendRosterPDF(activeRoster, hospitalNameInput = 'VAR
     });
   }
 
-  // Construct Body Rows
+  // Construct Body Rows - Every shift cell starts with Duty Area Name, then employees below
   const bodyRows = dutyAreas.map((da) => {
     const daName = (da.name || da.title || 'DUTY AREA').toUpperCase();
 
-    const shiftCells = columns.map((col) => {
+    return columns.map((col) => {
       const matches = getCellAssignments(daName, col);
-      if (matches.length === 0) return '-';
 
-      return matches.map((ass) => {
-        let empName = 'UNASSIGNED';
-        let phone = '';
+      const lines = [daName];
 
-        if (ass.employeeId) {
-          if (typeof ass.employeeId === 'object') {
-            const first = ass.employeeId.firstName || '';
-            const last = ass.employeeId.lastName || '';
-            empName = `${first} ${last}`.trim() || ass.employeeId.name || 'EMPLOYEE';
-            phone = ass.employeeId.phone || ass.employeeId.mobile || '';
-          } else {
-            empName = ass.employeeId;
+      if (matches.length > 0) {
+        matches.forEach((ass) => {
+          let empName = 'UNASSIGNED';
+          let phone = '';
+
+          if (ass.employeeId) {
+            if (typeof ass.employeeId === 'object') {
+              const first = ass.employeeId.firstName || '';
+              const last = ass.employeeId.lastName || '';
+              empName = `${first} ${last}`.trim() || ass.employeeId.name || 'EMPLOYEE';
+              phone = ass.employeeId.phone || ass.employeeId.mobile || '';
+            } else {
+              empName = ass.employeeId;
+            }
+          } else if (ass.fullName) {
+            empName = ass.fullName;
           }
-        } else if (ass.fullName) {
-          empName = ass.fullName;
-        }
 
-        let line = empName.toUpperCase();
-        if (phone) {
-          line += ` ${phone}`;
-        }
+          let line = empName.toUpperCase();
+          if (phone) {
+            line += ` ${phone}`;
+          }
 
-        if (
-          ass.startTime &&
-          ass.endTime &&
-          (ass.startTime !== col.startTime || ass.endTime !== col.endTime)
-        ) {
-          line += ` (${formatTime12h(ass.startTime)} - ${formatTime12h(ass.endTime)})`;
-        }
+          // Custom shift time
+          if (
+            ass.startTime &&
+            ass.endTime &&
+            (ass.startTime !== col.startTime || ass.endTime !== col.endTime)
+          ) {
+            line += ` (${formatTime12h(ass.startTime)} TO ${formatTime12h(ass.endTime)})`;
+          }
 
-        return line;
-      }).join('\n');
+          lines.push(line);
+        });
+      }
+
+      return lines.join('\n');
     });
-
-    return [daName, ...shiftCells];
   });
 
-  // Calculate dynamic column width for shift columns
-  const dutyAreaWidth = 65; // mm
-  const printableWidth = pageWidth - marginX * 2; // ~277 mm
-  const shiftWidth = (printableWidth - dutyAreaWidth) / columns.length;
-
-  const columnStyles = {
-    0: { cellWidth: dutyAreaWidth, fontStyle: 'bold', halign: 'left' },
-  };
+  // Calculate equal column widths for all shift columns
+  const shiftColWidth = printableWidth / columns.length;
+  const columnStyles = {};
   columns.forEach((_, idx) => {
-    columnStyles[idx + 1] = { cellWidth: shiftWidth, halign: 'left' };
+    columnStyles[idx] = { cellWidth: shiftColWidth, halign: 'left' };
   });
 
   // Generate Table via autoTable
   autoTable(doc, {
     head: [headRow],
     body: bodyRows,
-    startY: 38,
-    margin: { top: 38, left: marginX, right: marginX, bottom: 12 },
+    startY: 24,
+    margin: { top: 24, left: marginX, right: marginX, bottom: 10 },
     theme: 'grid',
     headStyles: {
-      fillColor: [241, 245, 249],
-      textColor: [15, 23, 42],
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
       fontStyle: 'bold',
       halign: 'center',
       valign: 'middle',
+      fontSize: 10,
       lineWidth: 0.3,
       lineColor: [0, 0, 0],
     },
     bodyStyles: {
-      textColor: [15, 23, 42],
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
       fontSize: 8.5,
-      cellPadding: 3.5,
+      cellPadding: 3,
       valign: 'top',
       lineWidth: 0.3,
       lineColor: [0, 0, 0],
     },
     columnStyles,
     didDrawPage: (data) => {
-      // Draw Page Header on top of every page
-      const currentY = 10;
+      // Draw Header at top of every page
+      const currentY = 8;
       doc.setFont('helvetica', 'bold');
-
-      // Hospital Name
-      doc.setFontSize(13);
-      doc.setTextColor(15, 23, 42);
-      doc.text(hospitalName, pageWidth / 2, currentY, { align: 'center' });
-
-      // Title
-      doc.setFontSize(10);
-      doc.setTextColor(51, 65, 85);
-      doc.text(rosterTitle, pageWidth / 2, currentY + 6, { align: 'center' });
 
       // Month & Year
       if (monthYear) {
         doc.setFontSize(12);
-        doc.setTextColor(30, 41, 59);
-        doc.text(monthYear, pageWidth / 2, currentY + 12, { align: 'center' });
+        doc.setTextColor(0, 0, 0);
+        doc.text(monthYear, pageWidth / 2, currentY, { align: 'center' });
       }
 
       // Date Range Period
       if (datePeriod) {
-        doc.setFontSize(9.5);
-        doc.setTextColor(71, 85, 105);
-        doc.text(datePeriod, pageWidth / 2, currentY + 17, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text(datePeriod, pageWidth / 2, currentY + 6, { align: 'center' });
       }
 
       // Footer - Page Numbers
@@ -253,9 +239,9 @@ export function generateFrontendRosterPDF(activeRoster, hospitalNameInput = 'VAR
       doc.setFontSize(8);
       doc.setTextColor(100, 116, 139);
       doc.text(
-        `Page ${pageCurrent} of ${totalPages}  •  Vardhan Hospital Workforce Management System`,
+        `Page ${pageCurrent} of ${totalPages}`,
         pageWidth - marginX,
-        pageHeight - 6,
+        pageHeight - 5,
         { align: 'right' }
       );
     },
