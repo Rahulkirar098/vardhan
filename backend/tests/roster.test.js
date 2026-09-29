@@ -387,43 +387,15 @@ async function runTests() {
         assert.strictEqual(resEditPublished.status, 201);
         console.log("  ✓ 13. Published rosters are EDITABLE by authorized managers with roster.manage");
 
-        console.log("\n--- 3. ROSTER PDF EXPORT SCENARIOS ---");
+        console.log("\n--- 3. CLEANUP & TEMPLATE DELETION ---");
 
-        // 14. Nurse can download PUBLISHED Roster PDF
-        const resNursePDF = await makeRequest(`/api/v1/rosters/${createdRosterId}/export/pdf`, {
-            method: "GET",
-            headers: { Authorization: `Bearer ${nurse2Token}` },
-        });
-        assert.strictEqual(resNursePDF.status, 200);
-        assert.strictEqual(resNursePDF.headers["content-type"], "application/pdf");
-        console.log("  ✓ 14. Authorized Nurse with roster.view can download PUBLISHED Roster PDF");
-
-        // 15. HR / Admin can download PUBLISHED Roster PDF
-        const resHRPDF = await makeRequest(`/api/v1/rosters/${createdRosterId}/export/pdf`, {
-            method: "GET",
-            headers: { Authorization: `Bearer ${hrToken}` },
-        });
-        assert.strictEqual(resHRPDF.status, 200);
-        assert.strictEqual(resHRPDF.headers["content-type"], "application/pdf");
-        console.log("  ✓ 15. HR / Admin with roster.manage can download Roster PDF");
-
-        // 16. Tenant Isolation: Hospital B user cannot export Hospital A Roster PDF
-        const resIsoPDF = await makeRequest(`/api/v1/rosters/${createdRosterId}/export/pdf`, {
-            method: "GET",
-            headers: { Authorization: `Bearer ${hospitalBAdminToken}` },
-        });
-        assert.strictEqual(resIsoPDF.status, 404);
-        console.log("  ✓ 16. Tenant Isolation: Hospital B user cannot export Hospital A roster PDF");
-
-        console.log("\n--- 4. CLEANUP & TEMPLATE DELETION ---");
-
-        // 17. Delete Template
-        const res17 = await makeRequest(`/api/v1/rosters/templates/${createdTemplateId}`, {
+        // 14. Delete Template
+        const res14 = await makeRequest(`/api/v1/rosters/templates/${createdTemplateId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${hrToken}` },
         });
-        assert.strictEqual(res17.status, 200);
-        console.log("  ✓ 17. Authorized HR can delete a Roster Template");
+        assert.strictEqual(res14.status, 200);
+        console.log("  ✓ 14. Authorized HR can delete a Roster Template");
 
         console.log("\n=======================================================");
         console.log("=== ALL ROSTER TESTS PASSED 100% ===");

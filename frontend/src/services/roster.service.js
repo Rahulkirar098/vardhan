@@ -94,16 +94,9 @@ export const rosterService = {
   getMyRoster: async (params) => {
     const response = await client.get('/v1/rosters/my-roster', { params });
     return response.data;
-  },
-
-  // --- PDF Export ---
-  downloadRosterPDF: async (id) => {
-    const response = await client.get(`/v1/rosters/${id}/export/pdf`, {
-      responseType: 'blob',
-    });
-    return response;
-  },
+  }
 };
 
 export default rosterService;
+
 

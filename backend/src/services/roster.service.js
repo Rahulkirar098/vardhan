@@ -592,26 +592,4 @@ module.exports = {
     getMyRoster,
 };
 
-const Hospital = require("../models/hospital.model");
-const { generateRosterPDF } = require("./pdf.service");
-
-const exportRosterPDF = async ({ rosterId, hospitalId, userId, isManager }) => {
-    const roster = await getRosterById({ rosterId, hospitalId, userId, isManager });
-    if (!roster) {
-        const err = new Error("Roster not found.");
-        err.code = "NOT_FOUND";
-        throw err;
-    }
-
-    if (!isManager && roster.status !== "PUBLISHED") {
-        const err = new Error("Only published rosters can be downloaded by employees.");
-        err.code = "FORBIDDEN";
-        throw err;
-    }
-
-    const hospital = await Hospital.findById(hospitalId).lean();
-    return generateRosterPDF({ roster, hospital });
-};
-
-module.exports.exportRosterPDF = exportRosterPDF;
 

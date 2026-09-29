@@ -68,6 +68,7 @@ import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
 import { UnifiedCalendar } from '../../components/calendar';
+import { generateFrontendRosterPDF } from '../../utils/rosterPdfGenerator';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import InitialsAvatar from '../../components/InitialsAvatar';
@@ -360,31 +361,16 @@ export default function RosterManagementPage() {
 
 
 
-  // --- PDF Export ---
-  const handleDownloadPDF = async () => {
+  // --- PDF Export (Frontend Only) ---
+  const handleDownloadPDF = () => {
     if (!activeRoster) return;
     try {
       setDownloading(true);
-      const response = await rosterService.downloadRosterPDF(activeRoster._id);
-
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-
-      const titleClean = (activeRoster.title || 'Vardhan_Roster').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const startFmt = activeRoster.startDate ? new Date(activeRoster.startDate).toISOString().split('T')[0] : 'period';
-      const endFmt = activeRoster.endDate ? new Date(activeRoster.endDate).toISOString().split('T')[0] : 'end';
-
-      link.setAttribute('download', `${titleClean}_${startFmt}_to_${endFmt}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      generateFrontendRosterPDF(activeRoster);
       showToast('Roster PDF downloaded successfully', 'success');
     } catch (err) {
       console.error('Download PDF Error:', err);
-      showToast(err.response?.data?.message || 'Failed to download roster PDF', 'error');
+      showToast('Failed to generate roster PDF', 'error');
     } finally {
       setDownloading(false);
     }
