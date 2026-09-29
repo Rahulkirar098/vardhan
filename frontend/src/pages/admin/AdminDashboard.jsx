@@ -113,7 +113,7 @@ const DashboardMetricCard = ({ label, value, hint, badgeLabel, badgeStatus, icon
         },
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }} spacing={1}>
         <Typography
           sx={{
             fontSize: '0.75rem',
@@ -214,9 +214,9 @@ const SectionCard = ({ title, subtitle, value, valueLabel, icon: Icon, action })
         justifyContent: 'space-between',
       }}
     >
-      <Stack spacing={2} justifyContent="space-between" sx={{ height: '100%' }}>
+      <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
         <Box>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
               {title}
             </Typography>
