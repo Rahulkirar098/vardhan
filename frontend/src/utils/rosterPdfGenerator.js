@@ -130,14 +130,13 @@ export function generateFrontendRosterPDF(activeRoster) {
     });
   }
 
-  // Construct Body Rows - Every shift cell starts with Duty Area Name, then employees below
-  const bodyRows = dutyAreas.map((da) => {
+  // Prepare structured cell objects and full text strings for autoTable
+  const cellMatrix = dutyAreas.map((da) => {
     const daName = (da.name || da.title || 'DUTY AREA').toUpperCase();
 
     return columns.map((col) => {
       const matches = getCellAssignments(daName, col);
-
-      const lines = [daName];
+      const empLines = [];
 
       if (matches.length > 0) {
         matches.forEach((ass) => {
@@ -171,11 +170,21 @@ export function generateFrontendRosterPDF(activeRoster) {
             line += ` (${formatTime12h(ass.startTime)} TO ${formatTime12h(ass.endTime)})`;
           }
 
-          lines.push(line);
+          empLines.push(line);
         });
       }
 
-      return lines.join('\n');
+      return {
+        dutyAreaName: daName,
+        empLines,
+      };
+    });
+  });
+
+  // Full body rows for autoTable text height measurement
+  const bodyRows = cellMatrix.map((rowObj) => {
+    return rowObj.map((cellObj) => {
+      return [cellObj.dutyAreaName, ...cellObj.empLines].join('\n');
     });
   });
 
@@ -183,7 +192,7 @@ export function generateFrontendRosterPDF(activeRoster) {
   const shiftColWidth = printableWidth / columns.length;
   const columnStyles = {};
   columns.forEach((_, idx) => {
-    columnStyles[idx] = { cellWidth: shiftColWidth, halign: 'left' };
+    columnStyles[idx] = { cellWidth: shiftColWidth };
   });
 
   // Generate Table via autoTable
@@ -199,20 +208,70 @@ export function generateFrontendRosterPDF(activeRoster) {
       fontStyle: 'bold',
       halign: 'center',
       valign: 'middle',
-      fontSize: 10,
+      fontSize: 9.5,
       lineWidth: 0.3,
       lineColor: [0, 0, 0],
     },
     bodyStyles: {
       fillColor: [255, 255, 255],
       textColor: [0, 0, 0],
-      fontSize: 8.5,
-      cellPadding: 3,
+      fontSize: 8,
+      cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
       valign: 'top',
       lineWidth: 0.3,
       lineColor: [0, 0, 0],
     },
     columnStyles,
+    willDrawCell: (data) => {
+      if (data.section === 'body') {
+        // Clear default text so we draw custom styled text with Duty Area in BOLD and Employees in NORMAL weight
+        data.cell.text = [];
+      }
+    },
+    didDrawCell: (data) => {
+      if (data.section === 'body') {
+        const rowIdx = data.row.index;
+        const colIdx = data.column.index;
+        const cellObj = cellMatrix[rowIdx][colIdx];
+        const cell = data.cell;
+
+        const paddingLeft = cell.padding('left');
+        const paddingRight = cell.padding('right');
+        const paddingTop = cell.padding('top');
+        const contentWidth = cell.width - paddingLeft - paddingRight;
+        const centerX = cell.x + cell.width / 2;
+        let currentY = cell.y + paddingTop + 2.5;
+
+        // 1. Duty Area Header (BOLD, centered, uppercase, black)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(0, 0, 0);
+
+        const daLines = doc.splitTextToSize(cellObj.dutyAreaName, contentWidth);
+        daLines.forEach((line) => {
+          doc.text(line, centerX, currentY, { align: 'center' });
+          currentY += 3.6;
+        });
+
+        // Small gap before employees if any exist
+        if (cellObj.empLines.length > 0) {
+          currentY += 1.0;
+        }
+
+        // 2. Employee Lines (NORMAL / REGULAR weight, centered, uppercase, black)
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(0, 0, 0);
+
+        cellObj.empLines.forEach((empLine) => {
+          const empWrapped = doc.splitTextToSize(empLine, contentWidth);
+          empWrapped.forEach((line) => {
+            doc.text(line, centerX, currentY, { align: 'center' });
+            currentY += 3.4;
+          });
+        });
+      }
+    },
     didDrawPage: (data) => {
       // Draw Header at top of every page
       const currentY = 8;
