@@ -473,6 +473,13 @@ const addAssignment = async (req, res) => {
             leaveWarning: result.leaveWarning,
         });
     } catch (error) {
+        if (error.code === "DUPLICATE_ASSIGNMENT") {
+            return res.status(409).json({
+                success: false,
+                message: error.message,
+                details: error.existingAssignment,
+            });
+        }
         if (error.code === "VALIDATION_ERROR") {
             return res.status(400).json({ success: false, message: error.message });
         }
@@ -491,7 +498,7 @@ const updateAssignment = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
-        const { columnId, shiftTitle, startTime, endTime, dutyArea, notes } = req.body;
+        const { columnId, shiftTitle, startTime, endTime, dutyArea, notes, date, employeeId } = req.body;
         const assignment = await rosterService.updateAssignment({
             assignmentId: req.params.assignmentId,
             hospitalId,
@@ -502,6 +509,8 @@ const updateAssignment = async (req, res) => {
             endTime,
             dutyArea,
             notes,
+            date,
+            employeeId,
         });
 
         return res.status(200).json({
@@ -510,6 +519,13 @@ const updateAssignment = async (req, res) => {
             data: assignment,
         });
     } catch (error) {
+        if (error.code === "DUPLICATE_ASSIGNMENT") {
+            return res.status(409).json({
+                success: false,
+                message: error.message,
+                details: error.existingAssignment,
+            });
+        }
         if (error.code === "VALIDATION_ERROR") {
             return res.status(400).json({ success: false, message: error.message });
         }

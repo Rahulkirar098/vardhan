@@ -7,6 +7,20 @@ const Leave = require("../models/leave.model");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+const getCalendarBounds = (dateInput) => {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) {
+        return { start: new Date(), end: new Date() };
+    }
+    const localStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    const localEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    const utcStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+    const utcEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+    const start = new Date(Math.min(localStart.getTime(), utcStart.getTime()));
+    const end = new Date(Math.max(localEnd.getTime(), utcEnd.getTime()));
+    return { start, end };
+};
+
 // ─── TEMPLATES ───────────────────────────────────────────────────────────────
 
 const listTemplates = async ({ hospitalId }) => {
@@ -396,8 +410,34 @@ const addAssignment = async ({
     }
 
     const assignmentDate = new Date(date);
-    const dateStart = new Date(assignmentDate.getFullYear(), assignmentDate.getMonth(), assignmentDate.getDate());
-    const dateEnd = new Date(assignmentDate.getFullYear(), assignmentDate.getMonth(), assignmentDate.getDate(), 23, 59, 59, 999);
+    const { start: dateStart, end: dateEnd } = getCalendarBounds(assignmentDate);
+
+    // Check if employee already has an assignment for the same roster date
+    const existingAssignment = await RosterAssignment.findOne({
+        hospitalId,
+        employeeId: employee._id,
+        date: { $gte: dateStart, $lte: dateEnd },
+    })
+        .populate({
+            path: "employeeId",
+            select: "firstName lastName name",
+        })
+        .lean();
+
+    if (existingAssignment) {
+        const empName = existingAssignment.employeeId
+            ? `${existingAssignment.employeeId.firstName || ""} ${existingAssignment.employeeId.lastName || ""}`.trim() || existingAssignment.employeeId.name || "This employee"
+            : `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "This employee";
+        const err = new Error(`${empName} is already assigned on this date.`);
+        err.code = "DUPLICATE_ASSIGNMENT";
+        err.existingAssignment = {
+            employeeName: empName,
+            date: existingAssignment.date,
+            existingShift: existingAssignment.shiftTitle,
+            existingDutyArea: existingAssignment.dutyArea,
+        };
+        throw err;
+    }
 
     // Check Leave database for conflicts / warnings
     const leaveConflict = await Leave.findOne({
@@ -461,6 +501,8 @@ const updateAssignment = async ({
     endTime,
     dutyArea,
     notes,
+    date,
+    employeeId,
 }) => {
     if (!isValidObjectId(assignmentId)) {
         const err = new Error("Invalid assignment ID.");
@@ -472,6 +514,37 @@ const updateAssignment = async ({
     if (!assignment) {
         const err = new Error("Roster assignment not found.");
         err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    const targetDate = date ? new Date(date) : assignment.date;
+    const targetEmployeeId = employeeId || assignment.employeeId;
+
+    const { start: dateStart, end: dateEnd } = getCalendarBounds(targetDate);
+    const existingAssignment = await RosterAssignment.findOne({
+        _id: { $ne: assignment._id },
+        hospitalId,
+        employeeId: targetEmployeeId,
+        date: { $gte: dateStart, $lte: dateEnd },
+    })
+        .populate({
+            path: "employeeId",
+            select: "firstName lastName name",
+        })
+        .lean();
+
+    if (existingAssignment) {
+        const empName = existingAssignment.employeeId
+            ? `${existingAssignment.employeeId.firstName || ""} ${existingAssignment.employeeId.lastName || ""}`.trim() || existingAssignment.employeeId.name || "This employee"
+            : "This employee";
+        const err = new Error(`${empName} is already assigned on this date.`);
+        err.code = "DUPLICATE_ASSIGNMENT";
+        err.existingAssignment = {
+            employeeName: empName,
+            date: existingAssignment.date,
+            existingShift: existingAssignment.shiftTitle,
+            existingDutyArea: existingAssignment.dutyArea,
+        };
         throw err;
     }
 

@@ -49,6 +49,7 @@ import {
   DeleteOutlineRounded,
   DownloadOutlined,
   EditOutlined,
+  ErrorOutlineRounded,
   EventNoteRounded,
   GroupAddRounded,
   PersonAddOutlined,
@@ -410,9 +411,45 @@ export default function RosterManagementPage() {
     setAssignmentModalOpen(true);
   };
 
+  // Check if selected employee already has an assignment on active date
+  const selectedEmpConflict = useMemo(() => {
+    if (!assignmentForm.employeeId || !activeRoster?.assignments || !assignmentForm.date) return null;
+    const empId = assignmentForm.employeeId;
+    const targetDateStr = new Date(assignmentForm.date).toISOString().split('T')[0];
+    const editingId = assignmentTarget.editingAssignment?._id;
+
+    const existing = activeRoster.assignments.find((ass) => {
+      if (editingId && ass._id === editingId) return false;
+      const assEmpId = ass.employeeId?._id || ass.employeeId;
+      if (String(assEmpId) !== String(empId)) return false;
+      const assDateStr = ass.date ? new Date(ass.date).toISOString().split('T')[0] : '';
+      return assDateStr === targetDateStr;
+    });
+
+    if (!existing) return null;
+
+    let empName = 'Employee';
+    const foundEmp = (activeEmployees || []).find((e) => String(e._id) === String(empId));
+    if (foundEmp) {
+      empName = `${foundEmp.firstName} ${foundEmp.lastName}`.trim();
+    } else if (existing.employeeId && typeof existing.employeeId === 'object') {
+      empName = `${existing.employeeId.firstName || ''} ${existing.employeeId.lastName || ''}`.trim();
+    }
+
+    return {
+      message: `${empName} is already assigned on this date.`,
+      details: `Current assignment: ${existing.shiftTitle} · ${existing.dutyArea}`,
+    };
+  }, [assignmentForm.employeeId, assignmentForm.date, activeRoster?.assignments, assignmentTarget.editingAssignment, activeEmployees]);
+
   const handleSaveAssignment = async () => {
     if (!assignmentForm.employeeId) {
       showToast('Please select an employee', 'warning');
+      return;
+    }
+
+    if (selectedEmpConflict) {
+      showToast(`${selectedEmpConflict.message} ${selectedEmpConflict.details}`, 'error');
       return;
     }
 
@@ -436,7 +473,13 @@ export default function RosterManagementPage() {
         handleOpenRosterDetails(activeRoster._id);
         setAssignmentModalOpen(false);
       } catch (err) {
-        showToast(err.response?.data?.message || 'Failed to save assignment', 'error');
+        const errMsg = err.response?.data?.message || 'Failed to save assignment';
+        const details = err.response?.data?.details;
+        let fullMsg = errMsg;
+        if (details && details.existingShift && details.existingDutyArea) {
+          fullMsg += ` (Current assignment: ${details.existingShift} · ${details.existingDutyArea})`;
+        }
+        showToast(fullMsg, 'error');
       } finally {
         setLoading(false);
       }
@@ -1454,6 +1497,13 @@ export default function RosterManagementPage() {
           maxWidth="sm"
         >
           <Stack spacing={2.5} sx={{ pt: 1 }}>
+            {selectedEmpConflict && (
+              <Alert severity="error" icon={<ErrorOutlineRounded />}>
+                <Typography variant="subtitle2" fontWeight={600}>{selectedEmpConflict.message}</Typography>
+                <Typography variant="body2">{selectedEmpConflict.details}</Typography>
+              </Alert>
+            )}
+
             {leaveWarning && (
               <Alert severity="warning" icon={<WarningAmberRounded />}>
                 {leaveWarning.message || 'Employee has approved/pending leave on this date.'}

@@ -387,7 +387,175 @@ async function runTests() {
         assert.strictEqual(resEditPublished.status, 201);
         console.log("  ✓ 13. Published rosters are EDITABLE by authorized managers with roster.manage");
 
-        console.log("\n--- 3. CLEANUP & TEMPLATE DELETION ---");
+        console.log("\n--- 3. SINGLE ASSIGNMENT & DOUBLE-BOOKING PREVENTION SCENARIOS ---");
+
+        // DB 1: Employee can be assigned once on a date -> 201 PASS
+        const dbRes1 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-09-15",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "General Ward",
+            },
+        });
+        assert.strictEqual(dbRes1.status, 201);
+        const nurse1Sep15AssId = dbRes1.body.data._id;
+        console.log("  ✓ DB 1. Employee can be assigned once on a date -> 201 PASS");
+
+        // DB 2: Same employee cannot be assigned to second shift on same date -> 409 Conflict
+        const dbRes2 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-09-15",
+                shiftTitle: "Afternoon",
+                startTime: "14:00",
+                endTime: "20:00",
+                dutyArea: "General Ward",
+            },
+        });
+        assert.strictEqual(dbRes2.status, 409);
+        assert.strictEqual(dbRes2.body.success, false);
+        console.log("  ✓ DB 2. Same employee cannot be assigned to second shift on same date -> 409 Conflict");
+
+        // DB 3: Same employee cannot be assigned to second duty area on same date -> 409 Conflict
+        const dbRes3 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-09-15",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "NICU 2nd Floor",
+            },
+        });
+        assert.strictEqual(dbRes3.status, 409);
+        console.log("  ✓ DB 3. Same employee cannot be assigned to second duty area on same date -> 409 Conflict");
+
+        // DB 4: Same employee can be assigned on next date -> 201 PASS
+        const dbRes4 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-09-16",
+                shiftTitle: "Night",
+                startTime: "20:00",
+                endTime: "08:00",
+                dutyArea: "NICU 2nd Floor",
+            },
+        });
+        assert.strictEqual(dbRes4.status, 201);
+        const nurse1Sep16AssId = dbRes4.body.data._id;
+        console.log("  ✓ DB 4. Same employee can be assigned on next date -> 201 PASS");
+
+        // DB 5: Same employee can be assigned on previous date -> 201 PASS
+        const dbRes5 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-09-11",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "General Ward",
+            },
+        });
+        assert.strictEqual(dbRes5.status, 201);
+        console.log("  ✓ DB 5. Same employee can be assigned on previous date -> 201 PASS");
+
+        // DB 6: Editing existing assignment without duplicate -> 200 PASS
+        const dbRes6 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments/${nurse1Sep15AssId}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                notes: "Updated notes for 15 Sep assignment",
+            },
+        });
+        assert.strictEqual(dbRes6.status, 200);
+        console.log("  ✓ DB 6. Editing existing assignment without duplicate -> 200 PASS");
+
+        // DB 7: Moving existing assignment to another shift on same date -> 200 PASS
+        const dbRes7 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments/${nurse1Sep16AssId}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+            },
+        });
+        assert.strictEqual(dbRes7.status, 200);
+        console.log("  ✓ DB 7. Moving existing assignment to another shift on same date -> 200 PASS");
+
+        // DB 8: Editing into a date where another assignment exists -> 409 Conflict
+        const dbRes8 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments/${nurse1Sep16AssId}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                date: "2026-09-15",
+            },
+        });
+        assert.strictEqual(dbRes8.status, 409);
+        console.log("  ✓ DB 8. Editing into a date where another assignment exists -> 409 Conflict");
+
+        // DB 9: Different employees can share same shift/duty area -> 201 PASS
+        const dbRes9 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse2Employee._id,
+                date: "2026-09-15",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "General Ward",
+            },
+        });
+        assert.strictEqual(dbRes9.status, 201);
+        console.log("  ✓ DB 9. Different employees can share same shift/duty area -> 201 PASS");
+
+        // DB 10: Different employees can work different shifts same date -> 201 PASS
+        const dbRes10 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: hrEmployee._id,
+                date: "2026-09-15",
+                shiftTitle: "Night",
+                startTime: "20:00",
+                endTime: "08:00",
+                dutyArea: "ICU 3rd Floor",
+            },
+        });
+        assert.strictEqual(dbRes10.status, 201);
+        console.log("  ✓ DB 10. Different employees can work different shifts same date -> 201 PASS");
+
+        // DB 11: Cross-hospital isolation remains intact
+        const dbRes11 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hospitalBAdminToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-09-17",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "General Ward",
+            },
+        });
+        assert.strictEqual(dbRes11.status, 404);
+        console.log("  ✓ DB 11. Cross-hospital isolation remains intact");
+
+        console.log("\n--- 4. CLEANUP & TEMPLATE DELETION ---");
 
         // 14. Delete Template
         const res14 = await makeRequest(`/api/v1/rosters/templates/${createdTemplateId}`, {
