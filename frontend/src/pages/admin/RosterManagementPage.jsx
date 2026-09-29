@@ -136,13 +136,7 @@ export default function RosterManagementPage() {
     endDate: '',
   });
 
-  // Edit Roster Details Modal (Draft & Published)
-  const [editRosterModalOpen, setEditRosterModalOpen] = useState(false);
-  const [editRosterForm, setEditRosterForm] = useState({
-    title: '',
-    startDate: '',
-    endDate: '',
-  });
+
 
   // Add / Edit Assignment Modal
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
@@ -360,48 +354,7 @@ export default function RosterManagementPage() {
     }
   };
 
-  // --- Edit Roster Details (Draft & Published) ---
-  const handleOpenEditRosterDetails = () => {
-    if (!activeRoster) return;
-    setEditRosterForm({
-      title: activeRoster.title || '',
-      startDate: activeRoster.startDate ? new Date(activeRoster.startDate).toISOString().split('T')[0] : '',
-      endDate: activeRoster.endDate ? new Date(activeRoster.endDate).toISOString().split('T')[0] : '',
-    });
-    setEditRosterModalOpen(true);
-  };
 
-  const handleSaveRosterDetails = async () => {
-    if (!editRosterForm.title.trim()) {
-      showToast('Roster Title is required', 'warning');
-      return;
-    }
-
-    const updateProc = async () => {
-      try {
-        setLoading(true);
-        await rosterService.updateRoster(activeRoster._id, editRosterForm);
-        showToast('Roster details updated successfully', 'success');
-        setEditRosterModalOpen(false);
-        handleOpenRosterDetails(activeRoster._id);
-        fetchRosters();
-      } catch (err) {
-        showToast(err.response?.data?.message || 'Failed to update roster details', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (activeRoster?.status === 'PUBLISHED') {
-      setEditRosterModalOpen(false);
-      setPublishEditConfirm({
-        open: true,
-        pendingAction: updateProc,
-      });
-    } else {
-      await updateProc();
-    }
-  };
 
   // --- Add / Edit Nurse Assignment ---
   const handleOpenAddAssignment = (dutyAreaName, shift) => {
@@ -812,9 +765,9 @@ export default function RosterManagementPage() {
                             variant="contained"
                             color="primary"
                             startIcon={<EditOutlined />}
-                            onClick={handleOpenEditRosterDetails}
+                            onClick={() => handleOpenEditTemplate(activeRoster.templateId)}
                           >
-                            Edit Roster Details
+                            Edit Template Layout
                           </Button>
                         </>
                       )}
@@ -1153,14 +1106,26 @@ export default function RosterManagementPage() {
                       ))}
                     </Stack>
 
-                    <Button
-                      variant="contained"
-                      startIcon={<GroupAddRounded />}
-                      onClick={() => handleOpenUseTemplate(tmpl)}
-                      sx={{ mt: 'auto' }}
-                    >
-                      Use Template to Create Roster
-                    </Button>
+                    <Stack direction="row" spacing={1} sx={{ mt: 'auto' }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<EditOutlined />}
+                        onClick={() => handleOpenEditTemplate(tmpl)}
+                        fullWidth
+                      >
+                        Edit Template Layout
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<GroupAddRounded />}
+                        onClick={() => handleOpenUseTemplate(tmpl)}
+                        fullWidth
+                      >
+                        Create Roster
+                      </Button>
+                    </Stack>
                   </GlassCard>
                 </Grid>
               ))
@@ -1446,55 +1411,7 @@ export default function RosterManagementPage() {
           </Stack>
         </Modal>
 
-        {/* ─── MODAL 2B: EDIT ROSTER DETAILS ─── */}
-        <Modal
-          open={editRosterModalOpen}
-          onClose={() => setEditRosterModalOpen(false)}
-          title="Edit Roster Details"
-          maxWidth="sm"
-        >
-          <Stack spacing={3} sx={{ pt: 1 }}>
-            <TextField
-              label="Roster Title"
-              value={editRosterForm.title}
-              onChange={(e) => setEditRosterForm((p) => ({ ...p, title: e.target.value }))}
-              fullWidth
-              required
-            />
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  label="Start Date"
-                  type="date"
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  value={editRosterForm.startDate}
-                  onChange={(e) => setEditRosterForm((p) => ({ ...p, startDate: e.target.value }))}
-                  required
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="End Date"
-                  type="date"
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  value={editRosterForm.endDate}
-                  onChange={(e) => setEditRosterForm((p) => ({ ...p, endDate: e.target.value }))}
-                  required
-                />
-              </Grid>
-            </Grid>
-            <Box align="right" pt={2}>
-              <Button onClick={() => setEditRosterModalOpen(false)} sx={{ mr: 1 }}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleSaveRosterDetails} loading={loading}>
-                Update Roster Details
-              </Button>
-            </Box>
-          </Stack>
-        </Modal>
+
 
         {/* ─── MODAL 3: ADD NURSE ASSIGNMENT ─── */}
         <Modal
