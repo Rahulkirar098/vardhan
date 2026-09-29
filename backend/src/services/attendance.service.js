@@ -149,14 +149,26 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
   const endOfDay = new Date(`${targetDateStr}T23:59:59.999Z`);
   const now = new Date();
 
-  // Find all published rosters
+  // Find current published roster for each hospital (exclude historical rosters)
   const rosterQuery = { status: "PUBLISHED" };
   if (hospitalId) rosterQuery.hospitalId = hospitalId;
-  const publishedRosters = await Roster.find(rosterQuery).select("_id hospitalId").lean();
+  const allPublished = await Roster.find(rosterQuery)
+    .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })
+    .select("_id hospitalId")
+    .lean();
 
-  if (!publishedRosters.length) return [];
+  if (!allPublished.length) return [];
 
-  const rosterIds = publishedRosters.map((r) => r._id);
+  // Pick ONLY the current published roster for each hospital
+  const hospitalCurrentMap = new Map();
+  for (const r of allPublished) {
+    const key = r.hospitalId.toString();
+    if (!hospitalCurrentMap.has(key)) {
+      hospitalCurrentMap.set(key, r._id);
+    }
+  }
+
+  const rosterIds = Array.from(hospitalCurrentMap.values());
 
   const assignmentQuery = {
     rosterId: { $in: rosterIds },

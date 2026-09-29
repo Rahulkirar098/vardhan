@@ -13,146 +13,6 @@ const getHospitalIdFromContext = async (user) => {
     return hospital ? hospital._id : null;
 };
 
-// ─── TEMPLATES ───────────────────────────────────────────────────────────────
-
-const listTemplates = async (req, res) => {
-    try {
-        const hospitalId = await getHospitalIdFromContext(req.user);
-        if (!hospitalId) {
-            return res.status(404).json({ success: false, message: "Hospital not found" });
-        }
-
-        const templates = await rosterService.listTemplates({ hospitalId });
-        return res.status(200).json({
-            success: true,
-            message: "Roster templates retrieved successfully",
-            data: templates,
-        });
-    } catch (error) {
-        console.error("List Roster Templates Error:", error);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
-};
-
-const getTemplateById = async (req, res) => {
-    try {
-        const hospitalId = await getHospitalIdFromContext(req.user);
-        if (!hospitalId) {
-            return res.status(404).json({ success: false, message: "Hospital not found" });
-        }
-
-        const template = await rosterService.getTemplateById({
-            templateId: req.params.id,
-            hospitalId,
-        });
-
-        if (!template) {
-            return res.status(404).json({ success: false, message: "Roster template not found" });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: "Roster template retrieved successfully",
-            data: template,
-        });
-    } catch (error) {
-        console.error("Get Roster Template Error:", error);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
-};
-
-const createTemplate = async (req, res) => {
-    try {
-        const hospitalId = await getHospitalIdFromContext(req.user);
-        if (!hospitalId) {
-            return res.status(404).json({ success: false, message: "Hospital not found" });
-        }
-
-        const { title, columns, dutyAreas } = req.body;
-        const template = await rosterService.createTemplate({
-            hospitalId,
-            userId: req.user.id || req.user._id,
-            title,
-            columns,
-            dutyAreas,
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: "Roster template created successfully",
-            data: template,
-        });
-    } catch (error) {
-        if (error.code === "VALIDATION_ERROR") {
-            return res.status(400).json({ success: false, message: error.message });
-        }
-        console.error("Create Roster Template Error:", error);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
-};
-
-const updateTemplate = async (req, res) => {
-    try {
-        const hospitalId = await getHospitalIdFromContext(req.user);
-        if (!hospitalId) {
-            return res.status(404).json({ success: false, message: "Hospital not found" });
-        }
-
-        const { title, columns, dutyAreas } = req.body;
-        const template = await rosterService.updateTemplate({
-            templateId: req.params.id,
-            hospitalId,
-            userId: req.user.id || req.user._id,
-            title,
-            columns,
-            dutyAreas,
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Roster template updated successfully",
-            data: template,
-        });
-    } catch (error) {
-        if (error.code === "VALIDATION_ERROR") {
-            return res.status(400).json({ success: false, message: error.message });
-        }
-        if (error.code === "NOT_FOUND") {
-            return res.status(404).json({ success: false, message: error.message });
-        }
-        console.error("Update Roster Template Error:", error);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
-};
-
-const deleteTemplate = async (req, res) => {
-    try {
-        const hospitalId = await getHospitalIdFromContext(req.user);
-        if (!hospitalId) {
-            return res.status(404).json({ success: false, message: "Hospital not found" });
-        }
-
-        await rosterService.deleteTemplate({
-            templateId: req.params.id,
-            hospitalId,
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Roster template deleted successfully",
-        });
-    } catch (error) {
-        if (error.code === "VALIDATION_ERROR") {
-            return res.status(400).json({ success: false, message: error.message });
-        }
-        if (error.code === "NOT_FOUND") {
-            return res.status(404).json({ success: false, message: error.message });
-        }
-        console.error("Delete Roster Template Error:", error);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
-};
-
 // ─── ROSTERS ─────────────────────────────────────────────────────────────────
 
 const listRosters = async (req, res) => {
@@ -226,14 +86,15 @@ const createRoster = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
-        const { templateId, title, startDate, endDate } = req.body;
+        const { title, startDate, endDate, columns, dutyAreas } = req.body;
         const roster = await rosterService.createRoster({
             hospitalId,
             userId: req.user.id || req.user._id,
-            templateId,
             title,
             startDate,
             endDate,
+            columns,
+            dutyAreas,
         });
 
         return res.status(201).json({
@@ -253,6 +114,33 @@ const createRoster = async (req, res) => {
     }
 };
 
+const getRosterHistory = async (req, res) => {
+    try {
+        const hospitalId = await getHospitalIdFromContext(req.user);
+        if (!hospitalId) {
+            return res.status(404).json({ success: false, message: "Hospital not found" });
+        }
+
+        const isManager = hasPermission(req.user, PERMISSIONS.ROSTER_MANAGE);
+        const userId = req.user.id || req.user._id;
+
+        const rosters = await rosterService.getRosterHistory({
+            hospitalId,
+            userId,
+            isManager,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Historical rosters retrieved successfully",
+            data: rosters,
+        });
+    } catch (error) {
+        console.error("Get Roster History Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 const updateRosterDraft = async (req, res) => {
     try {
         const hospitalId = await getHospitalIdFromContext(req.user);
@@ -260,7 +148,7 @@ const updateRosterDraft = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
-        const { title, startDate, endDate } = req.body;
+        const { title, startDate, endDate, columns, dutyAreas } = req.body;
         const roster = await rosterService.updateRosterDraft({
             rosterId: req.params.id,
             hospitalId,
@@ -268,6 +156,8 @@ const updateRosterDraft = async (req, res) => {
             title,
             startDate,
             endDate,
+            columns,
+            dutyAreas,
         });
 
         return res.status(200).json({
@@ -281,6 +171,9 @@ const updateRosterDraft = async (req, res) => {
         }
         if (error.code === "NOT_FOUND") {
             return res.status(404).json({ success: false, message: error.message });
+        }
+        if (error.code === "BUSINESS_CONFLICT") {
+            return res.status(409).json({ success: false, message: error.message });
         }
         console.error("Update Roster Error:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -309,6 +202,9 @@ const deleteRosterDraft = async (req, res) => {
         }
         if (error.code === "NOT_FOUND") {
             return res.status(404).json({ success: false, message: error.message });
+        }
+        if (error.code === "BUSINESS_CONFLICT") {
+            return res.status(409).json({ success: false, message: error.message });
         }
         console.error("Delete Roster Error:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -339,6 +235,9 @@ const publishRoster = async (req, res) => {
         }
         if (error.code === "NOT_FOUND") {
             return res.status(404).json({ success: false, message: error.message });
+        }
+        if (error.code === "BUSINESS_CONFLICT") {
+            return res.status(409).json({ success: false, message: error.message });
         }
         console.error("Publish Roster Error:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -480,6 +379,9 @@ const addAssignment = async (req, res) => {
                 details: error.existingAssignment,
             });
         }
+        if (error.code === "BUSINESS_CONFLICT") {
+            return res.status(409).json({ success: false, message: error.message });
+        }
         if (error.code === "VALIDATION_ERROR") {
             return res.status(400).json({ success: false, message: error.message });
         }
@@ -526,6 +428,9 @@ const updateAssignment = async (req, res) => {
                 details: error.existingAssignment,
             });
         }
+        if (error.code === "BUSINESS_CONFLICT") {
+            return res.status(409).json({ success: false, message: error.message });
+        }
         if (error.code === "VALIDATION_ERROR") {
             return res.status(400).json({ success: false, message: error.message });
         }
@@ -555,6 +460,9 @@ const deleteAssignment = async (req, res) => {
             message: "Assignment deleted successfully",
         });
     } catch (error) {
+        if (error.code === "BUSINESS_CONFLICT") {
+            return res.status(409).json({ success: false, message: error.message });
+        }
         if (error.code === "VALIDATION_ERROR") {
             return res.status(400).json({ success: false, message: error.message });
         }
@@ -593,15 +501,10 @@ const getMyRoster = async (req, res) => {
 };
 
 module.exports = {
-    // Templates
-    listTemplates,
-    getTemplateById,
-    createTemplate,
-    updateTemplate,
-    deleteTemplate,
     // Rosters
     listRosters,
     getRosterById,
+    getRosterHistory,
     createRoster,
     updateRosterDraft,
     deleteRosterDraft,

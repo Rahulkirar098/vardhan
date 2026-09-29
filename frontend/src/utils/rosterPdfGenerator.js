@@ -69,9 +69,7 @@ export function generateFrontendRosterPDF(activeRoster) {
 
   // Extract columns (shifts)
   let columns = [];
-  if (activeRoster.templateId && Array.isArray(activeRoster.templateId.columns) && activeRoster.templateId.columns.length > 0) {
-    columns = [...activeRoster.templateId.columns].sort((a, b) => (a.order || 0) - (b.order || 0));
-  } else if (Array.isArray(activeRoster.columns) && activeRoster.columns.length > 0) {
+  if (Array.isArray(activeRoster.columns) && activeRoster.columns.length > 0) {
     columns = [...activeRoster.columns].sort((a, b) => (a.order || 0) - (b.order || 0));
   } else {
     columns = [
@@ -83,8 +81,8 @@ export function generateFrontendRosterPDF(activeRoster) {
 
   // Extract duty areas
   let dutyAreas = [];
-  if (activeRoster.templateId && Array.isArray(activeRoster.templateId.dutyAreas) && activeRoster.templateId.dutyAreas.length > 0) {
-    dutyAreas = [...activeRoster.templateId.dutyAreas].sort((a, b) => (a.order || 0) - (b.order || 0));
+  if (Array.isArray(activeRoster.dutyAreas) && activeRoster.dutyAreas.length > 0) {
+    dutyAreas = [...activeRoster.dutyAreas].sort((a, b) => (a.order || 0) - (b.order || 0));
   } else {
     const areaMap = new Map();
     (activeRoster.assignments || []).forEach((ass) => {

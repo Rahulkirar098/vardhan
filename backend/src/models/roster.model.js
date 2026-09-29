@@ -30,6 +30,26 @@ const rosterReviewCommentSchema = new mongoose.Schema({
     },
 });
 
+const columnSchema = new mongoose.Schema(
+    {
+        id: { type: String, required: true },
+        title: { type: String, required: true, trim: true },
+        startTime: { type: String, required: true, trim: true },
+        endTime: { type: String, required: true, trim: true },
+        order: { type: Number, default: 0 },
+    },
+    { _id: false }
+);
+
+const dutyAreaSchema = new mongoose.Schema(
+    {
+        id: { type: String, required: true },
+        name: { type: String, required: true, trim: true },
+        order: { type: Number, default: 0 },
+    },
+    { _id: false }
+);
+
 const rosterSchema = new mongoose.Schema(
     {
         hospitalId: {
@@ -37,11 +57,6 @@ const rosterSchema = new mongoose.Schema(
             ref: "Hospital",
             required: true,
             index: true,
-        },
-        templateId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "RosterTemplate",
-            default: null,
         },
         title: {
             type: String,
@@ -55,6 +70,14 @@ const rosterSchema = new mongoose.Schema(
         endDate: {
             type: Date,
             required: true,
+        },
+        columns: {
+            type: [columnSchema],
+            default: [],
+        },
+        dutyAreas: {
+            type: [dutyAreaSchema],
+            default: [],
         },
         status: {
             type: String,

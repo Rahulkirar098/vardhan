@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const RosterTemplate = require("../models/rosterTemplate.model");
 const Roster = require("../models/roster.model");
 const RosterAssignment = require("../models/rosterAssignment.model");
 const Employee = require("../models/employee.model");
@@ -21,76 +20,6 @@ const getCalendarBounds = (dateInput) => {
     return { start, end };
 };
 
-// ─── TEMPLATES ───────────────────────────────────────────────────────────────
-
-const listTemplates = async ({ hospitalId }) => {
-    return RosterTemplate.find({ hospitalId })
-        .sort({ createdAt: -1 })
-        .lean();
-};
-
-const getTemplateById = async ({ templateId, hospitalId }) => {
-    if (!isValidObjectId(templateId)) return null;
-    return RosterTemplate.findOne({ _id: templateId, hospitalId }).lean();
-};
-
-const createTemplate = async ({ hospitalId, userId, title, columns = [], dutyAreas = [] }) => {
-    if (!title || !String(title).trim()) {
-        const err = new Error("Template title is required.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
-    const template = await RosterTemplate.create({
-        hospitalId,
-        title: String(title).trim(),
-        columns: Array.isArray(columns) ? columns : [],
-        dutyAreas: Array.isArray(dutyAreas) ? dutyAreas : [],
-        createdBy: userId,
-    });
-
-    return template;
-};
-
-const updateTemplate = async ({ templateId, hospitalId, userId, title, columns, dutyAreas }) => {
-    if (!isValidObjectId(templateId)) {
-        const err = new Error("Invalid template ID.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
-    const template = await RosterTemplate.findOne({ _id: templateId, hospitalId });
-    if (!template) {
-        const err = new Error("Roster template not found.");
-        err.code = "NOT_FOUND";
-        throw err;
-    }
-
-    if (title !== undefined) template.title = String(title).trim();
-    if (Array.isArray(columns)) template.columns = columns;
-    if (Array.isArray(dutyAreas)) template.dutyAreas = dutyAreas;
-    template.updatedBy = userId;
-
-    await template.save();
-    return template;
-};
-
-const deleteTemplate = async ({ templateId, hospitalId }) => {
-    if (!isValidObjectId(templateId)) {
-        const err = new Error("Invalid template ID.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
-    const res = await RosterTemplate.deleteOne({ _id: templateId, hospitalId });
-    if (res.deletedCount === 0) {
-        const err = new Error("Roster template not found.");
-        err.code = "NOT_FOUND";
-        throw err;
-    }
-    return { success: true };
-};
-
 // ─── ROSTERS ─────────────────────────────────────────────────────────────────
 
 const listRosters = async ({ hospitalId, status, userId, isManager }) => {
@@ -109,7 +38,6 @@ const listRosters = async ({ hospitalId, status, userId, isManager }) => {
     }
 
     return Roster.find(query)
-        .populate("templateId", "title columns dutyAreas")
         .populate("createdBy", "name email")
         .populate("publishedBy", "name email")
         .populate("sharedWith", "name email")
@@ -117,11 +45,40 @@ const listRosters = async ({ hospitalId, status, userId, isManager }) => {
         .lean();
 };
 
+const isHistoricalRoster = async (rosterId, hospitalId) => {
+    if (!isValidObjectId(rosterId)) return false;
+    const roster = await Roster.findOne({ _id: rosterId, hospitalId }).lean();
+    if (!roster || roster.status !== "PUBLISHED") return false;
+
+    const latestPublished = await Roster.findOne({ hospitalId, status: "PUBLISHED" })
+        .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })
+        .lean();
+
+    if (!latestPublished) return false;
+    return latestPublished._id.toString() !== roster._id.toString();
+};
+
+const getRosterHistory = async ({ hospitalId, userId, isManager }) => {
+    const publishedRosters = await Roster.find({ hospitalId, status: "PUBLISHED" })
+        .populate("createdBy", "name email")
+        .populate("publishedBy", "name email")
+        .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })
+        .lean();
+
+    if (publishedRosters.length <= 1) {
+        return [];
+    }
+
+    return publishedRosters.slice(1).map((r) => ({
+        ...r,
+        isHistorical: true,
+    }));
+};
+
 const getRosterById = async ({ rosterId, hospitalId, userId, isManager }) => {
     if (!isValidObjectId(rosterId)) return null;
 
     const roster = await Roster.findOne({ _id: rosterId, hospitalId })
-        .populate("templateId")
         .populate("createdBy", "name email")
         .populate("publishedBy", "name email")
         .populate("sharedWith", "name email employeeId")
@@ -142,6 +99,15 @@ const getRosterById = async ({ rosterId, hospitalId, userId, isManager }) => {
         }
     }
 
+    const latestPublished = await Roster.findOne({ hospitalId, status: "PUBLISHED" })
+        .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })
+        .lean();
+
+    const isHistorical =
+        roster.status === "PUBLISHED" &&
+        latestPublished &&
+        latestPublished._id.toString() !== roster._id.toString();
+
     const assignments = await RosterAssignment.find({ rosterId: roster._id, hospitalId })
         .populate({
             path: "employeeId",
@@ -153,11 +119,12 @@ const getRosterById = async ({ rosterId, hospitalId, userId, isManager }) => {
 
     return {
         ...roster,
+        isHistorical: !!isHistorical,
         assignments,
     };
 };
 
-const createRoster = async ({ hospitalId, userId, templateId, title, startDate, endDate }) => {
+const createRoster = async ({ hospitalId, userId, title, startDate, endDate, columns = [], dutyAreas = [] }) => {
     if (!title || !String(title).trim()) {
         const err = new Error("Roster title is required.");
         err.code = "VALIDATION_ERROR";
@@ -170,35 +137,21 @@ const createRoster = async ({ hospitalId, userId, templateId, title, startDate, 
         throw err;
     }
 
-    let template = null;
-    if (templateId) {
-        if (!isValidObjectId(templateId)) {
-            const err = new Error("Invalid template ID.");
-            err.code = "VALIDATION_ERROR";
-            throw err;
-        }
-        template = await RosterTemplate.findOne({ _id: templateId, hospitalId }).lean();
-        if (!template) {
-            const err = new Error("Referenced roster template not found.");
-            err.code = "NOT_FOUND";
-            throw err;
-        }
-    }
-
     const roster = await Roster.create({
         hospitalId,
-        templateId: template ? template._id : null,
         title: String(title).trim(),
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         status: "DRAFT",
+        columns: Array.isArray(columns) ? columns : [],
+        dutyAreas: Array.isArray(dutyAreas) ? dutyAreas : [],
         createdBy: userId,
     });
 
     return roster;
 };
 
-const updateRosterDraft = async ({ rosterId, hospitalId, userId, title, startDate, endDate }) => {
+const updateRosterDraft = async ({ rosterId, hospitalId, userId, title, startDate, endDate, columns, dutyAreas }) => {
     if (!isValidObjectId(rosterId)) {
         const err = new Error("Invalid roster ID.");
         err.code = "VALIDATION_ERROR";
@@ -212,9 +165,17 @@ const updateRosterDraft = async ({ rosterId, hospitalId, userId, title, startDat
         throw err;
     }
 
+    if (await isHistoricalRoster(rosterId, hospitalId)) {
+        const err = new Error("Historical rosters are read-only and cannot be modified.");
+        err.code = "BUSINESS_CONFLICT";
+        throw err;
+    }
+
     if (title !== undefined) roster.title = String(title).trim();
     if (startDate) roster.startDate = new Date(startDate);
     if (endDate) roster.endDate = new Date(endDate);
+    if (Array.isArray(columns)) roster.columns = columns;
+    if (Array.isArray(dutyAreas)) roster.dutyAreas = dutyAreas;
     roster.updatedBy = userId;
 
     await roster.save();
@@ -232,6 +193,13 @@ const deleteRosterDraft = async ({ rosterId, hospitalId }) => {
     if (!roster) {
         const err = new Error("Roster not found.");
         err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    if (roster.status === "PUBLISHED") {
+        const isHist = await isHistoricalRoster(roster._id, hospitalId);
+        const err = new Error(isHist ? "Historical rosters are read-only and cannot be deleted." : "Published rosters cannot be deleted.");
+        err.code = "BUSINESS_CONFLICT";
         throw err;
     }
 
@@ -254,6 +222,12 @@ const publishRoster = async ({ rosterId, hospitalId, userId }) => {
     if (!roster) {
         const err = new Error("Roster not found.");
         err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    if (await isHistoricalRoster(rosterId, hospitalId)) {
+        const err = new Error("Historical rosters cannot be published again.");
+        err.code = "BUSINESS_CONFLICT";
         throw err;
     }
 
@@ -390,6 +364,12 @@ const addAssignment = async ({
         throw err;
     }
 
+    if (await isHistoricalRoster(rosterId, hospitalId)) {
+        const err = new Error("Historical rosters are read-only and cannot be modified.");
+        err.code = "BUSINESS_CONFLICT";
+        throw err;
+    }
+
     const employee = await Employee.findOne({ _id: employeeId, hospitalId });
     if (!employee) {
         const err = new Error("Employee not found in this hospital.");
@@ -517,6 +497,12 @@ const updateAssignment = async ({
         throw err;
     }
 
+    if (await isHistoricalRoster(assignment.rosterId, hospitalId)) {
+        const err = new Error("Historical rosters are read-only and cannot be modified.");
+        err.code = "BUSINESS_CONFLICT";
+        throw err;
+    }
+
     const targetDate = date ? new Date(date) : assignment.date;
     const targetEmployeeId = employeeId || assignment.employeeId;
 
@@ -583,6 +569,12 @@ const deleteAssignment = async ({ assignmentId, hospitalId, userId }) => {
         throw err;
     }
 
+    if (await isHistoricalRoster(assignment.rosterId, hospitalId)) {
+        const err = new Error("Historical rosters are read-only and cannot be modified.");
+        err.code = "BUSINESS_CONFLICT";
+        throw err;
+    }
+
     await RosterAssignment.deleteOne({ _id: assignment._id });
 
     if (userId) {
@@ -640,15 +632,10 @@ const getMyRoster = async ({ userId, hospitalId, employeeId: paramEmployeeId }) 
 };
 
 module.exports = {
-    // Templates
-    listTemplates,
-    getTemplateById,
-    createTemplate,
-    updateTemplate,
-    deleteTemplate,
     // Rosters
     listRosters,
     getRosterById,
+    getRosterHistory,
     createRoster,
     updateRosterDraft,
     deleteRosterDraft,

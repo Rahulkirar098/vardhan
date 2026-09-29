@@ -10,38 +10,6 @@ const { PERMISSIONS } = require("../config/permissions");
 router.use(authMiddleware);
 router.use(requireModule("hrms"));
 
-// ─── TEMPLATES ───────────────────────────────────────────────────────────────
-
-router.get(
-    "/templates",
-    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
-    rosterController.listTemplates
-);
-
-router.get(
-    "/templates/:id",
-    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
-    rosterController.getTemplateById
-);
-
-router.post(
-    "/templates",
-    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
-    rosterController.createTemplate
-);
-
-router.put(
-    "/templates/:id",
-    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
-    rosterController.updateTemplate
-);
-
-router.delete(
-    "/templates/:id",
-    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
-    rosterController.deleteTemplate
-);
-
 // ─── MY ROSTER (Employee View) ───────────────────────────────────────────────
 
 router.get(
@@ -61,6 +29,12 @@ router.post(
     "/",
     authorizePermission(PERMISSIONS.ROSTER_MANAGE),
     rosterController.createRoster
+);
+
+router.get(
+    "/history",
+    authorizeAnyPermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_MANAGE),
+    rosterController.getRosterHistory
 );
 
 router.get(

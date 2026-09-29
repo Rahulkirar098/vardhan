@@ -14,8 +14,8 @@ const Floor = require("../src/models/floor.model");
 const Room = require("../src/models/room.model");
 const Leave = require("../src/models/leave.model");
 const Attendance = require("../src/models/attendance.model");
-const AttendanceRegularization = require("../src/models/attendanceRegularization.model");
-const { RosterTemplate, RosterAssignment } = require("../src/models/roster.model");
+const Roster = require("../src/models/roster.model");
+const RosterAssignment = require("../src/models/rosterAssignment.model");
 const { hashPassword } = require("../src/utils/password");
 const { generateToken } = require("../src/utils/jwt");
 const { PERMISSIONS } = require("../src/config/permissions");
@@ -544,7 +544,7 @@ const runFullQA = async () => {
             moduleName: "Roster",
             permKey: PERMISSIONS.ROSTER_VIEW,
             testUser: userC_Emp,
-            testEndpoint: "/api/v1/hrms/rosters/templates",
+            testEndpoint: "/api/v1/hrms/rosters",
             allowRoleDefaultWithout: true
         });
 
@@ -552,10 +552,12 @@ const runFullQA = async () => {
             moduleName: "Roster",
             permKey: PERMISSIONS.ROSTER_MANAGE,
             testUser: userC_Emp,
-            testEndpoint: "/api/v1/hrms/rosters/templates",
+            testEndpoint: "/api/v1/hrms/rosters",
             method: "POST",
             reqBody: {
-                title: `Template ${timestamp}`,
+                title: `Roster ${timestamp}`,
+                startDate: "2026-09-11",
+                endDate: "2026-09-20",
                 columns: [{ id: "c1", title: "Morning Shift", startTime: "08:00", endTime: "16:00" }],
                 dutyAreas: [{ id: "da1", name: "ICU Ward" }]
             }
@@ -569,7 +571,7 @@ const runFullQA = async () => {
         // ─── 9. POSITION VS PERMISSION AUDIT ─────────────────────
         console.log("\n--- TESTING POSITION VS PERMISSION INDEPENDENCE ---");
         const tokenHRNoPerm = makeEmpToken(userB_HR);
-        const resHRRoster = await request("/api/v1/hrms/rosters/templates", { method: "POST", headers: { Authorization: `Bearer ${tokenHRNoPerm}` }, body: { name: "Test" } });
+        const resHRRoster = await request("/api/v1/hrms/rosters", { method: "POST", headers: { Authorization: `Bearer ${tokenHRNoPerm}` }, body: { title: "Test", startDate: "2026-09-11", endDate: "2026-09-20" } });
         const resHRLeaveApprove = await request(`/api/v1/hrms/leaves/${leaveD._id}/approve`, { method: "PATCH", headers: { Authorization: `Bearer ${tokenHRNoPerm}` } });
         const resHRAccess = await request("/api/v1/access-management/users", { headers: { Authorization: `Bearer ${tokenHRNoPerm}` } });
 

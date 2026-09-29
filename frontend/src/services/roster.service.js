@@ -1,32 +1,6 @@
 import client from './api/client';
 
 export const rosterService = {
-  // --- Templates ---
-  getTemplates: async (params) => {
-    const response = await client.get('/v1/rosters/templates', { params });
-    return response.data;
-  },
-
-  getTemplate: async (id) => {
-    const response = await client.get(`/v1/rosters/templates/${id}`);
-    return response.data;
-  },
-
-  createTemplate: async (data) => {
-    const response = await client.post('/v1/rosters/templates', data);
-    return response.data;
-  },
-
-  updateTemplate: async (id, data) => {
-    const response = await client.put(`/v1/rosters/templates/${id}`, data);
-    return response.data;
-  },
-
-  deleteTemplate: async (id) => {
-    const response = await client.delete(`/v1/rosters/templates/${id}`);
-    return response.data;
-  },
-
   // --- Rosters ---
   getRosters: async (params) => {
     const response = await client.get('/v1/rosters', { params });
@@ -35,6 +9,11 @@ export const rosterService = {
 
   getRoster: async (id) => {
     const response = await client.get(`/v1/rosters/${id}`);
+    return response.data;
+  },
+
+  getRosterHistory: async (params) => {
+    const response = await client.get('/v1/rosters/history', { params });
     return response.data;
   },
 

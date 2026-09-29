@@ -93,7 +93,6 @@ const Position = require("./src/models/position.model");
 const Leave = require("./src/models/leave.model");
 const Attendance = require("./src/models/attendance.model");
 const AttendanceRegularization = require("./src/models/attendanceRegularization.model");
-const RosterTemplate = require("./src/models/rosterTemplate.model");
 const Roster = require("./src/models/roster.model");
 const RosterAssignment = require("./src/models/rosterAssignment.model");
 
@@ -156,7 +155,6 @@ if (require.main === module) {
                 await Leave.syncIndexes();
                 await Attendance.syncIndexes();
                 await AttendanceRegularization.syncIndexes();
-                await RosterTemplate.syncIndexes();
                 await Roster.syncIndexes();
                 await RosterAssignment.syncIndexes();
             } catch (indexErr) {

@@ -11,7 +11,6 @@ const Hospital = require("../src/models/hospital.model");
 const Position = require("../src/models/position.model");
 const Employee = require("../src/models/employee.model");
 const Leave = require("../src/models/leave.model");
-const RosterTemplate = require("../src/models/rosterTemplate.model");
 const Roster = require("../src/models/roster.model");
 const RosterAssignment = require("../src/models/rosterAssignment.model");
 const { generateToken } = require("../src/utils/jwt");
@@ -217,14 +216,16 @@ async function runTests() {
         await nurse2User.save();
         nurse2Token = generateToken({ id: nurse2User._id, role: nurse2User.role, hospitalId: hospitalA._id, employeeId: nurse2Employee._id });
 
-        console.log("--- 1. TEMPLATE BUILDER SCENARIOS ---");
+        console.log("--- 1. ROSTER BUILDER SCENARIOS ---");
 
-        // 1. Create Roster Template
-        const res1 = await makeRequest("/api/v1/rosters/templates", {
+        // 1. Create Roster Draft directly
+        const res1 = await makeRequest("/api/v1/rosters", {
             method: "POST",
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
-                title: "Nursing Duty Template",
+                title: "September 11 to 20 Nursing Schedule",
+                startDate: "2026-09-11",
+                endDate: "2026-09-20",
                 columns: [
                     { id: "col-1", title: "Morning", startTime: "08:00", endTime: "14:00", order: 1 },
                     { id: "col-2", title: "Afternoon", startTime: "14:00", endTime: "20:00", order: 2 },
@@ -240,65 +241,49 @@ async function runTests() {
         });
         assert.strictEqual(res1.status, 201);
         assert.strictEqual(res1.body.success, true);
-        assert.strictEqual(res1.body.data.title, "Nursing Duty Template");
+        assert.strictEqual(res1.body.data.title, "September 11 to 20 Nursing Schedule");
         assert.strictEqual(res1.body.data.columns.length, 3);
         assert.strictEqual(res1.body.data.dutyAreas.length, 4);
-        createdTemplateId = res1.body.data._id;
-        console.log("  ✓ 1. Authorized HR can create a Roster Template with custom columns & duty areas");
+        createdRosterId = res1.body.data._id;
+        console.log("  ✓ 1. Authorized HR can create a Roster Draft directly with custom columns & duty areas");
 
-        // 2. Unauthorized Template Creation
-        const res2 = await makeRequest("/api/v1/rosters/templates", {
+        // 2. Unauthorized Roster Creation
+        const res2 = await makeRequest("/api/v1/rosters", {
             method: "POST",
             headers: { Authorization: `Bearer ${nurse2Token}` },
-            body: { title: "Unauthorized Template", columns: [], dutyAreas: [] },
+            body: { title: "Unauthorized Roster", startDate: "2026-09-11", endDate: "2026-09-20", columns: [], dutyAreas: [] },
         });
         assert.strictEqual(res2.status, 403);
-        console.log("  ✓ 2. User without roster.manage cannot create Roster Template (403 Forbidden)");
+        console.log("  ✓ 2. User without roster.manage cannot create Roster Draft (403 Forbidden)");
 
-        // 3. List Templates
-        const res3 = await makeRequest("/api/v1/rosters/templates", {
+        // 3. List Rosters
+        const res3 = await makeRequest("/api/v1/rosters", {
             method: "GET",
             headers: { Authorization: `Bearer ${hrToken}` },
         });
         assert.strictEqual(res3.status, 200);
         assert.strictEqual(res3.body.data.length, 1);
-        console.log("  ✓ 3. Authorized user can view Roster Templates list");
+        console.log("  ✓ 3. Authorized user can view Rosters list");
 
         // 4. Tenant Isolation
-        const res4 = await makeRequest(`/api/v1/rosters/templates/${createdTemplateId}`, {
+        const res4 = await makeRequest(`/api/v1/rosters/${createdRosterId}`, {
             method: "GET",
             headers: { Authorization: `Bearer ${hospitalBAdminToken}` },
         });
         assert.strictEqual(res4.status, 404);
-        console.log("  ✓ 4. Tenant Isolation: Hospital B cannot access Hospital A templates");
+        console.log("  ✓ 4. Tenant Isolation: Hospital B cannot access Hospital A rosters");
 
-        // 5. Update Template
-        const res5 = await makeRequest(`/api/v1/rosters/templates/${createdTemplateId}`, {
+        // 5. Update Roster Draft
+        const res5 = await makeRequest(`/api/v1/rosters/${createdRosterId}`, {
             method: "PUT",
             headers: { Authorization: `Bearer ${hrToken}` },
-            body: { title: "Updated September Roster Template" },
+            body: { title: "Updated September Roster Schedule" },
         });
         assert.strictEqual(res5.status, 200);
-        assert.strictEqual(res5.body.data.title, "Updated September Roster Template");
-        console.log("  ✓ 5. Authorized HR can update Roster Template");
+        assert.strictEqual(res5.body.data.title, "Updated September Roster Schedule");
+        console.log("  ✓ 5. Authorized HR can update Roster Draft details");
 
         console.log("\n--- 2. ROSTER DRAFT, REVIEW SHARING & PUBLISH SCENARIOS ---");
-
-        // 6. Create Roster Draft
-        const res6 = await makeRequest("/api/v1/rosters", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${hrToken}` },
-            body: {
-                templateId: createdTemplateId,
-                title: "September 11 to 20 Nursing Schedule",
-                startDate: "2026-09-11",
-                endDate: "2026-09-20",
-            },
-        });
-        assert.strictEqual(res6.status, 201);
-        assert.strictEqual(res6.body.data.status, "DRAFT");
-        createdRosterId = res6.body.data._id;
-        console.log("  ✓ 6. Authorized HR can create an actual Roster draft from template");
 
         // 7. Unshared Nurse cannot view DRAFT Roster
         const resDraftBlocked = await makeRequest(`/api/v1/rosters/${createdRosterId}`, {
@@ -555,15 +540,225 @@ async function runTests() {
         assert.strictEqual(dbRes11.status, 404);
         console.log("  ✓ DB 11. Cross-hospital isolation remains intact");
 
-        console.log("\n--- 4. CLEANUP & TEMPLATE DELETION ---");
+        console.log("\n--- 4. DELETE DRAFT ROSTER SCENARIOS ---");
 
-        // 14. Delete Template
-        const res14 = await makeRequest(`/api/v1/rosters/templates/${createdTemplateId}`, {
+        // 1. Create a draft roster for deletion tests
+        const createDraftRes = await makeRequest("/api/v1/rosters", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                title: "October Draft Roster",
+                startDate: "2026-10-01",
+                endDate: "2026-10-10",
+                columns: [{ id: "col-1", title: "Morning", startTime: "08:00", endTime: "14:00", order: 1 }],
+                dutyAreas: [{ id: "da-1", name: "General Ward", order: 1 }],
+            },
+        });
+        assert.strictEqual(createDraftRes.status, 201);
+        const testDraftId = createDraftRes.body.data._id;
+        console.log("  ✓ DEL 1. Draft roster created for deletion test suite");
+
+        // 2. User without roster.manage cannot delete draft -> 403 Forbidden
+        const delRes403 = await makeRequest(`/api/v1/rosters/${testDraftId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${nurse1Token}` },
+        });
+        assert.strictEqual(delRes403.status, 403);
+        console.log("  ✓ DEL 2. User without roster.manage cannot delete draft -> 403 Forbidden");
+
+        // 3. Cross-hospital deletion rejected -> 404 Not Found
+        const delResCross = await makeRequest(`/api/v1/rosters/${testDraftId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hospitalBAdminToken}` },
+        });
+        assert.strictEqual(delResCross.status, 404);
+        console.log("  ✓ DEL 3. Cross-hospital deletion rejected -> 404 Not Found");
+
+        // 4. Invalid roster ID -> 400 Bad Request
+        const delRes400 = await makeRequest("/api/v1/rosters/invalid-object-id", {
             method: "DELETE",
             headers: { Authorization: `Bearer ${hrToken}` },
         });
-        assert.strictEqual(res14.status, 200);
-        console.log("  ✓ 14. Authorized HR can delete a Roster Template");
+        assert.strictEqual(delRes400.status, 400);
+        console.log("  ✓ DEL 4. Invalid roster ID -> 400 Bad Request");
+
+        // 5. Delete nonexistent roster -> 404 Not Found
+        const fakeId = new mongoose.Types.ObjectId();
+        const delRes404 = await makeRequest(`/api/v1/rosters/${fakeId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(delRes404.status, 404);
+        console.log("  ✓ DEL 5. Delete nonexistent roster -> 404 Not Found");
+
+        // 6. Delete published roster rejected -> 409 Conflict
+        const delResPublished = await makeRequest(`/api/v1/rosters/${createdRosterId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(delResPublished.status, 409);
+        assert.strictEqual(delResPublished.body.success, false);
+        console.log("  ✓ DEL 6. Delete published roster rejected -> 409 Conflict");
+
+        // 7. Delete draft successfully -> 200 OK
+        const delResSuccess = await makeRequest(`/api/v1/rosters/${testDraftId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(delResSuccess.status, 200);
+        assert.strictEqual(delResSuccess.body.success, true);
+        console.log("  ✓ DEL 7. Authorized HR can delete draft roster -> 200 OK");
+
+        // 8. Repeated delete after successful deletion -> 404 Not Found
+        const delResRepeat = await makeRequest(`/api/v1/rosters/${testDraftId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(delResRepeat.status, 404);
+        console.log("  ✓ DEL 8. Repeated delete after successful deletion -> 404 Not Found");
+
+        // 9. Draft deletion does not affect published roster or attendance logic
+        const checkPublishedRes = await makeRequest(`/api/v1/rosters/${createdRosterId}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(checkPublishedRes.status, 200);
+        assert.strictEqual(checkPublishedRes.body.data.status, "PUBLISHED");
+        console.log("  ✓ DEL 9. Draft deletion does not affect published roster or attendance logic");
+
+        console.log("\n--- 5. ROSTER HISTORY & IMMUTABILITY SCENARIOS ---");
+
+        // 1. Create and Publish a new October Roster (becomes Current Published Roster)
+        const resOctCreate = await makeRequest("/api/v1/rosters", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                title: "October 2026 Nursing Roster",
+                startDate: "2026-10-01",
+                endDate: "2026-10-31",
+                columns: [{ id: "col-1", title: "Morning", startTime: "08:00", endTime: "14:00", order: 1 }],
+                dutyAreas: [{ id: "da-1", name: "ICU 3rd Floor", order: 1 }],
+            },
+        });
+        assert.strictEqual(resOctCreate.status, 201);
+        const octRosterId = resOctCreate.body.data._id;
+
+        const resOctPublish = await makeRequest(`/api/v1/rosters/${octRosterId}/publish`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(resOctPublish.status, 200);
+        assert.strictEqual(resOctPublish.body.data.status, "PUBLISHED");
+        console.log("  ✓ HIST 1. Publishing a new roster (October) makes it the Current Published Roster");
+
+        // 2. Fetch Roster History -> September Roster appears in history, October does not
+        const resHistory = await makeRequest("/api/v1/rosters/history", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(resHistory.status, 200);
+        assert.strictEqual(resHistory.body.data.length, 1);
+        assert.strictEqual(resHistory.body.data[0]._id.toString(), createdRosterId.toString());
+        assert.strictEqual(resHistory.body.data[0].isHistorical, true);
+        console.log("  ✓ HIST 2. Previously published roster (September) appears in Roster History");
+
+        // 3. Employee with roster.view can view Roster History
+        const resNurseHistory = await makeRequest("/api/v1/rosters/history", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${nurse1Token}` },
+        });
+        assert.strictEqual(resNurseHistory.status, 200);
+        assert.strictEqual(resNurseHistory.body.data.length, 1);
+        console.log("  ✓ HIST 3. Employee with roster.view can view Roster History");
+
+        // 4. Draft roster does NOT appear in history
+        const resDraftHistoryCheck = await makeRequest("/api/v1/rosters", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                title: "November Draft Roster",
+                startDate: "2026-11-01",
+                endDate: "2026-11-30",
+                columns: [],
+                dutyAreas: [],
+            },
+        });
+        assert.strictEqual(resDraftHistoryCheck.status, 201);
+
+        const resHistoryAfterDraft = await makeRequest("/api/v1/rosters/history", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(resHistoryAfterDraft.body.data.length, 1);
+        console.log("  ✓ HIST 4. Draft rosters do NOT appear in Roster History");
+
+        // 5. Viewing a historical roster returns data with isHistorical = true
+        const resViewHist = await makeRequest(`/api/v1/rosters/${createdRosterId}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(resViewHist.status, 200);
+        assert.strictEqual(resViewHist.body.data.isHistorical, true);
+        console.log("  ✓ HIST 5. Historical roster details returned with isHistorical = true");
+
+        // 6. Historical roster layout cannot be updated -> 409 Conflict
+        const resUpdateHist = await makeRequest(`/api/v1/rosters/${createdRosterId}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: { title: "Attempted Update to Historical Roster" },
+        });
+        assert.strictEqual(resUpdateHist.status, 409);
+        console.log("  ✓ HIST 6. Attempting to update historical roster details returns 409 Conflict");
+
+        // 7. Historical roster cannot be deleted -> 409 Conflict
+        const resDelHist = await makeRequest(`/api/v1/rosters/${createdRosterId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(resDelHist.status, 409);
+        console.log("  ✓ HIST 7. Attempting to delete historical roster returns 409 Conflict");
+
+        // 8. Historical roster cannot add assignment -> 409 Conflict
+        const resAddAssignHist = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-09-25",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "General Ward",
+            },
+        });
+        assert.strictEqual(resAddAssignHist.status, 409);
+        console.log("  ✓ HIST 8. Attempting to add assignment to historical roster returns 409 Conflict");
+
+        // 9. Historical roster cannot edit existing assignment -> 409 Conflict
+        const resEditAssignHist = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments/${createdAssignmentId}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: { notes: "Attempted edit" },
+        });
+        assert.strictEqual(resEditAssignHist.status, 409);
+        console.log("  ✓ HIST 9. Attempting to edit assignment on historical roster returns 409 Conflict");
+
+        // 10. Historical roster cannot delete existing assignment -> 409 Conflict
+        const resDeleteAssignHist = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments/${createdAssignmentId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(resDeleteAssignHist.status, 409);
+        console.log("  ✓ HIST 10. Attempting to delete assignment on historical roster returns 409 Conflict");
+
+        // 11. Cross-hospital isolation for Roster History
+        const resHospitalBHistory = await makeRequest("/api/v1/rosters/history", {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hospitalBAdminToken}` },
+        });
+        assert.strictEqual(resHospitalBHistory.status, 200);
+        assert.strictEqual(resHospitalBHistory.body.data.length, 0);
+        console.log("  ✓ HIST 11. Tenant isolation for Roster History verified (Hospital B sees 0 items)");
 
         console.log("\n=======================================================");
         console.log("=== ALL ROSTER TESTS PASSED 100% ===");
