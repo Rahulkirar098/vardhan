@@ -1,6 +1,6 @@
 # Vardhan
 
-A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management, workforce employee management, leave management, attendance & regularization, template-first duty roster planning, and generic access management.
+A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management, workforce employee management, leave management, attendance & regularization with background automatic absence scheduling, simplified duty roster planning, roster history auditing, and generic access management.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white" alt="Node.js 18+" />
@@ -35,9 +35,9 @@ VARDHAN SaaS
     └── HRMS
         ├── Employees (Workforce staff record reciprocal to User)
         ├── Invitations (Centralized invitation flow with token hashing)
-        ├── Leave Management (Apply, My Leave, Approval, Balance, Stats)
-        ├── Attendance & Regularization (Clock-In/Out, Regularization Requests & Atomic Approvals)
-        └── Roster Module (Template-first builder, Shift columns, Duty Areas, Draft/Published lifecycle, Self-Service roster.view_own, Leave Warnings)
+        ├── Leave Management (Apply, My Leave, Approval, Balance, Stats, Workforce Leave)
+        ├── Attendance & Regularization (Clock-In/Out, Regularization Requests, Background Automatic Absence Scheduler)
+        └── Roster Module (Simplified Direct Architecture, Shift Columns, Duty Areas, Draft/Current/History Lifecycle, Delete Draft, Immutability, Leave Warnings)
 ```
 
 ---
@@ -70,19 +70,21 @@ VARDHAN SaaS
 
 ### 5. Leave Management
 - Self-service leave applications (`leave.apply`, `leave.view_own`, `leave.cancel_own`).
-- Management queue for workforce leave approvals (`leave.view`, `leave.approve`, `leave.manage`).
+- Workforce Leave access control (`leave.view_workforce`, `leave.approve`, `leave.manage`).
 - Real-time leave balance tracking and non-blocking leave conflict detection during shift roster allocation.
 
-### 6. Attendance & Regularization
+### 6. Attendance & Background Automatic Absence
 - Employee check-in/out tracking with working duration computation.
-- Attendance regularization submission and cancellation.
-- Atomic regularization approval transactions updating attendance records cleanly.
+- Attendance regularization submission, cancellation, and atomic approval transactions.
+- Automated background scheduler executing periodic absence marking for un-checked-in employees driven strictly by the current published roster.
 
-### 7. Template-First Roster Module (Phase 9)
-- **Roster Templates:** Configurable shift columns (title, start/end times) and duty area rows (independent of floor/room).
-- **Roster Lifecycle:** Draft generation from templates, shift allocations, leave conflict warnings, and publishing.
-- **Self-Service Roster Access:** `roster.view_own` grants employees access to view their own published shift schedules.
-- **Calendar Integration:** Reuses `UnifiedCalendar` component for schedule visualization.
+### 7. Simplified Roster Module
+- **Direct Model Architecture:** `Roster` documents directly contain embedded `columns` (shift titles, start/end times) and `dutyAreas` (operational rows). Obsolete Roster Templates have been permanently removed.
+- **Roster Lifecycle:** `DRAFT` → `PUBLISHED`.
+- **Delete Draft Roster:** Authorized managers (`roster.manage`) can delete draft rosters cleanly via modal confirmation dialogs. Published rosters cannot be deleted.
+- **Single Current Roster Rule:** The main screen displays the single active published roster directly. No multiple-published-roster dropdowns.
+- **Roster History & Immutability:** Previously published rosters move to **Roster History**. Historical rosters are read-only (API rejects updates, deletion, or re-publishing with HTTP `409 Conflict`).
+- **Calendar & PDF Integration:** PDF downloading via `generateFrontendRosterPDF` and visual schedule integration via `UnifiedCalendar`.
 
 ### 8. Access Management
 - Unified Access Management screen for administrators to manage permissions and module access for workforce accounts (`employee` role).
@@ -152,7 +154,10 @@ npm run dev
 cd backend
 npm test
 ```
-All 11 backend integration test suites verify authentication, employee lifecycle, access management, hospital isolation, leave management, attendance regularization, and Phase 9 roster planning.
+The test suite includes:
+- `roster.test.js`: Roster builder, draft updates, review comments, double-booking prevention, delete draft roster, and roster history immutability.
+- `full-qa-audit.test.js`: Comprehensive permission matrix verification across all modules.
+- `attendance-regularization.test.js`, `attendance.test.js`, `leave-management.test.js`, `access-management.test.js`, `unified-employees.test.js`, `hospital-structure.test.js`, `core-platform.test.js`.
 
 ---
 
