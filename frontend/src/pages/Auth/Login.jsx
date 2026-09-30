@@ -134,7 +134,7 @@ const Login = () => {
       navigate('/dashboard');
     } catch (err) {
       setError(
-        err?.response?.data?.message || 'Unable to login. Please try again.',
+        err?.response?.data?.message || 'Invalid email or password',
       );
     } finally {
       setLoading(false);

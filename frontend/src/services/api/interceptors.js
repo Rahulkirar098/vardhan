@@ -10,8 +10,16 @@ const attachAuthToken = (config) => {
 
 const handleApiError = (error) => {
   const status = error?.response?.status;
+  const requestUrl = error?.config?.url || '';
 
-  if (status === 401) {
+  const isAuthEndpoint =
+    requestUrl.includes('/auth/login') ||
+    requestUrl.includes('/auth/register') ||
+    requestUrl.includes('/auth/forgot-password') ||
+    requestUrl.includes('/auth/reset-password') ||
+    requestUrl.includes('/employee-invitations');
+
+  if (status === 401 && !isAuthEndpoint) {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('role');
@@ -22,7 +30,10 @@ const handleApiError = (error) => {
     localStorage.removeItem('modules');
     localStorage.removeItem('hospitalId');
     localStorage.removeItem('employeeId');
-    window.location.href = '/login';
+
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
   }
 
   return Promise.reject(error);
