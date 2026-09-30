@@ -47,77 +47,14 @@ import attendanceService from '../../services/attendance.service';
 import leaveService from '../../services/leave.service';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
-const formatTime = (isoString) => {
-  if (!isoString) return '—';
-  try {
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  } catch {
-    return '—';
-  }
-};
-
-const formatDuration = (minutes) => {
-  if (!minutes || minutes <= 0) return '—';
-  const hrs = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
-  if (hrs > 0) return `${hrs}h`;
-  return `${mins}m`;
-};
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '—';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return String(dateStr);
-    return d.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return String(dateStr);
-  }
-};
-
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return '—';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return String(dateStr);
-    return d.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return String(dateStr);
-  }
-};
-
-const formatDayFull = (dateStr) => {
-  if (!dateStr) return '—';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return String(dateStr);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return String(dateStr);
-  }
-};
+import {
+  formatDate,
+  formatDayFull,
+  formatDateTime,
+  formatDuration,
+  formatTime12h as formatTime,
+  getTodayDateStr,
+} from '../../utils/dateUtils';
 
 const AttendancePage = () => {
   const currentRole = localStorage.getItem('role') || 'employee';
@@ -156,7 +93,7 @@ const AttendancePage = () => {
   const [myRegularizations, setMyRegularizations] = useState([]);
   const [workforceRegularizations, setWorkforceRegularizations] = useState([]);
   const [stats, setStats] = useState({ present: 0, halfDay: 0, absent: 0, workingDays: 0 });
-  const [selectedDateStr, setSelectedDateStr] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedDateStr, setSelectedDateStr] = useState(() => getTodayDateStr());
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
   // Regularization modal & cancel state

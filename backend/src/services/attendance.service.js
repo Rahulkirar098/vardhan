@@ -94,7 +94,7 @@ const parseTimeToDate = (timeInput, baseDateStr) => {
       const hh = String(hours).padStart(2, "0");
       const mm = String(minutes).padStart(2, "0");
       const ss = String(seconds).padStart(2, "0");
-      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}.000Z`);
+      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}`);
       if (!isNaN(d.getTime())) return d;
     }
 
@@ -114,7 +114,7 @@ const parseTimeToDate = (timeInput, baseDateStr) => {
       const hh = String(hours).padStart(2, "0");
       const mm = String(minutes).padStart(2, "0");
       const ss = String(seconds).padStart(2, "0");
-      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}.000Z`);
+      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}`);
       if (!isNaN(d.getTime())) return d;
     }
 
@@ -149,8 +149,12 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
   const endOfDay = new Date(`${targetDateStr}T23:59:59.999Z`);
   const now = new Date();
 
-  // Find current published roster for each hospital (exclude historical rosters)
-  const rosterQuery = { status: "PUBLISHED" };
+  // Find current published roster for each hospital covering target date
+  const rosterQuery = {
+    status: "PUBLISHED",
+    startDate: { $lte: endOfDay },
+    endDate: { $gte: startOfDay },
+  };
   if (hospitalId) rosterQuery.hospitalId = hospitalId;
   const allPublished = await Roster.find(rosterQuery)
     .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })

@@ -77,6 +77,7 @@ import InitialsAvatar from '../../components/InitialsAvatar';
 import rosterService from '../../services/roster.service';
 import employeeService from '../../services/employee.service';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+import { formatDate, formatTime12h, getTodayDateStr, parseLocalDateStr } from '../../utils/dateUtils';
 
 export default function RosterManagementPage() {
   const theme = useTheme();
@@ -245,7 +246,7 @@ export default function RosterManagementPage() {
       const rosterData = res.data;
       setActiveRoster(rosterData);
       if (rosterData.startDate) {
-        const startIso = new Date(rosterData.startDate).toISOString().split('T')[0];
+        const startIso = getTodayDateStr(rosterData.startDate);
         setActiveRosterDate(startIso);
       }
       setSelectedReviewerIds(rosterData.sharedWith?.map((u) => u._id || u) || []);
@@ -259,8 +260,8 @@ export default function RosterManagementPage() {
   // --- Roster Builder (Create / Edit) ---
   const handleOpenNewRoster = () => {
     setEditingRoster(null);
-    const today = new Date().toISOString().split('T')[0];
-    const tenDays = new Date(Date.now() + 9 * 86400000).toISOString().split('T')[0];
+    const today = getTodayDateStr();
+    const tenDays = getTodayDateStr(new Date(Date.now() + 9 * 86400000));
     setRosterForm({
       title: 'HOSPITAL NURSING ROSTER',
       startDate: today,
@@ -285,8 +286,8 @@ export default function RosterManagementPage() {
   const handleOpenEditRoster = (roster) => {
     if (!roster) return;
     setEditingRoster(roster);
-    const startStr = roster.startDate ? new Date(roster.startDate).toISOString().split('T')[0] : '';
-    const endStr = roster.endDate ? new Date(roster.endDate).toISOString().split('T')[0] : '';
+    const startStr = roster.startDate ? getTodayDateStr(roster.startDate) : '';
+    const endStr = roster.endDate ? getTodayDateStr(roster.endDate) : '';
     setRosterForm({
       title: roster.title || '',
       startDate: startStr,
@@ -400,14 +401,14 @@ export default function RosterManagementPage() {
   const selectedEmpConflict = useMemo(() => {
     if (!assignmentForm.employeeId || !activeRoster?.assignments || !assignmentForm.date) return null;
     const empId = assignmentForm.employeeId;
-    const targetDateStr = new Date(assignmentForm.date).toISOString().split('T')[0];
+    const targetDateStr = getTodayDateStr(assignmentForm.date);
     const editingId = assignmentTarget.editingAssignment?._id;
 
     const existing = activeRoster.assignments.find((ass) => {
       if (editingId && ass._id === editingId) return false;
       const assEmpId = ass.employeeId?._id || ass.employeeId;
       if (String(assEmpId) !== String(empId)) return false;
-      const assDateStr = ass.date ? new Date(ass.date).toISOString().split('T')[0] : '';
+      const assDateStr = ass.date ? getTodayDateStr(ass.date) : '';
       return assDateStr === targetDateStr;
     });
 
@@ -591,10 +592,13 @@ export default function RosterManagementPage() {
   const activeRosterDates = useMemo(() => {
     if (!activeRoster?.startDate || !activeRoster?.endDate) return [];
     const list = [];
-    const cur = new Date(activeRoster.startDate);
-    const end = new Date(activeRoster.endDate);
-    while (cur <= end) {
-      list.push(cur.toISOString().split('T')[0]);
+    const start = parseLocalDateStr(activeRoster.startDate);
+    const end = parseLocalDateStr(activeRoster.endDate);
+    if (!start || !end) return [];
+    const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    while (cur <= endDay) {
+      list.push(getTodayDateStr(cur));
       cur.setDate(cur.getDate() + 1);
     }
     return list;
@@ -605,7 +609,7 @@ export default function RosterManagementPage() {
     if (!activeRoster?.assignments || !activeRosterDate) return {};
     const map = {};
     activeRoster.assignments.forEach((ass) => {
-      const assDate = new Date(ass.date).toISOString().split('T')[0];
+      const assDate = getTodayDateStr(ass.date);
       if (assDate === activeRosterDate) {
         const key = `${ass.dutyArea}__${ass.shiftTitle}`;
         if (!map[key]) map[key] = [];
@@ -619,13 +623,13 @@ export default function RosterManagementPage() {
   const myRosterCalendarEvents = useMemo(() => {
     return myAssignments.map((ass) => ({
       id: ass.id || ass._id,
-      title: `${ass.shiftTitle} (${ass.startTime} - ${ass.endTime}) - ${ass.dutyArea}`,
+      title: `${ass.shiftTitle} (${formatTime12h(ass.startTime)} - ${formatTime12h(ass.endTime)}) - ${ass.dutyArea}`,
       startDate: ass.date,
       endDate: ass.date,
       type: 'duty_roster',
       dutyArea: ass.dutyArea,
       shiftTitle: ass.shiftTitle,
-      times: `${ass.startTime} to ${ass.endTime}`,
+      times: `${formatTime12h(ass.startTime)} to ${formatTime12h(ass.endTime)}`,
       status: 'published',
     }));
   }, [myAssignments]);
@@ -756,7 +760,7 @@ export default function RosterManagementPage() {
                     {activeRoster.title}
                   </Typography>
 
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2} flexWrap="wrap" gap={1}>
+                  <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
                     {activeRoster.isHistorical ? (
                       <Chip label="Historical / Published" color="default" variant="outlined" sx={{ fontWeight: 700 }} />
                     ) : (
@@ -894,7 +898,7 @@ export default function RosterManagementPage() {
                                 {col.title?.toUpperCase()}
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mt: 0.25 }}>
-                                {col.startTime} TO {col.endTime}
+                                {formatTime12h(col.startTime)} TO {formatTime12h(col.endTime)}
                               </Typography>
                             </TableCell>
                           ))}
@@ -973,7 +977,7 @@ export default function RosterManagementPage() {
                                               </Typography>
                                               {isCustomTime && (
                                                 <Typography variant="caption" fontWeight="700" color="primary" sx={{ display: 'block' }}>
-                                                  {ass.startTime} TO {ass.endTime}
+                                                  {formatTime12h(ass.startTime)} TO {formatTime12h(ass.endTime)}
                                                 </Typography>
                                               )}
                                               {ass.notes && (
@@ -1245,7 +1249,7 @@ export default function RosterManagementPage() {
                               })}
                             </Typography>
                             <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
-                              <Chip icon={<ScheduleRounded fontSize="small" />} label={`${ass.shiftTitle} (${ass.startTime} - ${ass.endTime})`} size="small" color="primary" />
+                              <Chip icon={<ScheduleRounded fontSize="small" />} label={`${ass.shiftTitle} (${formatTime12h(ass.startTime)} - ${formatTime12h(ass.endTime)})`} size="small" color="primary" />
                               <Chip label={ass.dutyArea} size="small" variant="outlined" />
                             </Stack>
                           </Box>

@@ -36,36 +36,13 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import ErrorState from '../../components/ErrorState';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+import { formatTime12h as format12h, getTodayDateStr } from '../../utils/dateUtils';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good morning';
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
-};
-
-const format12h = (timeInput) => {
-  if (!timeInput) return '';
-  if (timeInput instanceof Date || (typeof timeInput === 'string' && (timeInput.includes('T') || timeInput.includes('Z')))) {
-    const d = new Date(timeInput);
-    if (!isNaN(d.getTime())) {
-      let h = d.getHours();
-      const m = String(d.getMinutes()).padStart(2, '0');
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      h = h % 12 || 12;
-      return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
-    }
-  }
-  if (typeof timeInput === 'string' && timeInput.includes(':')) {
-    const parts = timeInput.split(':');
-    let h = parseInt(parts[0], 10);
-    const m = parts[1] ? parts[1].substring(0, 2) : '00';
-    if (isNaN(h)) return timeInput;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
-  }
-  return String(timeInput);
 };
 
 const calculateWorkDuration = (inTime, outTime, minutes) => {
@@ -431,8 +408,8 @@ const AttendanceDonutGraph = ({ data }) => {
         </Box>
 
         <Grid container spacing={1.5} sx={{ mt: 1 }}>
-          <Grid item xs={6}>
-            <Stack direction="row" alignItems="center" spacing={1}>
+          <Grid xs={6}>
+            <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#10B981' }} />
               <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
                 Present
@@ -442,8 +419,8 @@ const AttendanceDonutGraph = ({ data }) => {
               </Typography>
             </Stack>
           </Grid>
-          <Grid item xs={6}>
-            <Stack direction="row" alignItems="center" spacing={1}>
+          <Grid xs={6}>
+            <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#F59E0B' }} />
               <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
                 Late
@@ -453,8 +430,8 @@ const AttendanceDonutGraph = ({ data }) => {
               </Typography>
             </Stack>
           </Grid>
-          <Grid item xs={6}>
-            <Stack direction="row" alignItems="center" spacing={1}>
+          <Grid xs={6}>
+            <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#EF4444' }} />
               <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
                 Absent
@@ -464,8 +441,8 @@ const AttendanceDonutGraph = ({ data }) => {
               </Typography>
             </Stack>
           </Grid>
-          <Grid item xs={6}>
-            <Stack direction="row" alignItems="center" spacing={1}>
+          <Grid xs={6}>
+            <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#6366F1' }} />
               <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
                 On Leave
@@ -523,7 +500,7 @@ const LeaveOverviewGraph = ({ data }) => {
         </Box>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
+          <Grid xs={12} sm={4}>
             <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#D97706', textTransform: 'uppercase' }}>
                 Pending
@@ -533,7 +510,7 @@ const LeaveOverviewGraph = ({ data }) => {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid xs={12} sm={4}>
             <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#16A34A', textTransform: 'uppercase' }}>
                 Approved
@@ -543,7 +520,7 @@ const LeaveOverviewGraph = ({ data }) => {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid xs={12} sm={4}>
             <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase' }}>
                 Rejected
@@ -608,7 +585,7 @@ const OperationalGraphsSection = ({
         }
 
         return (
-          <Grid item xs={xsWidth} md={mdWidth} key={card.key}>
+          <Grid xs={xsWidth} md={mdWidth} key={card.key}>
             {card.component}
           </Grid>
         );
@@ -697,10 +674,10 @@ const AdminDashboard = () => {
 
         if (rosterRes.status === 'fulfilled') {
           const assignments = rosterRes.value?.data || rosterRes.value || [];
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = getTodayDateStr();
           const todayDuty = Array.isArray(assignments)
             ? assignments.find((ass) => {
-                const d = ass.date ? new Date(ass.date).toISOString().split('T')[0] : '';
+                const d = ass.date ? getTodayDateStr(ass.date) : '';
                 return d === todayStr;
               })
             : null;
@@ -892,7 +869,7 @@ const AdminDashboard = () => {
   const isCheckoutPending = useMemo(() => {
     if (!isCheckedIn || !todayRosterDuty?.endTime) return false;
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getTodayDateStr();
       let endStr = todayRosterDuty.endTime.trim();
       let endParts = endStr.split(':').map(Number);
       if (!isNaN(endParts[0])) {
@@ -934,10 +911,10 @@ const AdminDashboard = () => {
 
           {loading ? (
             <Grid container spacing={2.5}>
-              <Grid item xs={12} md={6}>
+              <Grid xs={12} md={6}>
                 <Skeleton variant="rounded" height={180} sx={{ borderRadius: '14px' }} />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid xs={12} md={6}>
                 <Skeleton variant="rounded" height={180} sx={{ borderRadius: '14px' }} />
               </Grid>
             </Grid>
@@ -946,7 +923,7 @@ const AdminDashboard = () => {
               {/* Today Status & Duty Cards */}
               <Grid container spacing={2.5}>
                 {/* ATTENDANCE ACTION CARD */}
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Box sx={{ p: 3, height: '100%', backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                     <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                       <Box>
@@ -1056,7 +1033,7 @@ const AdminDashboard = () => {
                 </Grid>
 
                 {/* TODAY'S ROSTER DUTY CARD */}
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Box sx={{ p: 3, height: '100%', backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                     <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                       <Box>
@@ -1111,7 +1088,7 @@ const AdminDashboard = () => {
 
               {/* Employee Summary Cards */}
               <Grid container spacing={2.5}>
-                <Grid item xs={12} sm={6} lg={3}>
+                <Grid xs={12} sm={6} lg={3}>
                   <DashboardMetricCard
                     label="My Leaves"
                     value={myLeaves.length}
@@ -1124,7 +1101,7 @@ const AdminDashboard = () => {
                     }
                   />
                 </Grid>
-                <Grid item xs={12} sm={6} lg={3}>
+                <Grid xs={12} sm={6} lg={3}>
                   <DashboardMetricCard
                     label="My Attendance"
                     value={todayAttendanceState ? 'Active' : 'Recorded'}
@@ -1137,7 +1114,7 @@ const AdminDashboard = () => {
                     }
                   />
                 </Grid>
-                <Grid item xs={12} sm={6} lg={3}>
+                <Grid xs={12} sm={6} lg={3}>
                   <DashboardMetricCard
                     label="Regularization"
                     value={pendingRegsCount}
@@ -1150,7 +1127,7 @@ const AdminDashboard = () => {
                     }
                   />
                 </Grid>
-                <Grid item xs={12} sm={6} lg={3}>
+                <Grid xs={12} sm={6} lg={3}>
                   <DashboardMetricCard
                     label="My Profile"
                     value="Account"
@@ -1197,7 +1174,7 @@ const AdminDashboard = () => {
                       Fast access to your self-service tools.
                     </Typography>
                   </Box>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} flexWrap="wrap">
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ flexWrap: 'wrap' }}>
                     <Button
                       variant="outlined"
                       startIcon={<EventNoteRounded />}
@@ -1267,7 +1244,7 @@ const AdminDashboard = () => {
           </Box>
 
           {/* Quick Action Buttons */}
-          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
               startIcon={<AddRounded sx={{ fontSize: 18 }} />}
@@ -1337,7 +1314,7 @@ const AdminDashboard = () => {
         {loading ? (
           <Grid container spacing={2.5}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Grid item xs={12} sm={6} lg={4} key={i}>
+              <Grid xs={12} sm={6} lg={4} key={i}>
                 <Skeleton variant="rounded" height={130} sx={{ borderRadius: '14px' }} />
               </Grid>
             ))}
@@ -1346,7 +1323,7 @@ const AdminDashboard = () => {
           <>
             {/* Hospital Summary KPI Grid (3 cols x 2 rows) */}
             <Grid container spacing={2.5}>
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid xs={12} sm={6} md={4}>
                 <DashboardMetricCard
                   label="Total Workforce"
                   value={stats.totalEmployees || stats.activeEmployees || stats.hrCount || 0}
@@ -1356,7 +1333,7 @@ const AdminDashboard = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid xs={12} sm={6} md={4}>
                 <DashboardMetricCard
                   label="Active Staff"
                   value={stats.activeEmployees || stats.totalEmployees || 0}
@@ -1366,7 +1343,7 @@ const AdminDashboard = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid xs={12} sm={6} md={4}>
                 <DashboardMetricCard
                   label="Today's Attendance"
                   value={stats.todayAttendance}
@@ -1380,7 +1357,7 @@ const AdminDashboard = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid xs={12} sm={6} md={4}>
                 <DashboardMetricCard
                   label="Pending Leave Requests"
                   value={stats.pendingLeaves}
@@ -1390,7 +1367,7 @@ const AdminDashboard = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid xs={12} sm={6} md={4}>
                 <DashboardMetricCard
                   label="Today's Scheduled Staff"
                   value={stats.todayRosterAssigned}
@@ -1404,7 +1381,7 @@ const AdminDashboard = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid xs={12} sm={6} md={4}>
                 <DashboardMetricCard
                   label="Pending Regularization"
                   value={stats.pendingRegularizations}
@@ -1440,7 +1417,7 @@ const AdminDashboard = () => {
             <Grid container spacing={2.5}>
               {/* ATTENDANCE OVERVIEW */}
               {canViewAttendance && (
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <SectionCard
                     title="Attendance Today"
                     subtitle="Track staff check-ins, check-outs, and active duty status."
@@ -1464,7 +1441,7 @@ const AdminDashboard = () => {
 
               {/* LEAVE MANAGEMENT OVERVIEW */}
               {canViewLeaves && (
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <SectionCard
                     title="Leave Management"
                     subtitle="Review and approve staff leave requests."
@@ -1488,7 +1465,7 @@ const AdminDashboard = () => {
 
               {/* ROSTER OPERATIONAL OVERVIEW */}
               {canViewRoster && (
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <SectionCard
                     title="Roster & Duty Planning"
                     subtitle="Manage shift templates, published schedules, and duty assignments."
@@ -1512,7 +1489,7 @@ const AdminDashboard = () => {
 
               {/* REGULARIZATION OVERVIEW */}
               {canViewAttendance && (
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <SectionCard
                     title="Attendance Regularization"
                     subtitle="Approve or decline attendance correction requests."
@@ -1546,7 +1523,7 @@ const AdminDashboard = () => {
                     Jump straight into managing your hospital modules.
                   </Typography>
                 </Box>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} flexWrap="wrap">
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ flexWrap: 'wrap' }}>
                   {canManageRoster && (
                     <Button
                       variant="outlined"

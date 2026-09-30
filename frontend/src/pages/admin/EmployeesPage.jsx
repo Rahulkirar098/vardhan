@@ -43,6 +43,7 @@ import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
+import { getTodayDateStr } from '../../utils/dateUtils';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
@@ -258,7 +259,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
         email: employee.email || '',
         phone: employee.phone || '',
         positionId: employee.positionId?._id || employee.positionId || '',
-        dateOfJoining: employee.dateOfJoining ? new Date(employee.dateOfJoining).toISOString().split('T')[0] : '',
+        dateOfJoining: employee.dateOfJoining ? getTodayDateStr(employee.dateOfJoining) : '',
       });
       setError('');
       setSubmitting(false);

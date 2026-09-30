@@ -13,6 +13,7 @@ import {
 import EditCalendarRounded from '@mui/icons-material/EditCalendarRounded';
 import Modal from '../Modal';
 import attendanceService from '../../services/attendance.service';
+import { getTodayDateStr } from '../../utils/dateUtils';
 
 const REQUESTED_STATUS_OPTIONS = [
   { value: 'PRESENT', label: 'Present' },
@@ -20,7 +21,7 @@ const REQUESTED_STATUS_OPTIONS = [
 ];
 
 const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) => {
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayStr = useMemo(() => getTodayDateStr(), []);
   const [date, setDate] = useState('');
   const [requestedStatus, setRequestedStatus] = useState('PRESENT');
   const [checkIn, setCheckIn] = useState('');

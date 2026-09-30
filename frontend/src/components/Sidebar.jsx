@@ -135,11 +135,13 @@ const NavItem = ({ item, currentPath, onClick }) => {
       </ListItemIcon>
       <ListItemText
         primary={item.label}
-        primaryTypographyProps={{
-          fontSize: '0.885rem',
-          fontWeight: active ? 700 : 500,
-          color: active ? '#FFFFFF' : 'inherit',
-          noWrap: true,
+        slotProps={{
+          primary: {
+            fontSize: '0.885rem',
+            fontWeight: active ? 700 : 500,
+            color: active ? '#FFFFFF' : 'inherit',
+            noWrap: true,
+          },
         }}
       />
     </ListItemButton>

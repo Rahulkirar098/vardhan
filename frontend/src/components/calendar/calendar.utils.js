@@ -14,6 +14,13 @@ export const WEEKDAYS = [
 
 export const toDateString = (d) => {
   if (!d) return '';
+  if (typeof d === 'string') {
+    const trimmed = d.trim();
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+  }
   const date = typeof d === 'string' ? new Date(d) : d;
   if (isNaN(date.getTime())) return '';
   const year = date.getFullYear();
@@ -22,7 +29,13 @@ export const toDateString = (d) => {
   return `${year}-${month}-${day}`;
 };
 
-export const getTodayString = () => toDateString(new Date());
+export const getTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export const formatMonthYear = (date) => {
   return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });

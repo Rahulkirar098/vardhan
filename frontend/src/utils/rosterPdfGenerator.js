@@ -1,20 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatTime12h, getTodayDateStr } from './dateUtils';
 
-/**
- * Format 24h time string (e.g. "08:00") to 12h format (e.g. "8 AM" or "8:30 PM")
- */
-export function formatTime12h(time24) {
-  if (!time24) return '';
-  const [hStr, mStr] = time24.split(':');
-  let h = parseInt(hStr, 10);
-  const m = mStr || '00';
-  if (isNaN(h)) return time24;
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12;
-  if (h === 0) h = 12;
-  return m === '00' ? `${h} ${ampm}` : `${h}:${m} ${ampm}`;
-}
+export { formatTime12h };
 
 /**
  * Format Date to Month (Year) e.g., SEPTEMBER (2026)
@@ -306,8 +294,8 @@ export function generateFrontendRosterPDF(activeRoster) {
 
   // Save PDF file directly in browser
   const titleClean = (activeRoster.title || 'Vardhan_Roster').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const startFmt = activeRoster.startDate ? new Date(activeRoster.startDate).toISOString().split('T')[0] : 'period';
-  const endFmt = activeRoster.endDate ? new Date(activeRoster.endDate).toISOString().split('T')[0] : 'end';
+  const startFmt = activeRoster.startDate ? getTodayDateStr(activeRoster.startDate) : 'period';
+  const endFmt = activeRoster.endDate ? getTodayDateStr(activeRoster.endDate) : 'end';
   const filename = `${titleClean}_${startFmt}_to_${endFmt}.pdf`;
 
   doc.save(filename);

@@ -50,6 +50,7 @@ import ErrorState from '../../components/ErrorState';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import { leaveService } from '../../services/leave.service';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+import { formatDate, formatDateTime, getTodayDateStr, parseLocalDateStr } from '../../utils/dateUtils';
 
 const LEAVE_TYPES = [
   { key: 'CASUAL', label: 'Casual Leave', color: '#0284C7' },
@@ -62,34 +63,6 @@ const LEAVE_TYPES = [
 const getLeaveTypeObj = (type) =>
   LEAVE_TYPES.find((t) => t.key === type) || { key: type, label: type || 'Leave', color: '#6B7280' };
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return '—';
-  try {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return String(dateStr);
-  }
-};
-
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return '—';
-  try {
-    return new Date(dateStr).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return String(dateStr);
-  }
-};
-
 // ─── Apply Leave Modal Component ─────────────────────────────────────────────
 const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
   const [leaveType, setLeaveType] = useState('CASUAL');
@@ -101,7 +74,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayStr = useMemo(() => getTodayDateStr(), []);
 
   useEffect(() => {
     if (open) {
@@ -567,7 +540,7 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
 
 // ─── Leave Calendar & Who's On Leave Component ───────────────────────────────
 const LeaveCalendarView = ({ leaves, canViewManagement }) => {
-  const [selectedDateStr, setSelectedDateStr] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedDateStr, setSelectedDateStr] = useState(() => getTodayDateStr());
 
   // Map leaves to dates
   const leavesByDate = useMemo(() => {

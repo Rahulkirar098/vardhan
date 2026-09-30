@@ -84,9 +84,19 @@ const getHospitalOverview = async (userId) => {
     }
 
     if (!hospital) {
-        const err = new Error("Hospital not found");
-        err.code = "NOT_FOUND";
-        throw err;
+        return {
+            hospital: null,
+            stats: {
+                totalEmployees: 0,
+                activeEmployees: 0,
+                pendingLeaves: 0,
+                todayAttendance: 0,
+                todayRosterAssigned: 0,
+                pendingRegularizations: 0,
+                hrCount: 0,
+                pendingInvitationCount: 0,
+            },
+        };
     }
 
     const now = new Date();

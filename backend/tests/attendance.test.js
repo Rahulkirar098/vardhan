@@ -458,10 +458,12 @@ const runTests = async () => {
         assert.strictEqual(dupRegRes.body.success, false);
         console.log("  ✓ 15. Duplicate pending regularization for same date rejected (409 Conflict)");
 
-        // Test 16: Regularization with future date is rejected with 400
         const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const futureDateStr = tomorrow.toISOString().split("T")[0];
+        tomorrow.setDate(tomorrow.getDate() + 5);
+        const y = tomorrow.getFullYear();
+        const m = String(tomorrow.getMonth() + 1).padStart(2, "0");
+        const d = String(tomorrow.getDate()).padStart(2, "0");
+        const futureDateStr = `${y}-${m}-${d}`;
 
         const futureRegRes = await request("/api/v1/hrms/attendance/regularization", {
             method: "POST",
@@ -542,7 +544,11 @@ const runTests = async () => {
         // ─────────────────────────────────────────────────────────────
         console.log("\n--- 7. AUTOMATIC ABSENCE & SHIFT LIFECYCLE TESTS ---");
 
-        const todayDateStr = new Date().toISOString().split("T")[0];
+        const nowObj = new Date();
+        const yStr = nowObj.getFullYear();
+        const mStr = String(nowObj.getMonth() + 1).padStart(2, "0");
+        const dStr = String(nowObj.getDate()).padStart(2, "0");
+        const todayDateStr = `${yStr}-${mStr}-${dStr}`;
         const todayDateObj = new Date(`${todayDateStr}T00:00:00.000Z`);
 
         // Create Employee 3 (Hospital A) for automatic absence tests
@@ -581,6 +587,7 @@ const runTests = async () => {
             startDate: todayDateObj,
             endDate: todayDateObj,
             status: "PUBLISHED",
+            publishedAt: new Date(),
             createdBy: adminUser._id,
         });
 
