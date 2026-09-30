@@ -1272,6 +1272,16 @@ export default function RosterManagementPage() {
           onClose={() => setRosterModalOpen(false)}
           title={editingRoster ? 'Edit Roster Details & Layout' : 'Create Hospital Roster'}
           maxWidth="md"
+          actions={
+            <>
+              <Button onClick={() => setRosterModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSaveRoster} loading={loading}>
+                {editingRoster ? 'Save Changes' : 'Create Draft Roster'}
+              </Button>
+            </>
+          }
         >
           <Stack spacing={3} sx={{ pt: 1 }}>
             <TextField
@@ -1457,15 +1467,6 @@ export default function RosterManagementPage() {
                 ))}
               </Stack>
             </Box>
-
-            <Box align="right" pt={2}>
-              <Button onClick={() => setRosterModalOpen(false)} sx={{ mr: 1 }}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleSaveRoster} loading={loading}>
-                {editingRoster ? 'Save Changes' : 'Create Draft Roster'}
-              </Button>
-            </Box>
           </Stack>
         </Modal>
 
@@ -1477,6 +1478,16 @@ export default function RosterManagementPage() {
           onClose={() => setAssignmentModalOpen(false)}
           title={`Assign Staff to ${assignmentTarget.dutyArea}`}
           maxWidth="sm"
+          actions={
+            <>
+              <Button onClick={() => setAssignmentModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSaveAssignment} loading={loading}>
+                Assign Staff
+              </Button>
+            </>
+          }
         >
           <Stack spacing={2.5} sx={{ pt: 1 }}>
             {selectedEmpConflict && (
@@ -1536,15 +1547,6 @@ export default function RosterManagementPage() {
               onChange={(e) => setAssignmentForm((p) => ({ ...p, notes: e.target.value }))}
               fullWidth
             />
-
-            <Box align="right" pt={1}>
-              <Button onClick={() => setAssignmentModalOpen(false)} sx={{ mr: 1 }}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleSaveAssignment} loading={loading}>
-                Assign Staff
-              </Button>
-            </Box>
           </Stack>
         </Modal>
 
@@ -1554,6 +1556,16 @@ export default function RosterManagementPage() {
           onClose={() => setShareModalOpen(false)}
           title="Share Roster for Review"
           maxWidth="sm"
+          actions={
+            <>
+              <Button onClick={() => setShareModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSaveShareReview} loading={loading}>
+                Share with Selected ({selectedReviewerIds.length})
+              </Button>
+            </>
+          }
         >
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography variant="body2" color="text.secondary">
@@ -1600,15 +1612,6 @@ export default function RosterManagementPage() {
                 })}
               </List>
             </Paper>
-
-            <Box align="right" pt={2}>
-              <Button onClick={() => setShareModalOpen(false)} sx={{ mr: 1 }}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleSaveShareReview} loading={loading}>
-                Share with Selected ({selectedReviewerIds.length})
-              </Button>
-            </Box>
           </Stack>
         </Modal>
 
@@ -1618,6 +1621,16 @@ export default function RosterManagementPage() {
           onClose={() => setFeedbackModalOpen(false)}
           title="Roster Review Feedback Comments"
           maxWidth="sm"
+          actions={
+            <>
+              <Button onClick={() => setFeedbackModalOpen(false)} sx={{ mr: 1 }}>
+                Close
+              </Button>
+              <Button variant="contained" onClick={handleAddComment} disabled={!newCommentText.trim()}>
+                Post Comment
+              </Button>
+            </>
+          }
         >
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Box sx={{ maxHeight: 260, overflowY: 'auto' }}>
@@ -1665,15 +1678,6 @@ export default function RosterManagementPage() {
               rows={2}
               fullWidth
             />
-
-            <Box align="right" pt={1}>
-              <Button onClick={() => setFeedbackModalOpen(false)} sx={{ mr: 1 }}>
-                Close
-              </Button>
-              <Button variant="contained" onClick={handleAddComment} disabled={!newCommentText.trim()}>
-                Post Comment
-              </Button>
-            </Box>
           </Stack>
         </Modal>
 
