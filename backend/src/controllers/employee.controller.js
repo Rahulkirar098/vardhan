@@ -239,7 +239,11 @@ const acceptInvitation = async (req, res) => {
         } catch (serviceError) {
             if (
                 serviceError.code === "INVALID_INVITATION" ||
-                serviceError.code === "EXPIRED_INVITATION"
+                serviceError.code === "EXPIRED_INVITATION" ||
+                serviceError.code === "VALIDATION_ERROR" ||
+                serviceError.code === "DUPLICATE_EMAIL" ||
+                serviceError.code === "DUPLICATE_USER" ||
+                serviceError.code === "DUPLICATE_EMPLOYEE"
             ) {
                 return res.status(400).json({
                     success: false,

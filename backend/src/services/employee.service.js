@@ -15,20 +15,31 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Format: EMP001, EMP002, …
  */
 const generateEmployeeId = async (hospitalId) => {
-    const lastEmployee = await Employee.findOne({ hospitalId })
-        .sort({ createdAt: -1 })
+    const employees = await Employee.find({ hospitalId })
         .select("employeeId")
         .lean();
 
-    if (!lastEmployee || !lastEmployee.employeeId) {
-        return "EMP001";
+    let maxNum = 0;
+    for (const emp of employees) {
+        if (!emp.employeeId) continue;
+        const match = String(emp.employeeId).match(/^EMP(\d+)$/i);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
+            }
+        }
     }
 
-    const match = String(lastEmployee.employeeId).match(/^EMP(\d+)$/);
-    if (!match) return "EMP001";
+    let nextNum = maxNum + 1;
+    let candidate = `EMP${String(nextNum).padStart(3, "0")}`;
 
-    const nextNum = parseInt(match[1], 10) + 1;
-    return `EMP${String(nextNum).padStart(3, "0")}`;
+    while (await Employee.findOne({ hospitalId, employeeId: candidate })) {
+        nextNum++;
+        candidate = `EMP${String(nextNum).padStart(3, "0")}`;
+    }
+
+    return candidate;
 };
 
 /**
@@ -366,67 +377,121 @@ const acceptInvitation = async (rawToken, password) => {
         throw err;
     }
 
-    // Check if employee with this email already exists in this hospital
-    const existingEmployee = await Employee.findOne({
-        hospitalId: invitation.hospitalId._id,
-        email: invitation.email,
-    });
-
-    if (existingEmployee) {
-        // If somehow already created, just mark invitation accepted
-        invitation.status = "accepted";
-        invitation.acceptedAt = new Date();
-        await invitation.save();
-        return existingEmployee;
-    }
-
-    // Resolve employee ID — if taken, auto-generate a new one
-    let resolvedEmployeeId = invitation.employeeId;
-    if (resolvedEmployeeId) {
-        const taken = await Employee.findOne({
-            hospitalId: invitation.hospitalId._id,
-            employeeId: resolvedEmployeeId,
-        });
-        if (taken) {
-            resolvedEmployeeId = await generateEmployeeId(invitation.hospitalId._id);
-        }
-    } else {
-        resolvedEmployeeId = await generateEmployeeId(invitation.hospitalId._id);
-    }
+    const email = String(invitation.email).trim().toLowerCase();
+    const emailRegex = new RegExp(`^\\s*${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, "i");
+    const hashedPassword = await hashPassword(password);
 
     // Derive modules from Position defaults
     const positionDefaultModules = invitation.positionId?.defaultModules || [];
     const moduleSet = new Set(["core", ...positionDefaultModules.filter(m => m !== "core")]);
     const userModules = Array.from(moduleSet);
 
-    // Create User account (every employee gets a login)
-    const hashedPassword = await hashPassword(password);
-    const user = await User.create({
-        name: `${invitation.firstName} ${invitation.lastName}`.trim(),
-        email: invitation.email,
-        phone: invitation.phone,
-        password: hashedPassword,
-        role: invitation.role,
+    // 1. Get or Create User account (every employee gets a login)
+    let user = await User.findOne({ email: emailRegex });
+
+    if (user) {
+        user.name = `${invitation.firstName} ${invitation.lastName}`.trim();
+        user.email = email;
+        if (invitation.phone) user.phone = invitation.phone;
+        user.password = hashedPassword;
+        user.role = invitation.role || user.role || "employee";
+        user.hospitalId = invitation.hospitalId._id;
+        user.status = "active";
+        user.modules = userModules;
+        await user.save();
+    } else {
+        try {
+            user = await User.create({
+                name: `${invitation.firstName} ${invitation.lastName}`.trim(),
+                email,
+                phone: invitation.phone,
+                password: hashedPassword,
+                role: invitation.role || "employee",
+                hospitalId: invitation.hospitalId._id,
+                status: "active",
+                createdBy: invitation.invitedBy,
+                modules: userModules,
+                permissions: [],
+            });
+        } catch (createErr) {
+            const isDup =
+                createErr.code === 11000 ||
+                createErr.name === "MongoServerError" ||
+                createErr.errorResponse?.code === 11000 ||
+                String(createErr.message || "").includes("E11000");
+
+            if (isDup) {
+                user = await User.findOne({ email: emailRegex });
+                if (!user) {
+                    const err = new Error("A user account with this email address already exists.");
+                    err.code = "DUPLICATE_USER";
+                    throw err;
+                }
+                user.name = `${invitation.firstName} ${invitation.lastName}`.trim();
+                user.email = email;
+                if (invitation.phone) user.phone = invitation.phone;
+                user.password = hashedPassword;
+                user.role = invitation.role || user.role || "employee";
+                user.hospitalId = invitation.hospitalId._id;
+                user.status = "active";
+                user.modules = userModules;
+                await user.save();
+            } else {
+                throw createErr;
+            }
+        }
+    }
+
+    // 2. Get or Create Employee record
+    let employee = await Employee.findOne({
         hospitalId: invitation.hospitalId._id,
-        status: "active",
-        createdBy: invitation.invitedBy,
-        modules: userModules,
-        permissions: [],
+        email: emailRegex,
     });
 
-    const employee = await Employee.create({
-        employeeId: resolvedEmployeeId,
-        firstName: invitation.firstName,
-        lastName: invitation.lastName,
-        email: invitation.email,
-        phone: invitation.phone,
-        dateOfJoining: invitation.dateOfJoining,
-        positionId: invitation.positionId?._id || invitation.positionId,
-        employmentStatus: "ACTIVE",
-        hospitalId: invitation.hospitalId._id,
-        createdBy: invitation.invitedBy,
-        userId: user._id,
-    });
+    if (!employee && user.employeeId) {
+        employee = await Employee.findById(user.employeeId);
+    }
+
+    if (employee) {
+        employee.firstName = invitation.firstName;
+        employee.lastName = invitation.lastName;
+        employee.email = email;
+        if (invitation.phone) employee.phone = invitation.phone;
+        if (invitation.positionId) {
+            employee.positionId = invitation.positionId._id || invitation.positionId;
+        }
+        employee.employmentStatus = "ACTIVE";
+        employee.userId = user._id;
+        await employee.save();
+    } else {
+        // Resolve employee ID — if taken, auto-generate a new one
+        let resolvedEmployeeId = invitation.employeeId;
+        if (resolvedEmployeeId) {
+            const taken = await Employee.findOne({
+                hospitalId: invitation.hospitalId._id,
+                employeeId: resolvedEmployeeId,
+            });
+            if (taken) {
+                resolvedEmployeeId = await generateEmployeeId(invitation.hospitalId._id);
+            }
+        } else {
+            resolvedEmployeeId = await generateEmployeeId(invitation.hospitalId._id);
+        }
+
+        employee = await Employee.create({
+            employeeId: resolvedEmployeeId,
+            firstName: invitation.firstName,
+            lastName: invitation.lastName,
+            email,
+            phone: invitation.phone,
+            dateOfJoining: invitation.dateOfJoining,
+            positionId: invitation.positionId?._id || invitation.positionId,
+            employmentStatus: "ACTIVE",
+            hospitalId: invitation.hospitalId._id,
+            createdBy: invitation.invitedBy,
+            userId: user._id,
+        });
+    }
 
     // Back-link Employee to User
     user.employeeId = employee._id;

@@ -594,7 +594,34 @@ const runTests = async () => {
         assert.strictEqual(userC24.employeeId.toString(), empC24._id.toString(), "User.employeeId -> Employee._id");
         assert.strictEqual(empC24.hospitalId.toString(), hospitalA._id.toString());
         assert.strictEqual(userC24.hospitalId.toString(), hospitalA._id.toString());
-        console.log("  ✓ 26. Employee and User relationships are correct\n");
+        console.log("  ✓ 26. Employee and User relationships are correct");
+
+        // 26b. Invitation acceptance handles pre-existing User account without duplicate key error
+        const existingEmail = `preexisting_user_${testTimestamp}@hospital.com`;
+        await User.create({
+            name: "PreExisting User",
+            email: existingEmail,
+            password: await hashPassword("OldPassword123!"),
+            role: "employee",
+            status: "active",
+            hospitalId: hospitalA._id,
+        });
+
+        const { invitation: c26bInv, rawToken: c26bToken } = await require("../src/services/employee.service").inviteEmployee({
+            hospital: hospitalA,
+            invitedBy: adminA._id,
+            firstName: "PreExisting",
+            lastName: "Accepted",
+            email: existingEmail,
+            positionId: posNurseA._id,
+            role: "employee",
+        });
+
+        const empC26b = await require("../src/services/employee.service").acceptInvitation(c26bToken, "NewPassword123!");
+        assert(empC26b && empC26b._id, "Employee linked successfully");
+        const userC26b = await User.findById(empC26b.userId).lean();
+        assert.strictEqual(userC26b.email, existingEmail);
+        console.log("  ✓ 26b. Invitation acceptance handles pre-existing User account without duplicate key error\n");
 
         // ====================================================================
         // D. POSITION SCENARIOS (27 - 31)
