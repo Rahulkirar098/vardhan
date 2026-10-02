@@ -106,10 +106,20 @@ export const rosterService = {
   },
 
   // --- My Roster ---
-  getMyRoster: async (params) => {
+  getMyRoster: async (tabOrParams) => {
+    const params = typeof tabOrParams === 'string' ? { tab: tabOrParams } : tabOrParams;
     const response = await client.get('/v1/rosters/my-roster', { params });
     return response.data;
   }
 };
+
+// Aliases for convenience
+rosterService.getTemplates = rosterService.getRosterTemplates;
+rosterService.getTemplate = rosterService.getRosterTemplate;
+rosterService.createTemplate = rosterService.createRosterTemplate;
+rosterService.updateTemplate = rosterService.updateRosterTemplate;
+rosterService.duplicateTemplate = rosterService.duplicateRosterTemplate;
+rosterService.deactivateTemplate = rosterService.deactivateRosterTemplate;
+rosterService.removeAssignment = rosterService.deleteAssignment;
 
 export default rosterService;
