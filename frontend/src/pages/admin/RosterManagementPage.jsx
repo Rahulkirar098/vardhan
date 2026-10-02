@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
   InputAdornment,
@@ -21,6 +22,8 @@ import {
   ListItemText,
   MenuItem,
   Paper,
+  Radio,
+  RadioGroup,
   Select,
   Snackbar,
   Stack,
@@ -208,6 +211,13 @@ export default function RosterManagementPage() {
 
   // Delete Confirm Dialog
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, type: '', id: '', title: '' });
+
+  // Flexible Roster Duty Removal Modal (THIS_DATE | FROM_DATE_TO_ROSTER_END)
+  const [removeDutyModal, setRemoveDutyModal] = useState({
+    open: false,
+    assignment: null,
+    scope: 'THIS_DATE',
+  });
 
   const showToast = (message, severity = 'info') => {
     setToast({ open: true, message, severity });
@@ -669,12 +679,32 @@ export default function RosterManagementPage() {
     }
   };
 
-  const handleDeleteAssignment = async (assignmentId) => {
+  const handleOpenRemoveDutyModal = (ass) => {
+    setRemoveDutyModal({
+      open: true,
+      assignment: ass,
+      scope: 'THIS_DATE',
+    });
+  };
+
+  const handleConfirmRemoveDuty = async () => {
+    const { assignment, scope } = removeDutyModal;
+    if (!assignment) return;
+    setRemoveDutyModal((prev) => ({ ...prev, open: false }));
+    await handleDeleteAssignment(assignment._id, scope);
+  };
+
+  const handleDeleteAssignment = async (assignmentId, scope = 'THIS_DATE') => {
     const deleteProc = async () => {
       try {
         setLoading(true);
-        await rosterService.removeAssignment(activeRoster._id, assignmentId);
-        showToast('Assignment removed', 'info');
+        await rosterService.removeAssignment(activeRoster._id, assignmentId, scope);
+        showToast(
+          scope === 'FROM_DATE_TO_ROSTER_END'
+            ? 'Duty removed for all applicable dates'
+            : 'Duty assignment removed',
+          'success'
+        );
         handleOpenRosterDetails(activeRoster._id);
         fetchRosters();
       } catch (err) {
@@ -1250,7 +1280,7 @@ export default function RosterManagementPage() {
                                               <IconButton
                                                 size="small"
                                                 color="error"
-                                                onClick={() => handleDeleteAssignment(ass._id)}
+                                                onClick={() => handleOpenRemoveDutyModal(ass)}
                                                 sx={{ p: 0.25, ml: 0.5 }}
                                               >
                                                 <CloseRounded fontSize="small" />
@@ -2355,6 +2385,83 @@ export default function RosterManagementPage() {
           onConfirm={handleConfirmDelete}
           onClose={() => setDeleteConfirm({ open: false, type: '', id: '', title: '', description: '' })}
         />
+
+        {/* Duty Removal Confirmation Modal */}
+        <Dialog
+          open={removeDutyModal.open}
+          onClose={() => setRemoveDutyModal((prev) => ({ ...prev, open: false }))}
+          maxWidth="xs"
+          fullWidth
+          PaperProps={{
+            sx: { borderRadius: '16px', p: 1 }
+          }}
+        >
+          <DialogTitle sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.25rem', pb: 1 }}>
+            Remove Duty
+          </DialogTitle>
+          <DialogContent>
+            {removeDutyModal.assignment && (
+              <Stack spacing={2} sx={{ mt: 1 }}>
+                <Box sx={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                    {removeDutyModal.assignment.employeeId?.name || removeDutyModal.assignment.employeeName || 'Employee'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#475569', mt: 0.5 }}>
+                    <strong>Duty:</strong> {removeDutyModal.assignment.shiftTitle} → {removeDutyModal.assignment.dutyArea}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#475569', mt: 0.25 }}>
+                    <strong>Date:</strong> {removeDutyModal.assignment.date ? new Date(removeDutyModal.assignment.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                  </Typography>
+                </Box>
+
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                  How would you like to remove this duty?
+                </Typography>
+
+                <RadioGroup
+                  value={removeDutyModal.scope}
+                  onChange={(e) => setRemoveDutyModal((prev) => ({ ...prev, scope: e.target.value }))}
+                >
+                  <FormControlLabel
+                    value="THIS_DATE"
+                    control={<Radio size="small" color="primary" />}
+                    label={
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#0F172A' }}>
+                        This date only
+                      </Typography>
+                    }
+                  />
+                  <FormControlLabel
+                    value="FROM_DATE_TO_ROSTER_END"
+                    control={<Radio size="small" color="primary" />}
+                    label={
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#0F172A' }}>
+                        This duty for all applicable dates
+                      </Typography>
+                    }
+                  />
+                </RadioGroup>
+              </Stack>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setRemoveDutyModal((prev) => ({ ...prev, open: false }))}
+              sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleConfirmRemoveDuty}
+              sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 700, px: 2.5 }}
+            >
+              Remove Duty
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Global Toast Notification */}
         <Snackbar

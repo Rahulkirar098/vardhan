@@ -715,69 +715,89 @@ const AttendancePage = () => {
             </Stack>
 
             {/* Check In / Check Out Action Button */}
-            {!todayAttendance ? (
-              <Button
-                variant="contained"
-                startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <LoginRounded />}
-                onClick={handleCheckIn}
-                disabled={submitting || loading}
-                sx={{
-                  backgroundColor: '#0F172A',
-                  color: '#FFFFFF',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  px: 3,
-                  py: 1,
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(15,23,42,0.2)',
-                  '&:hover': { backgroundColor: '#1E293B' },
-                }}
-              >
-                Check In
-              </Button>
-            ) : !todayAttendance.checkOut ? (
-              <Button
-                variant="contained"
-                startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <LogoutRounded />}
-                onClick={handleCheckOut}
-                disabled={submitting || loading}
-                sx={{
-                  backgroundColor: '#D97706',
-                  color: '#FFFFFF',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  px: 3,
-                  py: 1,
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(217,119,6,0.25)',
-                  '&:hover': { backgroundColor: '#B45309' },
-                }}
-              >
-                Check Out
-              </Button>
-            ) : (
-              <Button
-                variant="outlined"
-                startIcon={<CheckCircleOutlineRounded sx={{ color: '#16A34A' }} />}
-                disabled
-                sx={{
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  px: 2.5,
-                  py: 1,
-                  borderRadius: '10px',
-                  borderColor: '#BBF7D0',
-                  color: '#166534',
-                  backgroundColor: '#F0FDF4',
-                  '&.Mui-disabled': { color: '#166534', borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' },
-                }}
-              >
-                Completed Today
-              </Button>
-            )}
+            {(() => {
+              const status = todayAttendance?.status;
+              const isAbsent = status === 'ABSENT';
+              const isOnLeave = status === 'ON_LEAVE' || status === 'LEAVE';
+              const hasCheckIn = Boolean(todayAttendance?.checkIn);
+              const hasCheckOut = Boolean(todayAttendance?.checkOut);
+
+              if (isAbsent || isOnLeave) {
+                return null;
+              }
+
+              if (hasCheckIn && hasCheckOut) {
+                return (
+                  <Button
+                    variant="outlined"
+                    startIcon={<CheckCircleOutlineRounded sx={{ color: '#16A34A' }} />}
+                    disabled
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      px: 2.5,
+                      py: 1,
+                      borderRadius: '10px',
+                      borderColor: '#BBF7D0',
+                      color: '#166534',
+                      backgroundColor: '#F0FDF4',
+                      '&.Mui-disabled': { color: '#166534', borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' },
+                    }}
+                  >
+                    Completed Today
+                  </Button>
+                );
+              }
+
+              if (hasCheckIn && !hasCheckOut) {
+                return (
+                  <Button
+                    variant="contained"
+                    startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <LogoutRounded />}
+                    onClick={handleCheckOut}
+                    disabled={submitting || loading}
+                    sx={{
+                      backgroundColor: '#D97706',
+                      color: '#FFFFFF',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      px: 3,
+                      py: 1,
+                      borderRadius: '10px',
+                      boxShadow: '0 2px 8px rgba(217,119,6,0.25)',
+                      '&:hover': { backgroundColor: '#B45309' },
+                    }}
+                  >
+                    Check Out
+                  </Button>
+                );
+              }
+
+              return (
+                <Button
+                  variant="contained"
+                  startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <LoginRounded />}
+                  onClick={handleCheckIn}
+                  disabled={submitting || loading}
+                  sx={{
+                    backgroundColor: '#0F172A',
+                    color: '#FFFFFF',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    px: 3,
+                    py: 1,
+                    borderRadius: '10px',
+                    boxShadow: '0 2px 8px rgba(15,23,42,0.2)',
+                    '&:hover': { backgroundColor: '#1E293B' },
+                  }}
+                >
+                  Check In
+                </Button>
+              );
+            })()}
           </Box>
 
           {/* Today's Status Details Grid */}

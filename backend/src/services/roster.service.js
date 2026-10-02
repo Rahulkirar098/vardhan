@@ -1125,9 +1125,17 @@ const updateAssignment = async ({
         .lean();
 };
 
-const deleteAssignment = async ({ assignmentId, hospitalId, userId }) => {
+const deleteAssignment = async ({ assignmentId, hospitalId, userId, scope = "THIS_DATE" }) => {
     if (!isValidObjectId(assignmentId)) {
         const err = new Error("Invalid assignment ID.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const validScopes = ["THIS_DATE", "FROM_DATE_TO_ROSTER_END", "ALL_APPLICABLE_DATES"];
+    const normalizedScope = (scope || "THIS_DATE").toUpperCase();
+    if (!validScopes.includes(normalizedScope)) {
+        const err = new Error("Invalid removal scope. Allowed values: THIS_DATE, FROM_DATE_TO_ROSTER_END");
         err.code = "VALIDATION_ERROR";
         throw err;
     }
@@ -1139,13 +1147,35 @@ const deleteAssignment = async ({ assignmentId, hospitalId, userId }) => {
         throw err;
     }
 
+    const roster = await Roster.findOne({ _id: assignment.rosterId, hospitalId });
+    if (!roster) {
+        const err = new Error("Roster not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
     if (await isHistoricalRoster(assignment.rosterId, hospitalId)) {
         const err = new Error("Historical rosters are read-only and cannot be modified.");
         err.code = "BUSINESS_CONFLICT";
         throw err;
     }
 
-    await RosterAssignment.deleteOne({ _id: assignment._id });
+    if (normalizedScope === "FROM_DATE_TO_ROSTER_END" || normalizedScope === "ALL_APPLICABLE_DATES") {
+        const deleteQuery = {
+            rosterId: assignment.rosterId,
+            hospitalId,
+            employeeId: assignment.employeeId,
+            shiftTitle: assignment.shiftTitle,
+            dutyArea: assignment.dutyArea,
+            date: { $gte: assignment.date },
+        };
+        if (roster.endDate) {
+            deleteQuery.date.$lte = new Date(roster.endDate);
+        }
+        await RosterAssignment.deleteMany(deleteQuery);
+    } else {
+        await RosterAssignment.deleteOne({ _id: assignment._id, hospitalId });
+    }
 
     if (userId) {
         await Roster.updateOne({ _id: assignment.rosterId }, { updatedBy: userId });

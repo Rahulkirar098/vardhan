@@ -360,6 +360,18 @@ const checkOut = async ({ hospitalId, employeeId, dateStr, notes }) => {
     throw error;
   }
 
+  if (record.status === ATTENDANCE_STATUSES.ABSENT) {
+    const error = new Error("Cannot check out. Attendance status is ABSENT.");
+    error.code = "FORBIDDEN";
+    throw error;
+  }
+
+  if (record.status === ATTENDANCE_STATUSES.ON_LEAVE) {
+    const error = new Error("Cannot check out. Attendance status is ON_LEAVE.");
+    error.code = "FORBIDDEN";
+    throw error;
+  }
+
   const checkOutTime = new Date();
   record.checkOut = checkOutTime;
 

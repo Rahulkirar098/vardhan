@@ -466,10 +466,13 @@ const deleteAssignment = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
+        const scope = req.query.scope || req.body?.scope || "THIS_DATE";
+
         await rosterService.deleteAssignment({
             assignmentId: req.params.assignmentId,
             hospitalId,
             userId: req.user.id || req.user._id,
+            scope,
         });
 
         return res.status(200).json({

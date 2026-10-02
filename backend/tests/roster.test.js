@@ -13,6 +13,7 @@ const Employee = require("../src/models/employee.model");
 const Leave = require("../src/models/leave.model");
 const Roster = require("../src/models/roster.model");
 const RosterAssignment = require("../src/models/rosterAssignment.model");
+const Attendance = require("../src/models/attendance.model");
 const { generateToken } = require("../src/utils/jwt");
 const { PERMISSIONS } = require("../src/config/permissions");
 
@@ -2018,6 +2019,126 @@ async function runTests() {
         });
         assert.strictEqual(myHistoryRes.status, 200);
         console.log("  ✓ M4, M5, M6. My Roster tab=history returns historical assignments");
+
+        console.log("\n--- 11. ROSTER DUTY REMOVAL SCENARIOS ---");
+
+        // Create a test roster: 01 Oct 2026 to 10 Oct 2026 for Duty Removal tests
+        const remRoster = await Roster.create({
+            hospitalId: hospitalA._id,
+            title: `Duty Removal Test Roster ${testSuffix}`,
+            startDate: new Date("2026-10-01T00:00:00.000Z"),
+            endDate: new Date("2026-10-10T23:59:59.999Z"),
+            status: "DRAFT",
+            shifts: [
+                { title: "Morning", startTime: "08:00", endTime: "16:00" },
+                { title: "Evening", startTime: "16:00", endTime: "00:00" }
+            ],
+            dutyAreas: [{ id: "da-1", name: "ICU" }, { id: "da-2", name: "Emergency" }],
+            createdBy: hrUser._id,
+        });
+
+        // Create assignments for nurse1: Morning -> ICU from 01 Oct to 10 Oct
+        const nurse1AssignIds = {};
+        for (let d = 1; d <= 10; d++) {
+            const dateStr = `2026-10-${String(d).padStart(2, "0")}`;
+            const ass = await RosterAssignment.create({
+                rosterId: remRoster._id,
+                hospitalId: hospitalA._id,
+                employeeId: nurse1Employee._id,
+                date: new Date(`${dateStr}T00:00:00.000Z`),
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "16:00",
+                dutyArea: "ICU",
+                createdBy: hrUser._id,
+            });
+            nurse1AssignIds[d] = ass._id;
+        }
+
+        // Create distinct duties for nurse2: Evening -> Emergency on 05 Oct
+        const nurse2EveningAss = await RosterAssignment.create({
+            rosterId: remRoster._id,
+            hospitalId: hospitalA._id,
+            employeeId: nurse2Employee._id,
+            date: new Date("2026-10-05T00:00:00.000Z"),
+            shiftTitle: "Evening",
+            startTime: "16:00",
+            endTime: "00:00",
+            dutyArea: "Emergency",
+            createdBy: hrUser._id,
+        });
+
+        // Create an Attendance record for nurse1 on 05 Oct to test non-deletion
+        const nurse1Attendance = await Attendance.create({
+            hospitalId: hospitalA._id,
+            employeeId: nurse1Employee._id,
+            date: new Date("2026-10-05T00:00:00.000Z"),
+            dateStr: "2026-10-05",
+            status: "PRESENT",
+            checkIn: new Date("2026-10-05T08:00:00.000Z"),
+            checkOut: new Date("2026-10-05T16:00:00.000Z"),
+            workingMinutes: 480,
+        });
+
+        // Test 1: Remove THIS_DATE only (nurse1's Morning assignment on 02 Oct)
+        const delThisDateRes = await makeRequest(`/api/v1/rosters/${remRoster._id}/assignments/${nurse1AssignIds[2]}?scope=THIS_DATE`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(delThisDateRes.status, 200);
+
+        const checkOct2 = await RosterAssignment.findById(nurse1AssignIds[2]);
+        const checkOct1 = await RosterAssignment.findById(nurse1AssignIds[1]);
+        const checkOct3 = await RosterAssignment.findById(nurse1AssignIds[3]);
+        assert.strictEqual(checkOct2, null, "Oct 02 assignment should be deleted");
+        assert.ok(checkOct1, "Oct 01 assignment should remain");
+        assert.ok(checkOct3, "Oct 03 assignment should remain");
+        console.log("  ✓ REM 1. Remove THIS_DATE deletes only selected date assignment");
+
+        // Test 2: Remove FROM_DATE_TO_ROSTER_END starting on 05 Oct
+        const delAllDatesRes = await makeRequest(`/api/v1/rosters/${remRoster._id}/assignments/${nurse1AssignIds[5]}?scope=FROM_DATE_TO_ROSTER_END`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(delAllDatesRes.status, 200);
+
+        // Verify dates 01, 03, 04 remain
+        for (const d of [1, 3, 4]) {
+            const ass = await RosterAssignment.findById(nurse1AssignIds[d]);
+            assert.ok(ass, `Date ${d} should remain untouched`);
+        }
+        // Verify dates 05..10 for Morning ICU are deleted
+        for (let d = 5; d <= 10; d++) {
+            const ass = await RosterAssignment.findById(nurse1AssignIds[d]);
+            assert.strictEqual(ass, null, `Date ${d} Morning assignment should be removed`);
+        }
+        console.log("  ✓ REM 2. Remove FROM_DATE_TO_ROSTER_END removes selected date through roster end, preserving prior dates");
+
+        // Test 3: Distinct duty for other employee (nurse2 Evening Emergency) remains
+        const checkEveningAss = await RosterAssignment.findById(nurse2EveningAss._id);
+        assert.ok(checkEveningAss, "Distinct duty (Evening/Emergency) for nurse2 must be preserved");
+        console.log("  ✓ REM 3. Removing Morning/ICU does not remove distinct Evening/Emergency duty of other staff");
+
+        // Test 4: Existing Attendance record remains after roster assignment removal
+        const checkAttAfterRem = await Attendance.findById(nurse1Attendance._id);
+        assert.ok(checkAttAfterRem, "Attendance record must NOT be deleted when roster assignment is removed");
+        console.log("  ✓ REM 4. Existing Attendance record preserved after roster duty removal");
+
+        // Test 5: Cross-hospital deletion rejected
+        const crossHospDelRes = await makeRequest(`/api/v1/rosters/${remRoster._id}/assignments/${nurse2EveningAss._id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hospitalBAdminToken}` },
+        });
+        assert.strictEqual(crossHospDelRes.status, 404);
+        console.log("  ✓ REM 5. Cross-hospital deletion request rejected");
+
+        // Test 7: Repeated delete returns 404 Not Found
+        const dupDelRes = await makeRequest(`/api/v1/rosters/${remRoster._id}/assignments/${nurse1AssignIds[5]}?scope=THIS_DATE`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(dupDelRes.status, 404);
+        console.log("  ✓ REM 7. Repeated delete returns 404 Not Found without corrupting data");
 
         console.log("\n=======================================================");
         console.log("=== ALL ROSTER & EXTENSION TESTS PASSED 100% ===");

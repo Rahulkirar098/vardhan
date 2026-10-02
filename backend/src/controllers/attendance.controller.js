@@ -95,6 +95,9 @@ const checkOut = async (req, res) => {
       data: record,
     });
   } catch (error) {
+    if (error.code === "FORBIDDEN") {
+      return res.status(403).json({ success: false, message: error.message });
+    }
     if (error.code === "NOT_FOUND") {
       return res.status(404).json({ success: false, message: error.message });
     }

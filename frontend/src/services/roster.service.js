@@ -105,8 +105,10 @@ export const rosterService = {
     return response.data;
   },
 
-  deleteAssignment: async (rosterId, assignmentId) => {
-    const response = await client.delete(`/v1/rosters/${rosterId}/assignments/${assignmentId}`);
+  deleteAssignment: async (rosterId, assignmentId, scope = "THIS_DATE") => {
+    const response = await client.delete(`/v1/rosters/${rosterId}/assignments/${assignmentId}`, {
+      params: { scope },
+    });
     return response.data;
   },
 
