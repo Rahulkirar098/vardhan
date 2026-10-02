@@ -111,7 +111,8 @@ export default function RosterManagementPage() {
   const [rosters, setRosters] = useState([]);
   const [historyRosters, setHistoryRosters] = useState([]);
   const [templates, setTemplates] = useState([]);
-  const [myAssignments, setMyAssignments] = useState([]);
+  const [myCurrentAssignments, setMyCurrentAssignments] = useState([]);
+  const [myHistoryAssignments, setMyHistoryAssignments] = useState([]);
   const [activeEmployees, setActiveEmployees] = useState([]);
 
   // Selected Active Roster (for Matrix View & Editing)
@@ -260,17 +261,27 @@ export default function RosterManagementPage() {
     }
   }, []);
 
-  const fetchMyRoster = useCallback(async (tab = myRosterSubTab) => {
+  const fetchMyRoster = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await rosterService.getMyRoster(tab);
-      setMyAssignments(res.data || []);
+      const [currentRes, historyRes] = await Promise.allSettled([
+        rosterService.getMyRoster('current'),
+        rosterService.getMyRoster('history'),
+      ]);
+      if (currentRes.status === 'fulfilled') {
+        const curList = currentRes.value?.data || currentRes.value || [];
+        setMyCurrentAssignments(Array.isArray(curList) ? curList : []);
+      }
+      if (historyRes.status === 'fulfilled') {
+        const histList = historyRes.value?.data || historyRes.value || [];
+        setMyHistoryAssignments(Array.isArray(histList) ? histList : []);
+      }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to load your personal roster', 'error');
+      console.error('Failed to load your personal roster:', err);
     } finally {
       setLoading(false);
     }
-  }, [myRosterSubTab]);
+  }, []);
 
   const fetchActiveEmployees = useCallback(async () => {
     try {
@@ -290,8 +301,8 @@ export default function RosterManagementPage() {
       fetchTemplates();
       fetchActiveEmployees();
     }
-    fetchMyRoster(myRosterSubTab);
-  }, [canViewWorkforce, fetchRosters, fetchHistory, fetchTemplates, fetchActiveEmployees, fetchMyRoster, myRosterSubTab]);
+    fetchMyRoster();
+  }, [canViewWorkforce, fetchRosters, fetchHistory, fetchTemplates, fetchActiveEmployees, fetchMyRoster]);
 
   // Load Single Roster Details
   const handleOpenRosterDetails = async (rosterId) => {
@@ -802,7 +813,8 @@ export default function RosterManagementPage() {
 
   // Transform My Roster into Calendar Events for UnifiedCalendar
   const myRosterCalendarEvents = useMemo(() => {
-    return myAssignments.map((ass) => ({
+    const list = myRosterSubTab === 'history' ? myHistoryAssignments : myCurrentAssignments;
+    return list.map((ass) => ({
       id: ass.id || ass._id,
       title: `${ass.shiftTitle} (${formatTime12h(ass.startTime)} - ${formatTime12h(ass.endTime)}) - ${ass.dutyArea}`,
       startDate: ass.date,
@@ -813,7 +825,7 @@ export default function RosterManagementPage() {
       times: `${formatTime12h(ass.startTime)} to ${formatTime12h(ass.endTime)}`,
       status: 'published',
     }));
-  }, [myAssignments]);
+  }, [myRosterSubTab, myCurrentAssignments, myHistoryAssignments]);
 
   // Format Header Month & Year (e.g., SEPTEMBER 2026)
   const headerMonthYearStr = useMemo(() => {
@@ -1594,10 +1606,7 @@ export default function RosterManagementPage() {
 
               <Tabs
                 value={myRosterSubTab}
-                onChange={(e, val) => {
-                  setMyRosterSubTab(val);
-                  fetchMyRoster(val);
-                }}
+                onChange={(e, val) => setMyRosterSubTab(val)}
                 indicatorColor="primary"
                 textColor="primary"
               >
@@ -1606,17 +1615,17 @@ export default function RosterManagementPage() {
               </Tabs>
             </Stack>
 
-            {myAssignments.length === 0 ? (
+            {(myRosterSubTab === 'history' ? myHistoryAssignments : myCurrentAssignments).length === 0 ? (
               <EmptyState
                 icon={CalendarMonthRounded}
-                title={myRosterSubTab === 'current' ? "No Current or Upcoming Assignments" : "No Past Duty History Found"}
+                title={myRosterSubTab === 'current' ? "No Current or Upcoming Duty Found" : "No Past Duty History Found"}
                 description={myRosterSubTab === 'current' ? "You have no upcoming duty shifts assigned." : "No past published shifts were found."}
               />
             ) : (
               <Grid container spacing={3}>
                 <Grid item xs={12} md={7}>
                   <Stack spacing={2}>
-                    {myAssignments.map((ass) => (
+                    {(myRosterSubTab === 'history' ? myHistoryAssignments : myCurrentAssignments).map((ass) => (
                       <Paper key={ass.id || ass._id} variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: '#0284C7' }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                           <Box>

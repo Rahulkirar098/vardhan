@@ -1058,7 +1058,14 @@ const getMyRoster = async ({ userId, hospitalId, employeeId: paramEmployeeId, ta
     let employee = null;
     if (paramEmployeeId && isValidObjectId(paramEmployeeId)) {
         employee = await Employee.findOne({ _id: paramEmployeeId, hospitalId }).lean();
-    } else if (userId) {
+    }
+    if (!employee && paramEmployeeId && typeof paramEmployeeId === "object") {
+        const empId = paramEmployeeId._id || paramEmployeeId.id;
+        if (empId && isValidObjectId(empId)) {
+            employee = await Employee.findOne({ _id: empId, hospitalId }).lean();
+        }
+    }
+    if (!employee && userId) {
         employee = await Employee.findOne({ userId, hospitalId }).lean();
     }
 
