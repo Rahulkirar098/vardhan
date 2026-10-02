@@ -149,7 +149,7 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
   const endOfDay = new Date(`${targetDateStr}T23:59:59.999Z`);
   const now = new Date();
 
-  // Find current published roster for each hospital covering target date
+  // Find all published rosters for hospital(s) covering target date
   const rosterQuery = {
     status: "PUBLISHED",
     startDate: { $lte: endOfDay },
@@ -157,22 +157,12 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
   };
   if (hospitalId) rosterQuery.hospitalId = hospitalId;
   const allPublished = await Roster.find(rosterQuery)
-    .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })
     .select("_id hospitalId")
     .lean();
 
   if (!allPublished.length) return [];
 
-  // Pick ONLY the current published roster for each hospital
-  const hospitalCurrentMap = new Map();
-  for (const r of allPublished) {
-    const key = r.hospitalId.toString();
-    if (!hospitalCurrentMap.has(key)) {
-      hospitalCurrentMap.set(key, r._id);
-    }
-  }
-
-  const rosterIds = Array.from(hospitalCurrentMap.values());
+  const rosterIds = allPublished.map((r) => r._id);
 
   const assignmentQuery = {
     rosterId: { $in: rosterIds },
@@ -182,6 +172,7 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
 
   const assignments = await RosterAssignment.find(assignmentQuery).populate("employeeId").lean();
   const processed = [];
+  const evaluatedEmployees = new Set();
 
   for (const assignment of assignments) {
     const emp = assignment.employeeId;
@@ -191,6 +182,12 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
 
     const empId = emp._id;
     const hospId = assignment.hospitalId;
+
+    const empKey = `${hospId.toString()}_${empId.toString()}`;
+    if (evaluatedEmployees.has(empKey)) {
+      continue;
+    }
+    evaluatedEmployees.add(empKey);
 
     // 1. Calculate shift end timestamp
     let shiftEndObj = null;
@@ -237,8 +234,8 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
     });
 
     if (existing) {
-      // If employee checked in (checkIn != null) -> DO NOT mark ABSENT
-      if (existing.checkIn) {
+      // If employee checked in (checkIn != null) or PRESENT/HALF_DAY -> DO NOT mark ABSENT
+      if (existing.checkIn || existing.status === ATTENDANCE_STATUSES.PRESENT || existing.status === ATTENDANCE_STATUSES.HALF_DAY) {
         continue;
       }
       // If already marked ABSENT or ON_LEAVE -> skip

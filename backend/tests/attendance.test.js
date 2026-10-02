@@ -789,6 +789,334 @@ const runTests = async () => {
         app.stopAutomaticAbsenceScheduler();
         console.log("  ✓ 29. Scheduler prevents duplicate running timer instances and cleans up properly");
 
+        // ─────────────────────────────────────────────────────────────
+        // 9. MULTIPLE ACTIVE ROSTERS ATTENDANCE TESTS (PHASE 1 CORRECTIONS)
+        // ─────────────────────────────────────────────────────────────
+        console.log("\n--- 9. MULTIPLE ACTIVE ROSTERS ATTENDANCE TESTS ---");
+
+        const targetDateStr1 = "2026-09-25";
+        const targetDateObj1 = new Date(`${targetDateStr1}T00:00:00.000Z`);
+
+        // Roster A: 20 Sep -> 30 Sep (Hospital A)
+        const rosterA = await Roster.create({
+            hospitalId: hospitalA._id,
+            title: `Roster A ${testTimestamp}`,
+            startDate: new Date("2026-09-20T00:00:00.000Z"),
+            endDate: new Date("2026-09-30T00:00:00.000Z"),
+            status: "PUBLISHED",
+            publishedAt: new Date(),
+            createdBy: adminUser._id,
+        });
+
+        // Roster B: 24 Sep -> 05 Oct (Hospital A - Overlapping Published Roster)
+        const rosterB = await Roster.create({
+            hospitalId: hospitalA._id,
+            title: `Roster B ${testTimestamp}`,
+            startDate: new Date("2026-09-24T00:00:00.000Z"),
+            endDate: new Date("2026-10-05T00:00:00.000Z"),
+            status: "PUBLISHED",
+            publishedAt: new Date(),
+            createdBy: adminUser._id,
+        });
+
+        // Employee assigned to Roster A
+        const empRosterA = await Employee.create({
+            hospitalId: hospitalA._id,
+            positionId: staffPosition._id,
+            firstName: "RosterA",
+            lastName: "Emp",
+            email: `rostera_${testTimestamp}@test.com`,
+            phone: "9876500001",
+            employeeId: `EMPA-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+
+        await RosterAssignment.create({
+            hospitalId: hospitalA._id,
+            rosterId: rosterA._id,
+            employeeId: empRosterA._id,
+            date: targetDateObj1,
+            shiftTitle: "Morning Shift",
+            startTime: "01:00",
+            endTime: "02:00",
+            dutyArea: "General Ward",
+            createdBy: adminUser._id,
+        });
+
+        // Employee assigned to Roster B
+        const empRosterB = await Employee.create({
+            hospitalId: hospitalA._id,
+            positionId: staffPosition._id,
+            firstName: "RosterB",
+            lastName: "Emp",
+            email: `rosterb_${testTimestamp}@test.com`,
+            phone: "9876500002",
+            employeeId: `EMPB-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+
+        await RosterAssignment.create({
+            hospitalId: hospitalA._id,
+            rosterId: rosterB._id,
+            employeeId: empRosterB._id,
+            date: targetDateObj1,
+            shiftTitle: "Night Shift",
+            startTime: "01:00",
+            endTime: "02:00",
+            dutyArea: "ICU",
+            createdBy: adminUser._id,
+        });
+
+        // TEST 1 & 2 & 3: Run automatic absence for targetDateStr1
+        const attendanceService = require("../src/services/attendance.service");
+        await attendanceService.processAutomaticAbsence({
+            hospitalId: hospitalA._id,
+            dateStr: targetDateStr1,
+        });
+
+        const empAAbsence = await Attendance.findOne({
+            hospitalId: hospitalA._id,
+            employeeId: empRosterA._id,
+            dateStr: targetDateStr1,
+        });
+        assert.ok(empAAbsence, "Employee on Roster A should be processed");
+        assert.strictEqual(empAAbsence.status, "ABSENT");
+
+        const empBAbsence = await Attendance.findOne({
+            hospitalId: hospitalA._id,
+            employeeId: empRosterB._id,
+            dateStr: targetDateStr1,
+        });
+        assert.ok(empBAbsence, "Employee on Roster B should be processed");
+        assert.strictEqual(empBAbsence.status, "ABSENT");
+        console.log("  ✓ TEST 1, 2, 3. Automatic absence processes assignments across ALL multiple published rosters");
+
+        // TEST 4 & 10: Existing Attendance is NOT duplicated on re-run
+        await attendanceService.processAutomaticAbsence({
+            hospitalId: hospitalA._id,
+            dateStr: targetDateStr1,
+        });
+        const empAAbsenceCount = await Attendance.countDocuments({
+            hospitalId: hospitalA._id,
+            employeeId: empRosterA._id,
+            dateStr: targetDateStr1,
+        });
+        assert.strictEqual(empAAbsenceCount, 1, "Must never create duplicate Attendance record for same employee/date");
+        console.log("  ✓ TEST 4 & 10. Existing Attendance is preserved without creating duplicate records");
+
+        // TEST 5: Employee with APPROVED leave is NOT marked ABSENT
+        const empLeave = await Employee.create({
+            hospitalId: hospitalA._id,
+            positionId: staffPosition._id,
+            firstName: "Leave",
+            lastName: "Approved",
+            email: `leaveapp_${testTimestamp}@test.com`,
+            phone: "9876500003",
+            employeeId: `EMPLV-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        await RosterAssignment.create({
+            hospitalId: hospitalA._id,
+            rosterId: rosterA._id,
+            employeeId: empLeave._id,
+            date: targetDateObj1,
+            shiftTitle: "Morning",
+            startTime: "01:00",
+            endTime: "02:00",
+            dutyArea: "General Ward",
+            createdBy: adminUser._id,
+        });
+        await Leave.create({
+            hospitalId: hospitalA._id,
+            employeeId: empLeave._id,
+            leaveType: "CASUAL",
+            startDate: targetDateObj1,
+            endDate: targetDateObj1,
+            totalDays: 1,
+            status: "approved",
+            reason: "On leave",
+            appliedBy: adminUser._id,
+        });
+
+        await attendanceService.processAutomaticAbsence({
+            hospitalId: hospitalA._id,
+            dateStr: targetDateStr1,
+        });
+        const empLeaveAbsence = await Attendance.findOne({
+            hospitalId: hospitalA._id,
+            employeeId: empLeave._id,
+            dateStr: targetDateStr1,
+        });
+        assert.strictEqual(empLeaveAbsence, null, "Employee with approved leave must NOT be marked ABSENT");
+        console.log("  ✓ TEST 5. Approved leave prevents automatic ABSENT");
+
+        // TEST 6: Employee with PENDING leave IS marked ABSENT
+        const empPendingLeave = await Employee.create({
+            hospitalId: hospitalA._id,
+            positionId: staffPosition._id,
+            firstName: "Leave",
+            lastName: "Pending",
+            email: `leavepend_${testTimestamp}@test.com`,
+            phone: "9876500004",
+            employeeId: `EMPPEND-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        await RosterAssignment.create({
+            hospitalId: hospitalA._id,
+            rosterId: rosterA._id,
+            employeeId: empPendingLeave._id,
+            date: targetDateObj1,
+            shiftTitle: "Morning",
+            startTime: "01:00",
+            endTime: "02:00",
+            dutyArea: "General Ward",
+            createdBy: adminUser._id,
+        });
+        await Leave.create({
+            hospitalId: hospitalA._id,
+            employeeId: empPendingLeave._id,
+            leaveType: "CASUAL",
+            startDate: targetDateObj1,
+            endDate: targetDateObj1,
+            totalDays: 1,
+            status: "pending",
+            reason: "Pending approval",
+            appliedBy: adminUser._id,
+        });
+        await attendanceService.processAutomaticAbsence({
+            hospitalId: hospitalA._id,
+            dateStr: targetDateStr1,
+        });
+        const empPendingAbsence = await Attendance.findOne({
+            hospitalId: hospitalA._id,
+            employeeId: empPendingLeave._id,
+            dateStr: targetDateStr1,
+        });
+        assert.ok(empPendingAbsence);
+        assert.strictEqual(empPendingAbsence.status, "ABSENT", "Pending leave is not approved leave");
+        console.log("  ✓ TEST 6. Pending leave does not prevent automatic ABSENT");
+
+        // TEST 7: Employee with REJECTED leave IS marked ABSENT
+        const empRejectedLeave = await Employee.create({
+            hospitalId: hospitalA._id,
+            positionId: staffPosition._id,
+            firstName: "Leave",
+            lastName: "Rejected",
+            email: `leaverej_${testTimestamp}@test.com`,
+            phone: "9876500005",
+            employeeId: `EMPREJ-${String(testTimestamp).slice(-4)}`,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        await RosterAssignment.create({
+            hospitalId: hospitalA._id,
+            rosterId: rosterA._id,
+            employeeId: empRejectedLeave._id,
+            date: targetDateObj1,
+            shiftTitle: "Morning",
+            startTime: "01:00",
+            endTime: "02:00",
+            dutyArea: "General Ward",
+            createdBy: adminUser._id,
+        });
+        await Leave.create({
+            hospitalId: hospitalA._id,
+            employeeId: empRejectedLeave._id,
+            leaveType: "CASUAL",
+            startDate: targetDateObj1,
+            endDate: targetDateObj1,
+            totalDays: 1,
+            status: "rejected",
+            reason: "Denied",
+            appliedBy: adminUser._id,
+        });
+        await attendanceService.processAutomaticAbsence({
+            hospitalId: hospitalA._id,
+            dateStr: targetDateStr1,
+        });
+        const empRejectedAbsence = await Attendance.findOne({
+            hospitalId: hospitalA._id,
+            employeeId: empRejectedLeave._id,
+            dateStr: targetDateStr1,
+        });
+        assert.ok(empRejectedAbsence);
+        assert.strictEqual(empRejectedAbsence.status, "ABSENT");
+        console.log("  ✓ TEST 7. Rejected/Cancelled leave does not prevent automatic ABSENT");
+
+        // TEST 8: Employee without roster assignment and rosterEligible=false is NOT marked ABSENT
+        const nonRosterPosition = await Position.create({
+            hospitalId: hospitalA._id,
+            name: `Non Roster Pos ${testTimestamp}`,
+            rosterEligible: false,
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        const empNonRoster = await Employee.create({
+            hospitalId: hospitalA._id,
+            firstName: "NonRoster",
+            lastName: "Staff",
+            email: `nonroster_${testTimestamp}@test.com`,
+            phone: "9876500006",
+            employeeId: `EMPNR-${String(testTimestamp).slice(-4)}`,
+            positionId: nonRosterPosition._id,
+            dateOfJoining: new Date(),
+            status: "active",
+            createdBy: adminUser._id,
+        });
+        await attendanceService.processAutomaticAbsence({
+            hospitalId: hospitalA._id,
+            dateStr: targetDateStr1,
+        });
+        const empNonRosterAbsence = await Attendance.findOne({
+            hospitalId: hospitalA._id,
+            employeeId: empNonRoster._id,
+            dateStr: targetDateStr1,
+        });
+        assert.strictEqual(empNonRosterAbsence, null, "Non-roster employee without assignment is not automatically ABSENT");
+        console.log("  ✓ TEST 8. Employee without roster assignment and rosterEligible=false is NOT marked ABSENT");
+
+        // TEST 9: Tenant Isolation — Hospital B rosters do NOT affect Hospital A automatic absence
+        const rosterHospitalB = await Roster.create({
+            hospitalId: hospitalB._id,
+            title: `Roster Hosp B ${testTimestamp}`,
+            startDate: new Date("2026-10-01T00:00:00.000Z"),
+            endDate: new Date("2026-10-15T00:00:00.000Z"),
+            status: "PUBLISHED",
+            publishedAt: new Date(),
+            createdBy: creatorIdB,
+        });
+        await RosterAssignment.create({
+            hospitalId: hospitalB._id,
+            rosterId: rosterHospitalB._id,
+            employeeId: staffEmp2._id,
+            date: targetDateObj1,
+            shiftTitle: "Hosp B Shift",
+            startTime: "01:00",
+            endTime: "02:00",
+            dutyArea: "Hosp B Ward",
+            createdBy: creatorIdB,
+        });
+        await attendanceService.processAutomaticAbsence({
+            hospitalId: hospitalA._id,
+            dateStr: targetDateStr1,
+        });
+        const hospBAbsenceInA = await Attendance.findOne({
+            hospitalId: hospitalA._id,
+            employeeId: staffEmp2._id,
+            dateStr: targetDateStr1,
+        });
+        assert.strictEqual(hospBAbsenceInA, null, "Hospital B employee must not receive attendance record under Hospital A");
+        console.log("  ✓ TEST 9. Cross-hospital tenant isolation enforced during automatic absence processing");
+
         console.log("\n=======================================================");
         console.log("=== ALL ATTENDANCE + SCHEDULER TESTS PASSED 100% ===");
         console.log("=======================================================\n");
