@@ -1,15 +1,15 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatTime12h, getTodayDateStr } from './dateUtils';
+import { formatDate, formatTime12h, getTodayDateStr, parseLocalDateStr } from './dateUtils';
 
 export { formatTime12h };
 
 /**
- * Format Date to Month (Year) e.g., SEPTEMBER (2026)
+ * Format Date to Month (Year) e.g., OCTOBER (2026)
  */
 export function formatMonthYear(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  const d = parseLocalDateStr(dateStr) || new Date(dateStr);
   if (isNaN(d.getTime())) return '';
   const month = d.toLocaleString('en-US', { month: 'long' }).toUpperCase();
   const year = d.getFullYear();
@@ -17,12 +17,12 @@ export function formatMonthYear(dateStr) {
 }
 
 /**
- * Format Date range to DD/MM/YY TO DD/MM/YY e.g., 11/09/26 TO 20/09/26
+ * Format Date range to DD/MM/YY TO DD/MM/YY e.g., 01/10/26 TO 15/10/26
  */
 export function formatDatePeriod(startStr, endStr) {
   const formatShort = (dateInput) => {
     if (!dateInput) return '';
-    const d = new Date(dateInput);
+    const d = parseLocalDateStr(dateInput) || new Date(dateInput);
     if (isNaN(d.getTime())) return '';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -37,6 +37,7 @@ export function formatDatePeriod(startStr, endStr) {
 
 /**
  * Generate and download PDF in browser matching Hospital Reference Layout
+ * Grouped strictly by DATE -> SHIFT -> DUTY AREA -> EMPLOYEES
  */
 export function generateFrontendRosterPDF(activeRoster) {
   if (!activeRoster) return;
@@ -54,6 +55,7 @@ export function generateFrontendRosterPDF(activeRoster) {
 
   const monthYear = formatMonthYear(activeRoster.startDate);
   const datePeriod = formatDatePeriod(activeRoster.startDate, activeRoster.endDate);
+  const rosterTitle = (activeRoster.title || 'HOSPITAL DUTY ROSTER').toUpperCase();
 
   // Extract columns (shifts)
   let columns = [];
@@ -89,20 +91,42 @@ export function generateFrontendRosterPDF(activeRoster) {
     }
   }
 
-  // Construct Header Row - EXACTLY columns.length columns (NO 4th Duty Area column!)
+  // Construct Header Row for shift columns
   const headRow = columns.map((col, idx) => {
     const title = (col.title || `SHIFT ${idx + 1}`).toUpperCase();
     const timeStr = col.startTime && col.endTime
       ? `${formatTime12h(col.startTime)} TO ${formatTime12h(col.endTime)}`
       : '';
-    return timeStr ? `${title} ${timeStr}` : title;
+    return timeStr ? `${title} (${timeStr})` : title;
   });
 
   const assignmentsList = activeRoster.assignments || [];
 
-  // Helper to match assignments
-  function getCellAssignments(dutyAreaName, col) {
+  // Parse date range into array of date ISO strings
+  const datesList = [];
+  if (activeRoster.startDate && activeRoster.endDate) {
+    const start = parseLocalDateStr(activeRoster.startDate);
+    const end = parseLocalDateStr(activeRoster.endDate);
+    if (start && end) {
+      const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 12, 0, 0);
+      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 12, 0, 0);
+      while (cur <= endDay) {
+        datesList.push(getTodayDateStr(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+  }
+
+  if (datesList.length === 0 && activeRoster.startDate) {
+    datesList.push(getTodayDateStr(activeRoster.startDate));
+  }
+
+  // Helper to match assignments for a SPECIFIC DATE, duty area, and shift column
+  function getCellAssignmentsForDate(dStr, dutyAreaName, col) {
     return assignmentsList.filter((ass) => {
+      const assDate = getTodayDateStr(ass.date);
+      if (assDate !== dStr) return false;
+
       const matchArea =
         ass.dutyArea &&
         ass.dutyArea.trim().toLowerCase() === dutyAreaName.trim().toLowerCase();
@@ -116,180 +140,200 @@ export function generateFrontendRosterPDF(activeRoster) {
     });
   }
 
-  // Prepare structured cell objects and full text strings for autoTable
-  const cellMatrix = dutyAreas.map((da) => {
-    const daName = (da.name || da.title || 'DUTY AREA').toUpperCase();
-
-    return columns.map((col) => {
-      const matches = getCellAssignments(daName, col);
-      const empLines = [];
-
-      if (matches.length > 0) {
-        matches.forEach((ass) => {
-          let empName = 'UNASSIGNED';
-          let phone = '';
-
-          if (ass.employeeId) {
-            if (typeof ass.employeeId === 'object') {
-              const first = ass.employeeId.firstName || '';
-              const last = ass.employeeId.lastName || '';
-              empName = `${first} ${last}`.trim() || ass.employeeId.name || 'EMPLOYEE';
-              phone = ass.employeeId.phone || ass.employeeId.mobile || '';
-            } else {
-              empName = ass.employeeId;
-            }
-          } else if (ass.fullName) {
-            empName = ass.fullName;
-          }
-
-          let line = empName.toUpperCase();
-          if (phone) {
-            line += ` ${phone}`;
-          }
-
-          // Custom shift time
-          if (
-            ass.startTime &&
-            ass.endTime &&
-            (ass.startTime !== col.startTime || ass.endTime !== col.endTime)
-          ) {
-            line += ` (${formatTime12h(ass.startTime)} TO ${formatTime12h(ass.endTime)})`;
-          }
-
-          empLines.push(line);
-        });
-      }
-
-      return {
-        dutyAreaName: daName,
-        empLines,
-      };
-    });
-  });
-
-  // Full body rows for autoTable text height measurement
-  const bodyRows = cellMatrix.map((rowObj) => {
-    return rowObj.map((cellObj) => {
-      return [cellObj.dutyAreaName, ...cellObj.empLines].join('\n');
-    });
-  });
-
-  // Calculate equal column widths for all shift columns
   const shiftColWidth = printableWidth / columns.length;
   const columnStyles = {};
   columns.forEach((_, idx) => {
     columnStyles[idx] = { cellWidth: shiftColWidth };
   });
 
-  // Generate Table via autoTable
-  autoTable(doc, {
-    head: [headRow],
-    body: bodyRows,
-    startY: 24,
-    margin: { top: 24, left: marginX, right: marginX, bottom: 10 },
-    theme: 'grid',
-    headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-      fontStyle: 'bold',
-      halign: 'center',
-      valign: 'middle',
-      fontSize: 9.5,
-      lineWidth: 0.3,
-      lineColor: [0, 0, 0],
-    },
-    bodyStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-      fontSize: 8,
-      cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
-      valign: 'top',
-      lineWidth: 0.3,
-      lineColor: [0, 0, 0],
-    },
-    columnStyles,
-    willDrawCell: (data) => {
-      if (data.section === 'body') {
-        // Clear default text so we draw custom styled text with Duty Area in BOLD and Employees in NORMAL weight
-        data.cell.text = [];
-      }
-    },
-    didDrawCell: (data) => {
-      if (data.section === 'body') {
-        const rowIdx = data.row.index;
-        const colIdx = data.column.index;
-        const cellObj = cellMatrix[rowIdx][colIdx];
-        const cell = data.cell;
+  // Loop over each date in the roster range and render date-separated sections
+  datesList.forEach((dStr, dateIdx) => {
+    if (dateIdx > 0) {
+      doc.addPage();
+    }
 
-        const paddingLeft = cell.padding('left');
-        const paddingRight = cell.padding('right');
-        const paddingTop = cell.padding('top');
-        const contentWidth = cell.width - paddingLeft - paddingRight;
-        const centerX = cell.x + cell.width / 2;
-        let currentY = cell.y + paddingTop + 2.5;
+    const dateObj = parseLocalDateStr(dStr) || new Date(dStr);
+    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const dayNum = String(dateObj.getDate()).padStart(2, '0');
+    const yearNum = dateObj.getFullYear();
+    const dateBanner = `DATE: ${dayName}, ${dayNum} ${monthName} ${yearNum}`;
 
-        // 1. Duty Area Header (BOLD, centered, uppercase, black)
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(0, 0, 0);
+    // Prepare cell matrix for this specific date
+    const cellMatrix = dutyAreas.map((da) => {
+      const daName = (da.name || da.title || 'DUTY AREA').toUpperCase();
 
-        const daLines = doc.splitTextToSize(cellObj.dutyAreaName, contentWidth);
-        daLines.forEach((line) => {
-          doc.text(line, centerX, currentY, { align: 'center' });
-          currentY += 3.6;
-        });
+      return columns.map((col) => {
+        const matches = getCellAssignmentsForDate(dStr, daName, col);
+        const empLines = [];
 
-        // Small gap before employees if any exist
-        if (cellObj.empLines.length > 0) {
-          currentY += 1.0;
+        if (matches.length > 0) {
+          matches.forEach((ass) => {
+            let empName = 'UNASSIGNED';
+            let phone = '';
+
+            if (ass.employeeId) {
+              if (typeof ass.employeeId === 'object') {
+                const first = ass.employeeId.firstName || '';
+                const last = ass.employeeId.lastName || '';
+                empName = `${first} ${last}`.trim() || ass.employeeId.name || 'EMPLOYEE';
+                phone = ass.employeeId.phone || ass.employeeId.mobile || '';
+              } else {
+                empName = ass.employeeId;
+              }
+            } else if (ass.fullName) {
+              empName = ass.fullName;
+            }
+
+            let line = empName.toUpperCase();
+            if (phone) {
+              line += ` ${phone}`;
+            }
+
+            if (
+              ass.startTime &&
+              ass.endTime &&
+              (ass.startTime !== col.startTime || ass.endTime !== col.endTime)
+            ) {
+              line += ` (${formatTime12h(ass.startTime)} TO ${formatTime12h(ass.endTime)})`;
+            }
+
+            if (ass.notes) {
+              line += ` [${ass.notes}]`;
+            }
+
+            empLines.push(line);
+          });
+        } else {
+          empLines.push('NO STAFF ASSIGNED');
         }
 
-        // 2. Employee Lines (NORMAL / REGULAR weight, centered, uppercase, black)
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.5);
-        doc.setTextColor(0, 0, 0);
+        return {
+          dutyAreaName: daName,
+          empLines,
+        };
+      });
+    });
 
-        cellObj.empLines.forEach((empLine) => {
-          const empWrapped = doc.splitTextToSize(empLine, contentWidth);
-          empWrapped.forEach((line) => {
+    const bodyRows = cellMatrix.map((rowObj) => {
+      return rowObj.map((cellObj) => {
+        return [cellObj.dutyAreaName, ...cellObj.empLines].join('\n');
+      });
+    });
+
+    // Render header title on every page
+    const startY = 32;
+
+    autoTable(doc, {
+      head: [headRow],
+      body: bodyRows,
+      startY,
+      margin: { top: 32, left: marginX, right: marginX, bottom: 12 },
+      theme: 'grid',
+      headStyles: {
+        fillColor: [241, 245, 249],
+        textColor: [17, 24, 39],
+        fontStyle: 'bold',
+        halign: 'center',
+        valign: 'middle',
+        fontSize: 9,
+        lineWidth: 0.3,
+        lineColor: [0, 0, 0],
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        fontSize: 8,
+        cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+        valign: 'top',
+        lineWidth: 0.3,
+        lineColor: [0, 0, 0],
+      },
+      columnStyles,
+      willDrawCell: (data) => {
+        if (data.section === 'body') {
+          data.cell.text = [];
+        }
+      },
+      didDrawCell: (data) => {
+        if (data.section === 'body') {
+          const rowIdx = data.row.index;
+          const colIdx = data.column.index;
+          const cellObj = cellMatrix[rowIdx][colIdx];
+          const cell = data.cell;
+
+          const paddingLeft = cell.padding('left');
+          const paddingRight = cell.padding('right');
+          const paddingTop = cell.padding('top');
+          const contentWidth = cell.width - paddingLeft - paddingRight;
+          const centerX = cell.x + cell.width / 2;
+          let currentY = cell.y + paddingTop + 2.5;
+
+          // 1. Duty Area Header (BOLD, centered, uppercase, black)
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor(15, 23, 42);
+
+          const daLines = doc.splitTextToSize(cellObj.dutyAreaName, contentWidth);
+          daLines.forEach((line) => {
             doc.text(line, centerX, currentY, { align: 'center' });
-            currentY += 3.4;
+            currentY += 3.6;
           });
-        });
-      }
-    },
-    didDrawPage: (data) => {
-      // Draw Header at top of every page
-      const currentY = 8;
-      doc.setFont('helvetica', 'bold');
 
-      // Month & Year
-      if (monthYear) {
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        doc.text(monthYear, pageWidth / 2, currentY, { align: 'center' });
-      }
+          if (cellObj.empLines.length > 0) {
+            currentY += 1.0;
+          }
 
-      // Date Range Period
-      if (datePeriod) {
+          // 2. Employee Lines (NORMAL / REGULAR weight)
+          cellObj.empLines.forEach((empLine) => {
+            const isNoStaff = empLine === 'NO STAFF ASSIGNED';
+            doc.setFont('helvetica', isNoStaff ? 'italic' : 'normal');
+            doc.setFontSize(isNoStaff ? 7.0 : 7.5);
+            doc.setTextColor(isNoStaff ? 148 : 0, isNoStaff ? 163 : 0, isNoStaff ? 184 : 0);
+
+            const empWrapped = doc.splitTextToSize(empLine, contentWidth);
+            empWrapped.forEach((line) => {
+              doc.text(line, centerX, currentY, { align: 'center' });
+              currentY += 3.4;
+            });
+          });
+        }
+      },
+      didDrawPage: (data) => {
+        // Draw Main Header Banner at top of page
+        doc.setFont('helvetica', 'bold');
+
+        // Month & Year (e.g. OCTOBER 2026)
+        if (monthYear) {
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+          doc.text(monthYear, pageWidth / 2, 8, { align: 'center' });
+        }
+
+        // Period Range & Roster Title (e.g. 01/10/26 TO 15/10/26 - OCTOBER NURSING ROSTER)
+        doc.setFontSize(9);
+        doc.setTextColor(51, 65, 85);
+        doc.text(`${datePeriod} | ${rosterTitle}`, pageWidth / 2, 14, { align: 'center' });
+
+        // Date Banner (e.g. DATE: THU, 01 OCT 2026)
         doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text(datePeriod, pageWidth / 2, currentY + 6, { align: 'center' });
-      }
+        doc.setTextColor(2, 132, 199);
+        doc.text(dateBanner, pageWidth / 2, 22, { align: 'center' });
 
-      // Footer - Page Numbers
-      const totalPages = doc.internal.getNumberOfPages();
-      const pageCurrent = data.pageNumber;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.text(
-        `Page ${pageCurrent} of ${totalPages}`,
-        pageWidth - marginX,
-        pageHeight - 5,
-        { align: 'right' }
-      );
-    },
+        // Footer - Page Numbers
+        const totalPages = doc.internal.getNumberOfPages();
+        const pageCurrent = data.pageNumber;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(
+          `Page ${pageCurrent} of ${totalPages}`,
+          pageWidth - marginX,
+          pageHeight - 5,
+          { align: 'right' }
+        );
+      },
+    });
   });
 
   // Save PDF file directly in browser
