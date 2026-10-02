@@ -36,10 +36,65 @@ export function formatDatePeriod(startStr, endStr) {
 }
 
 /**
- * Generate and download PDF in browser matching Hospital Reference Layout
- * Pages are split strictly by CHANGE IN ROSTER ASSIGNMENT PATTERN.
- * Consecutive dates with identical shift, duty area, employee, times, and notes assignments
- * are grouped onto the SAME page displaying their effective date range (e.g. 01/10/26 TO 10/10/26).
+ * Format date range for sub-periods (e.g., 01–05 Oct, 01/10–05/10)
+ */
+function formatSubPeriod(startStr, endStr) {
+  const s = parseLocalDateStr(startStr) || new Date(startStr);
+  const e = parseLocalDateStr(endStr) || new Date(endStr);
+  if (!s || isNaN(s.getTime())) return '';
+  if (!e || isNaN(e.getTime())) return '';
+
+  const startDay = String(s.getDate()).padStart(2, '0');
+  const endDay = String(e.getDate()).padStart(2, '0');
+  const startMonth = s.toLocaleString('en-US', { month: 'short' });
+  const endMonth = e.toLocaleString('en-US', { month: 'short' });
+
+  if (startStr === endStr) {
+    return `${startDay} ${startMonth}`;
+  }
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+    return `${startDay}–${endDay} ${startMonth}`;
+  }
+  return `${startDay} ${startMonth} – ${endDay} ${endMonth}`;
+}
+
+/**
+ * Build concise date ranges string for employee assignments in a cell
+ */
+function buildDateRangesString(sortedDates, allRosterDates) {
+  if (!sortedDates || sortedDates.length === 0) return '';
+  // If assigned for all dates of the roster, no date range suffix is needed
+  if (allRosterDates && sortedDates.length === allRosterDates.length) {
+    return '';
+  }
+
+  const blocks = [];
+  let blockStart = sortedDates[0];
+  let prevDate = parseLocalDateStr(sortedDates[0]);
+
+  for (let i = 1; i < sortedDates.length; i++) {
+    const currStr = sortedDates[i];
+    const currDate = parseLocalDateStr(currStr);
+    const diffDays = Math.round((currDate - prevDate) / 86400000);
+
+    if (diffDays === 1) {
+      prevDate = currDate;
+    } else {
+      blocks.push({ start: blockStart, end: getTodayDateStr(prevDate) });
+      blockStart = currStr;
+      prevDate = currDate;
+    }
+  }
+  blocks.push({ start: blockStart, end: getTodayDateStr(prevDate) });
+
+  const formattedBlocks = blocks.map((b) => formatSubPeriod(b.start, b.end));
+  return `(${formattedBlocks.join(', ')})`;
+}
+
+/**
+ * Generate and download SINGLE-PAGE PDF in browser matching Hospital Reference Layout
+ * The downloaded PDF is ALWAYS EXACTLY ONE PAGE for the selected roster summary.
+ * Daily assignments for the same employee in a Shift + Duty Area cell are deduplicated.
  */
 export function generateFrontendRosterPDF(activeRoster) {
   if (!activeRoster) return;
@@ -123,63 +178,105 @@ export function generateFrontendRosterPDF(activeRoster) {
     datesList.push(getTodayDateStr(activeRoster.startDate));
   }
 
-  // Compute Fingerprint of Roster Assignment Pattern for a specific date
-  function getDateFingerprint(dStr) {
-    const dayAssigns = assignmentsList.filter((ass) => getTodayDateStr(ass.date) === dStr);
-    const items = dayAssigns.map((ass) => {
-      const area = (ass.dutyArea || '').trim().toLowerCase();
-      const shift = (ass.columnId || ass.shiftTitle || '').trim().toLowerCase();
-      let emp = '';
-      if (ass.employeeId) {
-        emp = typeof ass.employeeId === 'object'
-          ? (ass.employeeId._id || ass.employeeId.id || `${ass.employeeId.firstName}_${ass.employeeId.lastName}`)
-          : String(ass.employeeId);
-      } else {
-        emp = (ass.fullName || '').trim().toLowerCase();
-      }
-      const start = ass.startTime || '';
-      const end = ass.endTime || '';
-      const notes = ass.notes || '';
-      return `${area}::${shift}::${emp}::${start}::${end}::${notes}`;
-    });
-    items.sort();
-    return items.join('||');
-  }
+  // Build Cell Matrix grouped by Duty Area + Shift Column across entire roster period
+  const cellMatrix = dutyAreas.map((da) => {
+    const daName = (da.name || da.title || 'DUTY AREA').toUpperCase();
 
-  // Group consecutive dates with identical assignment pattern fingerprints
-  const chunks = [];
-  datesList.forEach((dStr) => {
-    const fp = getDateFingerprint(dStr);
-    if (chunks.length === 0) {
-      chunks.push({ startDate: dStr, endDate: dStr, fingerprint: fp });
-    } else {
-      const lastChunk = chunks[chunks.length - 1];
-      if (lastChunk.fingerprint === fp) {
-        lastChunk.endDate = dStr;
-      } else {
-        chunks.push({ startDate: dStr, endDate: dStr, fingerprint: fp });
+    return columns.map((col) => {
+      // Find all assignments for this duty area & column across the entire roster
+      const matchingAssignments = assignmentsList.filter((ass) => {
+        const matchArea =
+          ass.dutyArea &&
+          ass.dutyArea.trim().toLowerCase() === daName.trim().toLowerCase();
+
+        const matchCol =
+          (ass.columnId && ass.columnId === col.id) ||
+          (ass.shiftTitle &&
+            ass.shiftTitle.trim().toLowerCase() === (col.title || '').trim().toLowerCase());
+
+        return matchArea && matchCol;
+      });
+
+      const empLines = [];
+
+      if (matchingAssignments.length > 0) {
+        // Group by unique employee
+        const empMap = new Map();
+
+        matchingAssignments.forEach((ass) => {
+          let empKey = '';
+          let empName = 'UNASSIGNED';
+          let phone = '';
+
+          if (ass.employeeId) {
+            if (typeof ass.employeeId === 'object') {
+              empKey = ass.employeeId._id || ass.employeeId.id || `${ass.employeeId.firstName}_${ass.employeeId.lastName}`;
+              const first = ass.employeeId.firstName || '';
+              const last = ass.employeeId.lastName || '';
+              empName = `${first} ${last}`.trim() || ass.employeeId.name || 'EMPLOYEE';
+              phone = ass.employeeId.phone || ass.employeeId.mobile || '';
+            } else {
+              empKey = String(ass.employeeId);
+              empName = String(ass.employeeId);
+            }
+          } else if (ass.fullName) {
+            empKey = ass.fullName.trim().toLowerCase();
+            empName = ass.fullName;
+          } else {
+            empKey = 'unassigned';
+          }
+
+          if (!empMap.has(empKey)) {
+            empMap.set(empKey, {
+              empName,
+              phone,
+              assignments: [],
+            });
+          }
+          empMap.get(empKey).assignments.push(ass);
+        });
+
+        // Deduplicate employee entries and append date ranges if assigned only for a sub-period
+        empMap.forEach((empObj) => {
+          const rawDates = empObj.assignments
+            .map((a) => getTodayDateStr(a.date))
+            .filter(Boolean);
+
+          const uniqueDates = Array.from(new Set(rawDates)).sort();
+          const dateSuffix = buildDateRangesString(uniqueDates, datesList);
+
+          let line = empObj.empName.toUpperCase();
+          if (empObj.phone) {
+            line += ` ${empObj.phone}`;
+          }
+          if (dateSuffix) {
+            line += ` ${dateSuffix}`;
+          }
+
+          // Custom shift time override or notes
+          const firstAss = empObj.assignments[0];
+          if (
+            firstAss &&
+            firstAss.startTime &&
+            firstAss.endTime &&
+            (firstAss.startTime !== col.startTime || firstAss.endTime !== col.endTime)
+          ) {
+            line += ` (${formatTime12h(firstAss.startTime)} TO ${formatTime12h(firstAss.endTime)})`;
+          }
+          if (firstAss && firstAss.notes) {
+            line += ` [${firstAss.notes}]`;
+          }
+
+          empLines.push(line);
+        });
       }
-    }
+
+      return {
+        dutyAreaName: daName,
+        empLines,
+      };
+    });
   });
-
-  // Helper to match assignments for a SPECIFIC DATE, duty area, and shift column
-  function getCellAssignmentsForDate(dStr, dutyAreaName, col) {
-    return assignmentsList.filter((ass) => {
-      const assDate = getTodayDateStr(ass.date);
-      if (assDate !== dStr) return false;
-
-      const matchArea =
-        ass.dutyArea &&
-        ass.dutyArea.trim().toLowerCase() === dutyAreaName.trim().toLowerCase();
-
-      const matchCol =
-        (ass.columnId && ass.columnId === col.id) ||
-        (ass.shiftTitle &&
-          ass.shiftTitle.trim().toLowerCase() === (col.title || '').trim().toLowerCase());
-
-      return matchArea && matchCol;
-    });
-  }
 
   const shiftColWidth = printableWidth / columns.length;
   const columnStyles = {};
@@ -187,189 +284,115 @@ export function generateFrontendRosterPDF(activeRoster) {
     columnStyles[idx] = { cellWidth: shiftColWidth };
   });
 
-  // Render one PDF page per consecutive pattern chunk
-  chunks.forEach((chunk, chunkIdx) => {
-    if (chunkIdx > 0) {
-      doc.addPage();
-    }
-
-    const chunkPeriodStr = formatDatePeriod(chunk.startDate, chunk.endDate);
-
-    // Prepare cell matrix for this chunk (using sample date from chunk)
-    const sampleDate = chunk.startDate;
-    const cellMatrix = dutyAreas.map((da) => {
-      const daName = (da.name || da.title || 'DUTY AREA').toUpperCase();
-
-      return columns.map((col) => {
-        const matches = getCellAssignmentsForDate(sampleDate, daName, col);
-        const empLines = [];
-
-        if (matches.length > 0) {
-          matches.forEach((ass) => {
-            let empName = 'UNASSIGNED';
-            let phone = '';
-
-            if (ass.employeeId) {
-              if (typeof ass.employeeId === 'object') {
-                const first = ass.employeeId.firstName || '';
-                const last = ass.employeeId.lastName || '';
-                empName = `${first} ${last}`.trim() || ass.employeeId.name || 'EMPLOYEE';
-                phone = ass.employeeId.phone || ass.employeeId.mobile || '';
-              } else {
-                empName = ass.employeeId;
-              }
-            } else if (ass.fullName) {
-              empName = ass.fullName;
-            }
-
-            let line = empName.toUpperCase();
-            if (phone) {
-              line += ` ${phone}`;
-            }
-
-            if (
-              ass.startTime &&
-              ass.endTime &&
-              (ass.startTime !== col.startTime || ass.endTime !== col.endTime)
-            ) {
-              line += ` (${formatTime12h(ass.startTime)} TO ${formatTime12h(ass.endTime)})`;
-            }
-
-            if (ass.notes) {
-              line += ` [${ass.notes}]`;
-            }
-
-            empLines.push(line);
-          });
-        } else {
-          empLines.push('NO STAFF ASSIGNED');
-        }
-
-        return {
-          dutyAreaName: daName,
-          empLines,
-        };
-      });
+  const bodyRows = cellMatrix.map((rowObj) => {
+    return rowObj.map((cellObj) => {
+      return [cellObj.dutyAreaName, ...cellObj.empLines].join('\n');
     });
+  });
 
-    const bodyRows = cellMatrix.map((rowObj) => {
-      return rowObj.map((cellObj) => {
-        return [cellObj.dutyAreaName, ...cellObj.empLines].join('\n');
-      });
-    });
+  const startY = 24;
 
-    const startY = 32;
+  autoTable(doc, {
+    head: [headRow],
+    body: bodyRows,
+    startY,
+    margin: { top: 24, left: marginX, right: marginX, bottom: 10 },
+    theme: 'grid',
+    headStyles: {
+      fillColor: [241, 245, 249],
+      textColor: [17, 24, 39],
+      fontStyle: 'bold',
+      halign: 'center',
+      valign: 'middle',
+      fontSize: 9,
+      lineWidth: 0.3,
+      lineColor: [0, 0, 0],
+    },
+    bodyStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      fontSize: 8,
+      cellPadding: { top: 2, bottom: 2, left: 3, right: 3 },
+      valign: 'top',
+      lineWidth: 0.3,
+      lineColor: [0, 0, 0],
+    },
+    columnStyles,
+    willDrawCell: (data) => {
+      if (data.section === 'body') {
+        data.cell.text = [];
+      }
+    },
+    didDrawCell: (data) => {
+      if (data.section === 'body') {
+        const rowIdx = data.row.index;
+        const colIdx = data.column.index;
+        const cellObj = cellMatrix[rowIdx][colIdx];
+        const cell = data.cell;
 
-    autoTable(doc, {
-      head: [headRow],
-      body: bodyRows,
-      startY,
-      margin: { top: 32, left: marginX, right: marginX, bottom: 12 },
-      theme: 'grid',
-      headStyles: {
-        fillColor: [241, 245, 249],
-        textColor: [17, 24, 39],
-        fontStyle: 'bold',
-        halign: 'center',
-        valign: 'middle',
-        fontSize: 9,
-        lineWidth: 0.3,
-        lineColor: [0, 0, 0],
-      },
-      bodyStyles: {
-        fillColor: [255, 255, 255],
-        textColor: [0, 0, 0],
-        fontSize: 8,
-        cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
-        valign: 'top',
-        lineWidth: 0.3,
-        lineColor: [0, 0, 0],
-      },
-      columnStyles,
-      willDrawCell: (data) => {
-        if (data.section === 'body') {
-          data.cell.text = [];
-        }
-      },
-      didDrawCell: (data) => {
-        if (data.section === 'body') {
-          const rowIdx = data.row.index;
-          const colIdx = data.column.index;
-          const cellObj = cellMatrix[rowIdx][colIdx];
-          const cell = data.cell;
+        const paddingLeft = cell.padding('left');
+        const paddingRight = cell.padding('right');
+        const paddingTop = cell.padding('top');
+        const contentWidth = cell.width - paddingLeft - paddingRight;
+        const centerX = cell.x + cell.width / 2;
+        let currentY = cell.y + paddingTop + 2.5;
 
-          const paddingLeft = cell.padding('left');
-          const paddingRight = cell.padding('right');
-          const paddingTop = cell.padding('top');
-          const contentWidth = cell.width - paddingLeft - paddingRight;
-          const centerX = cell.x + cell.width / 2;
-          let currentY = cell.y + paddingTop + 2.5;
-
-          // 1. Duty Area Header (BOLD, centered, uppercase, black)
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
-          doc.setTextColor(15, 23, 42);
-
-          const daLines = doc.splitTextToSize(cellObj.dutyAreaName, contentWidth);
-          daLines.forEach((line) => {
-            doc.text(line, centerX, currentY, { align: 'center' });
-            currentY += 3.6;
-          });
-
-          if (cellObj.empLines.length > 0) {
-            currentY += 1.0;
-          }
-
-          // 2. Employee Lines (NORMAL / REGULAR weight)
-          cellObj.empLines.forEach((empLine) => {
-            const isNoStaff = empLine === 'NO STAFF ASSIGNED';
-            doc.setFont('helvetica', isNoStaff ? 'italic' : 'normal');
-            doc.setFontSize(isNoStaff ? 7.0 : 7.5);
-            doc.setTextColor(isNoStaff ? 148 : 0, isNoStaff ? 163 : 0, isNoStaff ? 184 : 0);
-
-            const empWrapped = doc.splitTextToSize(empLine, contentWidth);
-            empWrapped.forEach((line) => {
-              doc.text(line, centerX, currentY, { align: 'center' });
-              currentY += 3.4;
-            });
-          });
-        }
-      },
-      didDrawPage: (data) => {
-        // Draw Main Header Banner at top of page
+        // 1. Duty Area Header (BOLD, centered, uppercase, black)
         doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(15, 23, 42);
 
-        // Month & Year (e.g. OCTOBER 2026)
-        if (monthYear) {
-          doc.setFontSize(11);
-          doc.setTextColor(0, 0, 0);
-          doc.text(monthYear, pageWidth / 2, 8, { align: 'center' });
+        const daLines = doc.splitTextToSize(cellObj.dutyAreaName, contentWidth);
+        daLines.forEach((line) => {
+          doc.text(line, centerX, currentY, { align: 'center' });
+          currentY += 3.6;
+        });
+
+        if (cellObj.empLines.length > 0) {
+          currentY += 1.0;
         }
 
-        // Period Range & Roster Title (e.g. 01/10/26 TO 15/10/26 | OCTOBER NURSING ROSTER)
-        doc.setFontSize(9);
-        doc.setTextColor(51, 65, 85);
-        doc.text(`${overallDatePeriod} | ${rosterTitle}`, pageWidth / 2, 14, { align: 'center' });
+        // 2. Employee Lines (NORMAL / REGULAR weight)
+        cellObj.empLines.forEach((empLine) => {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7.5);
+          doc.setTextColor(0, 0, 0);
 
-        // Effective Date Range Banner for this Page Chunk (e.g. PATTERN PERIOD: 01/10/26 TO 10/10/26)
-        doc.setFontSize(10);
-        doc.setTextColor(2, 132, 199);
-        doc.text(`EFFECTIVE DATES: ${chunkPeriodStr}`, pageWidth / 2, 22, { align: 'center' });
+          const empWrapped = doc.splitTextToSize(empLine, contentWidth);
+          empWrapped.forEach((line) => {
+            doc.text(line, centerX, currentY, { align: 'center' });
+            currentY += 3.4;
+          });
+        });
+      }
+    },
+    didDrawPage: (data) => {
+      // Draw Main Header Banner at top of page
+      doc.setFont('helvetica', 'bold');
 
-        // Footer - Page Numbers
-        const totalPages = doc.internal.getNumberOfPages();
-        const pageCurrent = data.pageNumber;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(100, 116, 139);
-        doc.text(
-          `Page ${pageCurrent} of ${totalPages}`,
-          pageWidth - marginX,
-          pageHeight - 5,
-          { align: 'right' }
-        );
-      },
-    });
+      // Month & Year (e.g. OCTOBER 2026)
+      if (monthYear) {
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text(monthYear, pageWidth / 2, 8, { align: 'center' });
+      }
+
+      // Period Range & Roster Title (e.g. 01/10/26 TO 15/10/26 | OCTOBER NURSING ROSTER)
+      doc.setFontSize(9);
+      doc.setTextColor(51, 65, 85);
+      doc.text(`${overallDatePeriod} | ${rosterTitle}`, pageWidth / 2, 15, { align: 'center' });
+
+      // Footer - Page Numbers (Always Page 1 of 1)
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(
+        `Page 1 of 1`,
+        pageWidth - marginX,
+        pageHeight - 5,
+        { align: 'right' }
+      );
+    },
   });
 
   // Save PDF file directly in browser
@@ -380,3 +403,4 @@ export function generateFrontendRosterPDF(activeRoster) {
 
   doc.save(filename);
 }
+
