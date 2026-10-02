@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Roster = require("../models/roster.model");
 const RosterAssignment = require("../models/rosterAssignment.model");
+const RosterTemplate = require("../models/rosterTemplate.model");
 const Employee = require("../models/employee.model");
 const Leave = require("../models/leave.model");
 
@@ -50,26 +51,28 @@ const isHistoricalRoster = async (rosterId, hospitalId) => {
     const roster = await Roster.findOne({ _id: rosterId, hospitalId }).lean();
     if (!roster || roster.status !== "PUBLISHED") return false;
 
-    const latestPublished = await Roster.findOne({ hospitalId, status: "PUBLISHED" })
-        .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })
-        .lean();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const end = new Date(roster.endDate);
 
-    if (!latestPublished) return false;
-    return latestPublished._id.toString() !== roster._id.toString();
+    return end < todayStart;
 };
 
 const getRosterHistory = async ({ hospitalId, userId, isManager }) => {
-    const publishedRosters = await Roster.find({ hospitalId, status: "PUBLISHED" })
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const publishedRosters = await Roster.find({
+        hospitalId,
+        status: "PUBLISHED",
+        endDate: { $lt: todayStart },
+    })
         .populate("createdBy", "name email")
         .populate("publishedBy", "name email")
-        .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })
+        .sort({ endDate: -1, publishedAt: -1, createdAt: -1 })
         .lean();
 
-    if (publishedRosters.length <= 1) {
-        return [];
-    }
-
-    return publishedRosters.slice(1).map((r) => ({
+    return publishedRosters.map((r) => ({
         ...r,
         isHistorical: true,
     }));
@@ -99,14 +102,10 @@ const getRosterById = async ({ rosterId, hospitalId, userId, isManager }) => {
         }
     }
 
-    const latestPublished = await Roster.findOne({ hospitalId, status: "PUBLISHED" })
-        .sort({ startDate: -1, publishedAt: -1, createdAt: -1 })
-        .lean();
-
-    const isHistorical =
-        roster.status === "PUBLISHED" &&
-        latestPublished &&
-        latestPublished._id.toString() !== roster._id.toString();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const end = new Date(roster.endDate);
+    const isHistorical = roster.status === "PUBLISHED" && end < todayStart;
 
     const assignments = await RosterAssignment.find({ rosterId: roster._id, hospitalId })
         .populate({
@@ -124,7 +123,7 @@ const getRosterById = async ({ rosterId, hospitalId, userId, isManager }) => {
     };
 };
 
-const createRoster = async ({ hospitalId, userId, title, startDate, endDate, columns = [], dutyAreas = [] }) => {
+const createRoster = async ({ hospitalId, userId, title, startDate, endDate, columns = [], dutyAreas = [], templateId = null }) => {
     if (!title || !String(title).trim()) {
         const err = new Error("Roster title is required.");
         err.code = "VALIDATION_ERROR";
@@ -137,14 +136,47 @@ const createRoster = async ({ hospitalId, userId, title, startDate, endDate, col
         throw err;
     }
 
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (start > end) {
+        const err = new Error("Start date must be less than or equal to end date.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    let finalColumns = Array.isArray(columns) ? columns : [];
+    let finalDutyAreas = Array.isArray(dutyAreas) ? dutyAreas : [];
+
+    if (templateId && isValidObjectId(templateId)) {
+        const template = await RosterTemplate.findOne({ _id: templateId, hospitalId, isActive: true }).lean();
+        if (template) {
+            if (finalColumns.length === 0 && Array.isArray(template.columns)) {
+                finalColumns = template.columns.map((c) => ({
+                    id: c.id,
+                    title: c.title,
+                    startTime: c.startTime,
+                    endTime: c.endTime,
+                    order: c.order,
+                }));
+            }
+            if (finalDutyAreas.length === 0 && Array.isArray(template.dutyAreas)) {
+                finalDutyAreas = template.dutyAreas.map((da) => ({
+                    id: da.id,
+                    name: da.name,
+                    order: da.order,
+                }));
+            }
+        }
+    }
+
     const roster = await Roster.create({
         hospitalId,
         title: String(title).trim(),
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: start,
+        endDate: end,
         status: "DRAFT",
-        columns: Array.isArray(columns) ? columns : [],
-        dutyAreas: Array.isArray(dutyAreas) ? dutyAreas : [],
+        columns: finalColumns,
+        dutyAreas: finalDutyAreas,
         createdBy: userId,
     });
 
@@ -171,9 +203,18 @@ const updateRosterDraft = async ({ rosterId, hospitalId, userId, title, startDat
         throw err;
     }
 
+    const targetStart = startDate ? new Date(startDate) : roster.startDate;
+    const targetEnd = endDate ? new Date(endDate) : roster.endDate;
+
+    if (targetStart > targetEnd) {
+        const err = new Error("Start date must be less than or equal to end date.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
     if (title !== undefined) roster.title = String(title).trim();
-    if (startDate) roster.startDate = new Date(startDate);
-    if (endDate) roster.endDate = new Date(endDate);
+    if (startDate) roster.startDate = targetStart;
+    if (endDate) roster.endDate = targetEnd;
     if (Array.isArray(columns)) roster.columns = columns;
     if (Array.isArray(dutyAreas)) roster.dutyAreas = dutyAreas;
     roster.updatedBy = userId;
@@ -229,6 +270,108 @@ const publishRoster = async ({ rosterId, hospitalId, userId }) => {
         const err = new Error("Historical rosters cannot be published again.");
         err.code = "BUSINESS_CONFLICT";
         throw err;
+    }
+
+    // --- PUBLISH VALIDATION ---
+    if (!roster.title || !String(roster.title).trim()) {
+        const err = new Error("Cannot publish roster: Title is missing.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (!roster.startDate || !roster.endDate) {
+        const err = new Error("Cannot publish roster: Start and end dates are required.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const rosterStart = new Date(roster.startDate);
+    const rosterEnd = new Date(roster.endDate);
+    if (rosterStart > rosterEnd) {
+        const err = new Error("Cannot publish roster: Start date must be less than or equal to end date.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (!Array.isArray(roster.columns) || roster.columns.length === 0) {
+        const err = new Error("Cannot publish roster: At least one shift column must be configured.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    for (const col of roster.columns) {
+        if (!col.title || !col.startTime || !col.endTime) {
+            const err = new Error("Cannot publish roster: All shift columns must have title, start time, and end time.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+    }
+
+    if (Array.isArray(roster.dutyAreas)) {
+        for (const da of roster.dutyAreas) {
+            if (!da.name || !String(da.name).trim()) {
+                const err = new Error("Cannot publish roster: All configured duty areas must have valid names.");
+                err.code = "VALIDATION_ERROR";
+                throw err;
+            }
+        }
+    }
+
+    const assignments = await RosterAssignment.find({ rosterId: roster._id, hospitalId })
+        .populate({
+            path: "employeeId",
+            populate: { path: "positionId" },
+        });
+
+    rosterStart.setHours(0, 0, 0, 0);
+    rosterEnd.setHours(23, 59, 59, 999);
+
+    for (const ass of assignments) {
+        const assDate = new Date(ass.date);
+        if (assDate < rosterStart || assDate > rosterEnd) {
+            const err = new Error(`Cannot publish roster: Assignment on ${ass.date.toISOString().split("T")[0]} falls outside the roster period.`);
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        const emp = ass.employeeId;
+        if (!emp || emp.hospitalId?.toString() !== hospitalId.toString()) {
+            const err = new Error("Cannot publish roster: Contains assignment for an invalid employee.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        if (emp.employmentStatus !== "ACTIVE") {
+            const err = new Error(`Cannot publish roster: Assigned employee ${emp.firstName || ""} ${emp.lastName || ""} is inactive.`);
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        if (!emp.positionId || !emp.positionId.rosterEligible) {
+            const err = new Error(`Cannot publish roster: Assigned employee ${emp.firstName || ""} ${emp.lastName || ""} is not roster eligible.`);
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        const matchingShift = roster.columns.find(
+            (c) => c.title?.toLowerCase() === ass.shiftTitle?.toLowerCase() || c.id === ass.columnId
+        );
+        if (!matchingShift) {
+            const err = new Error(`Cannot publish roster: Assignment has shift '${ass.shiftTitle}' which is not configured in this roster.`);
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        if (Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0) {
+            const matchingDutyArea = roster.dutyAreas.find(
+                (da) => da.name?.toLowerCase() === ass.dutyArea?.toLowerCase() || da.id === ass.dutyArea
+            );
+            if (!matchingDutyArea) {
+                const err = new Error(`Cannot publish roster: Assignment has duty area '${ass.dutyArea}' which is not configured in this roster.`);
+                err.code = "VALIDATION_ERROR";
+                throw err;
+            }
+        }
     }
 
     roster.status = "PUBLISHED";
@@ -370,7 +513,7 @@ const addAssignment = async ({
         throw err;
     }
 
-    const employee = await Employee.findOne({ _id: employeeId, hospitalId });
+    const employee = await Employee.findOne({ _id: employeeId, hospitalId }).populate("positionId");
     if (!employee) {
         const err = new Error("Employee not found in this hospital.");
         err.code = "NOT_FOUND";
@@ -383,6 +526,12 @@ const addAssignment = async ({
         throw err;
     }
 
+    if (!employee.positionId || !employee.positionId.rosterEligible) {
+        const err = new Error("Employee position is not eligible for roster assignments.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
     if (!date || !shiftTitle || !startTime || !endTime || !dutyArea) {
         const err = new Error("Date, shift title, times, and duty area are required.");
         err.code = "VALIDATION_ERROR";
@@ -391,6 +540,39 @@ const addAssignment = async ({
 
     const assignmentDate = new Date(date);
     const { start: dateStart, end: dateEnd } = getCalendarBounds(assignmentDate);
+
+    const rosterStart = new Date(roster.startDate);
+    const rosterEnd = new Date(roster.endDate);
+    rosterStart.setHours(0, 0, 0, 0);
+    rosterEnd.setHours(23, 59, 59, 999);
+
+    if (assignmentDate < rosterStart || assignmentDate > rosterEnd) {
+        const err = new Error("Assignment date must fall within the roster start and end date period.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (Array.isArray(roster.columns) && roster.columns.length > 0) {
+        const matchingShift = roster.columns.find(
+            (c) => c.title?.toLowerCase() === shiftTitle?.toLowerCase() || c.id === columnId
+        );
+        if (!matchingShift) {
+            const err = new Error("Selected shift does not belong to this roster.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+    }
+
+    if (Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0) {
+        const matchingDutyArea = roster.dutyAreas.find(
+            (da) => da.name?.toLowerCase() === dutyArea?.toLowerCase() || da.id === dutyArea
+        );
+        if (!matchingDutyArea) {
+            const err = new Error("Selected duty area does not belong to this roster.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+    }
 
     // Check if employee already has an assignment for the same roster date
     const existingAssignment = await RosterAssignment.findOne({
@@ -471,6 +653,235 @@ const addAssignment = async ({
     };
 };
 
+const addBulkRangeAssignments = async ({
+    hospitalId,
+    userId,
+    rosterId,
+    employeeId,
+    startDate,
+    endDate,
+    columnId,
+    shiftTitle,
+    startTime,
+    endTime,
+    dutyArea,
+    notes,
+    overwriteConflicts = false,
+}) => {
+    if (!isValidObjectId(rosterId)) {
+        const err = new Error("Invalid roster ID.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (!isValidObjectId(employeeId)) {
+        const err = new Error("Invalid employee ID.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const roster = await Roster.findOne({ _id: rosterId, hospitalId });
+    if (!roster) {
+        const err = new Error("Roster not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    if (await isHistoricalRoster(rosterId, hospitalId)) {
+        const err = new Error("Historical rosters are read-only and cannot be modified.");
+        err.code = "BUSINESS_CONFLICT";
+        throw err;
+    }
+
+    const employee = await Employee.findOne({ _id: employeeId, hospitalId }).populate("positionId");
+    if (!employee) {
+        const err = new Error("Employee not found in this hospital.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    if (employee.employmentStatus === "INACTIVE") {
+        const err = new Error("Cannot assign inactive employees to roster.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (!employee.positionId || !employee.positionId.rosterEligible) {
+        const err = new Error("Employee position is not eligible for roster assignments.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (!startDate || !endDate || !shiftTitle || !startTime || !endTime || !dutyArea) {
+        const err = new Error("Start date, end date, shift title, times, and duty area are required.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const startRange = new Date(startDate);
+    const endRange = new Date(endDate);
+    if (isNaN(startRange.getTime()) || isNaN(endRange.getTime())) {
+        const err = new Error("Invalid date format.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const { start: rosterStartBounds } = getCalendarBounds(roster.startDate);
+    const { end: rosterEndBounds } = getCalendarBounds(roster.endDate);
+
+    const { start: rangeStartBounds } = getCalendarBounds(startRange);
+    const { end: rangeEndBounds } = getCalendarBounds(endRange);
+
+    if (rangeStartBounds < rosterStartBounds || rangeEndBounds > rosterEndBounds) {
+        const err = new Error("Assignment date range must fall within the roster start and end date period.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (rangeStartBounds > rangeEndBounds) {
+        const err = new Error("Start date must be less than or equal to end date.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (Array.isArray(roster.columns) && roster.columns.length > 0) {
+        const matchingShift = roster.columns.find(
+            (c) => c.title?.toLowerCase() === shiftTitle?.toLowerCase() || c.id === columnId
+        );
+        if (!matchingShift) {
+            const err = new Error("Selected shift does not belong to this roster.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+    }
+
+    if (Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0) {
+        const matchingDutyArea = roster.dutyAreas.find(
+            (da) => da.name?.toLowerCase() === dutyArea?.toLowerCase() || da.id === dutyArea
+        );
+        if (!matchingDutyArea) {
+            const err = new Error("Selected duty area does not belong to this roster.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+    }
+
+    const datesList = [];
+    const parseNoonDate = (dInput) => {
+        const dObj = new Date(dInput);
+        return new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 12, 0, 0, 0);
+    };
+
+    let curr = parseNoonDate(startDate);
+    const lastDate = parseNoonDate(endDate);
+
+    while (curr <= lastDate) {
+        datesList.push(new Date(curr));
+        curr.setDate(curr.getDate() + 1);
+    }
+
+    const existingAssignments = await RosterAssignment.find({
+        hospitalId,
+        employeeId: employee._id,
+        date: { $gte: rangeStartBounds, $lte: rangeEndBounds },
+    }).lean();
+
+    const existingMap = new Map();
+    existingAssignments.forEach((ass) => {
+        const dateKey = ass.date.toISOString().split("T")[0];
+        existingMap.set(dateKey, ass);
+    });
+
+    const leaveConflicts = await Leave.find({
+        hospitalId,
+        employeeId: employee._id,
+        status: { $in: ["APPROVED", "PENDING", "approved", "pending"] },
+        startDate: { $lte: rangeEndBounds },
+        endDate: { $gte: rangeStartBounds },
+    }).lean();
+
+    const conflicts = [];
+    const leaveWarnings = [];
+    const createdAssignments = [];
+
+    if (!overwriteConflicts && existingAssignments.length === datesList.length && datesList.length > 0) {
+        const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
+        const err = new Error(`${empName} already has assignments for all dates in this range.`);
+        err.code = "DUPLICATE_ASSIGNMENT";
+        err.existingAssignment = {
+            employeeName: empName,
+            conflicts: existingAssignments.map((a) => ({
+                date: a.date.toISOString().split("T")[0],
+                existingShift: a.shiftTitle,
+                existingDutyArea: a.dutyArea,
+            })),
+        };
+        throw err;
+    }
+
+    for (const d of datesList) {
+        const dateKey = d.toISOString().split("T")[0];
+        const { start: dateStart, end: dateEnd } = getCalendarBounds(d);
+
+        const leaveOnDate = leaveConflicts.find(
+            (l) => new Date(l.startDate) <= dateEnd && new Date(l.endDate) >= dateStart
+        );
+        if (leaveOnDate) {
+            leaveWarnings.push({
+                date: dateKey,
+                status: leaveOnDate.status,
+                leaveType: leaveOnDate.leaveType,
+                reason: leaveOnDate.reason,
+                message: `Employee has ${leaveOnDate.status} leave on ${dateKey} (${leaveOnDate.leaveType}).`,
+            });
+        }
+
+        const existing = existingMap.get(dateKey);
+
+        if (existing) {
+            if (!overwriteConflicts) {
+                conflicts.push({
+                    date: dateKey,
+                    existingShift: existing.shiftTitle,
+                    existingDutyArea: existing.dutyArea,
+                    isOverride: !!existing.isOverride,
+                    message: `Existing assignment on ${dateKey} kept (${existing.shiftTitle} - ${existing.dutyArea}).`,
+                });
+                continue;
+            } else {
+                await RosterAssignment.deleteOne({ _id: existing._id });
+            }
+        }
+
+        const newAss = await RosterAssignment.create({
+            rosterId: roster._id,
+            hospitalId,
+            employeeId: employee._id,
+            date: d,
+            columnId: columnId || null,
+            shiftTitle: String(shiftTitle).trim(),
+            startTime: String(startTime).trim(),
+            endTime: String(endTime).trim(),
+            dutyArea: String(dutyArea).trim(),
+            notes: notes ? String(notes).trim() : null,
+            isOverride: false,
+            createdBy: userId,
+        });
+
+        createdAssignments.push(newAss);
+    }
+
+    roster.updatedBy = userId;
+    await roster.save();
+
+    return {
+        createdCount: createdAssignments.length,
+        createdAssignments,
+        conflicts,
+        leaveWarnings,
+    };
+};
+
 const updateAssignment = async ({
     assignmentId,
     hospitalId,
@@ -506,6 +917,62 @@ const updateAssignment = async ({
     const targetDate = date ? new Date(date) : assignment.date;
     const targetEmployeeId = employeeId || assignment.employeeId;
 
+    const targetEmp = await Employee.findOne({ _id: targetEmployeeId, hospitalId }).populate("positionId");
+    if (!targetEmp) {
+        const err = new Error("Employee not found in this hospital.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    if (targetEmp.employmentStatus === "INACTIVE") {
+        const err = new Error("Cannot assign inactive employees to roster.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const roster = await Roster.findOne({ _id: assignment.rosterId, hospitalId });
+    if (!roster) {
+        const err = new Error("Roster not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    const rosterStart = new Date(roster.startDate);
+    const rosterEnd = new Date(roster.endDate);
+    rosterStart.setHours(0, 0, 0, 0);
+    rosterEnd.setHours(23, 59, 59, 999);
+
+    if (targetDate < rosterStart || targetDate > rosterEnd) {
+        const err = new Error("Assignment date must fall within the roster start and end date period.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const finalShiftTitle = shiftTitle !== undefined ? String(shiftTitle).trim() : assignment.shiftTitle;
+    const finalColumnId = columnId !== undefined ? columnId : assignment.columnId;
+    if (Array.isArray(roster.columns) && roster.columns.length > 0) {
+        const matchingShift = roster.columns.find(
+            (c) => c.title?.toLowerCase() === finalShiftTitle?.toLowerCase() || c.id === finalColumnId
+        );
+        if (!matchingShift) {
+            const err = new Error("Selected shift does not belong to this roster.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+    }
+
+    const finalDutyArea = dutyArea !== undefined ? String(dutyArea).trim() : assignment.dutyArea;
+    if (Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0) {
+        const matchingDutyArea = roster.dutyAreas.find(
+            (da) => da.name?.toLowerCase() === finalDutyArea?.toLowerCase() || da.id === finalDutyArea
+        );
+        if (!matchingDutyArea) {
+            const err = new Error("Selected duty area does not belong to this roster.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+    }
+
     const { start: dateStart, end: dateEnd } = getCalendarBounds(targetDate);
     const existingAssignment = await RosterAssignment.findOne({
         _id: { $ne: assignment._id },
@@ -540,6 +1007,7 @@ const updateAssignment = async ({
     if (endTime !== undefined) assignment.endTime = String(endTime).trim();
     if (dutyArea !== undefined) assignment.dutyArea = String(dutyArea).trim();
     if (notes !== undefined) assignment.notes = notes ? String(notes).trim() : null;
+    assignment.isOverride = true;
 
     await assignment.save();
 
@@ -586,7 +1054,7 @@ const deleteAssignment = async ({ assignmentId, hospitalId, userId }) => {
 
 // ─── MY ROSTER (Employee View) ───────────────────────────────────────────────
 
-const getMyRoster = async ({ userId, hospitalId, employeeId: paramEmployeeId }) => {
+const getMyRoster = async ({ userId, hospitalId, employeeId: paramEmployeeId, tab = "current" }) => {
     let employee = null;
     if (paramEmployeeId && isValidObjectId(paramEmployeeId)) {
         employee = await Employee.findOne({ _id: paramEmployeeId, hospitalId }).lean();
@@ -598,7 +1066,6 @@ const getMyRoster = async ({ userId, hospitalId, employeeId: paramEmployeeId }) 
         return [];
     }
 
-    // Find all published rosters for this hospital
     const publishedRosters = await Roster.find({ hospitalId, status: "PUBLISHED" })
         .select("_id title startDate endDate")
         .lean();
@@ -608,17 +1075,34 @@ const getMyRoster = async ({ userId, hospitalId, employeeId: paramEmployeeId }) 
         return [];
     }
 
-    const assignments = await RosterAssignment.find({
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const query = {
         hospitalId,
         employeeId: employee._id,
         rosterId: { $in: publishedRosterIds },
-    })
+    };
+
+    if (String(tab).toLowerCase() === "history") {
+        query.date = { $lt: todayStart };
+    } else if (String(tab).toLowerCase() === "all") {
+        // No date filter
+    } else {
+        // Default "current" / upcoming
+        query.date = { $gte: todayStart };
+    }
+
+    const sortOrder = String(tab).toLowerCase() === "history" ? { date: -1, startTime: 1 } : { date: 1, startTime: 1 };
+
+    const assignments = await RosterAssignment.find(query)
         .populate("rosterId", "title startDate endDate status")
-        .sort({ date: 1, startTime: 1 })
+        .sort(sortOrder)
         .lean();
 
     return assignments.map((a) => ({
         id: a._id,
+        _id: a._id,
         rosterId: a.rosterId?._id || a.rosterId,
         rosterTitle: a.rosterId?.title || "Published Roster",
         date: a.date,
@@ -627,6 +1111,7 @@ const getMyRoster = async ({ userId, hospitalId, employeeId: paramEmployeeId }) 
         endTime: a.endTime,
         dutyArea: a.dutyArea,
         notes: a.notes,
+        isOverride: !!a.isOverride,
         employeeName: `${employee.firstName} ${employee.lastName}`.trim(),
     }));
 };
@@ -646,6 +1131,7 @@ module.exports = {
     resolveReviewComment,
     // Assignments
     addAssignment,
+    addBulkRangeAssignments,
     updateAssignment,
     deleteAssignment,
     // My Roster

@@ -1,7 +1,7 @@
 const Position = require('../models/position.model');
 const { VALID_MODULE_KEYS } = require('../config/modules.config');
 
-const createPosition = async (hospitalId, name, defaultModules = []) => {
+const createPosition = async (hospitalId, name, defaultModules = [], rosterEligible = false) => {
     if (!name) {
         const err = new Error('Position name is required');
         err.code = 'VALIDATION_ERROR';
@@ -25,6 +25,7 @@ const createPosition = async (hospitalId, name, defaultModules = []) => {
             hospitalId,
             name: normalizedName,
             defaultModules: validatedModules,
+            rosterEligible: Boolean(rosterEligible),
             status: 'active'
         });
         return position;
@@ -59,21 +60,26 @@ const getPositionById = async (hospitalId, positionId) => {
     return position;
 };
 
-const updatePosition = async (hospitalId, positionId, name, defaultModules) => {
+const updatePosition = async (hospitalId, positionId, name, defaultModules, rosterEligible) => {
     const position = await getPositionById(hospitalId, positionId);
     
-    if (!name || name.trim().length === 0) {
-        const err = new Error('Position name cannot be empty');
-        err.code = 'VALIDATION_ERROR';
-        throw err;
+    if (name !== undefined) {
+        if (!name || name.trim().length === 0) {
+            const err = new Error('Position name cannot be empty');
+            err.code = 'VALIDATION_ERROR';
+            throw err;
+        }
+        position.name = name.trim();
     }
-
-    position.name = name.trim();
 
     if (defaultModules !== undefined) {
         position.defaultModules = Array.isArray(defaultModules)
             ? defaultModules.filter(m => VALID_MODULE_KEYS.includes(m))
             : [];
+    }
+
+    if (rosterEligible !== undefined) {
+        position.rosterEligible = Boolean(rosterEligible);
     }
     
     try {

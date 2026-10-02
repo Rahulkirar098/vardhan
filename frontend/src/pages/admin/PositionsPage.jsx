@@ -32,7 +32,7 @@ const PositionsPage = () => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     
     const [selectedPosition, setSelectedPosition] = useState(null);
-    const [formData, setFormData] = useState({ name: '', defaultModules: ['hrms'] });
+    const [formData, setFormData] = useState({ name: '', defaultModules: ['hrms'], rosterEligible: false });
     const [submitting, setSubmitting] = useState(false);
 
     const fetchPositions = async () => {
@@ -61,13 +61,17 @@ const PositionsPage = () => {
     }, []);
 
     const handleOpenAdd = () => {
-        setFormData({ name: '', defaultModules: ['hrms'] });
+        setFormData({ name: '', defaultModules: ['hrms'], rosterEligible: false });
         setIsAddOpen(true);
     };
 
     const handleOpenEdit = (position) => {
         setSelectedPosition(position);
-        setFormData({ name: position.name, defaultModules: position.defaultModules || [] });
+        setFormData({
+            name: position.name,
+            defaultModules: position.defaultModules || [],
+            rosterEligible: Boolean(position.rosterEligible),
+        });
         setIsEditOpen(true);
     };
 
@@ -97,7 +101,8 @@ const PositionsPage = () => {
             setSubmitting(true);
             await positionService.createPosition({
                 name: formData.name.trim(),
-                defaultModules: formData.defaultModules || []
+                defaultModules: formData.defaultModules || [],
+                rosterEligible: Boolean(formData.rosterEligible),
             });
             showSnack('Position created successfully', 'success');
             setIsAddOpen(false);
@@ -119,7 +124,8 @@ const PositionsPage = () => {
             setSubmitting(true);
             await positionService.updatePosition(selectedPosition._id, {
                 name: formData.name.trim(),
-                defaultModules: formData.defaultModules || []
+                defaultModules: formData.defaultModules || [],
+                rosterEligible: Boolean(formData.rosterEligible),
             });
             showSnack('Position updated successfully', 'success');
             setIsEditOpen(false);
@@ -149,12 +155,24 @@ const PositionsPage = () => {
     const columns = [
         { key: 'name', label: 'Position Name', sortable: true },
         { key: 'defaultModules', label: 'Default Modules' },
+        { key: 'rosterEligible', label: 'Roster Eligible' },
         { key: 'status', label: 'Status' }
     ];
 
     const renderCell = (pos, column) => {
         if (column.key === 'status') {
             return <StatusBadge status={pos.status} />;
+        }
+        if (column.key === 'rosterEligible') {
+            return (
+                <Chip
+                    label={pos.rosterEligible ? 'Eligible' : 'Not Eligible'}
+                    size="small"
+                    color={pos.rosterEligible ? 'success' : 'default'}
+                    variant="outlined"
+                    sx={{ fontSize: '0.75rem', fontWeight: 600 }}
+                />
+            );
         }
         if (column.key === 'defaultModules') {
             const mods = pos.defaultModules || [];
@@ -339,6 +357,37 @@ const PositionsPage = () => {
                             })}
                         </Stack>
                     </Box>
+
+                    <Paper
+                        variant="outlined"
+                        onClick={() => setFormData((p) => ({ ...p, rosterEligible: !p.rosterEligible }))}
+                        sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            cursor: 'pointer',
+                            borderColor: formData.rosterEligible ? 'primary.main' : 'divider',
+                            bgcolor: formData.rosterEligible ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            transition: 'all 0.15s ease-in-out',
+                        }}
+                    >
+                        <Checkbox
+                            checked={Boolean(formData.rosterEligible)}
+                            onChange={(e) => setFormData((p) => ({ ...p, rosterEligible: e.target.checked }))}
+                            onClick={(e) => e.stopPropagation()}
+                            color="primary"
+                        />
+                        <Box>
+                            <Typography variant="body2" fontWeight={600} color="text.primary">
+                                Roster Eligible
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Allow employees with this position to be assigned to hospital duty rosters.
+                            </Typography>
+                        </Box>
+                    </Paper>
                 </Stack>
             </Modal>
 
@@ -406,6 +455,37 @@ const PositionsPage = () => {
                             })}
                         </Stack>
                     </Box>
+
+                    <Paper
+                        variant="outlined"
+                        onClick={() => setFormData((p) => ({ ...p, rosterEligible: !p.rosterEligible }))}
+                        sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            cursor: 'pointer',
+                            borderColor: formData.rosterEligible ? 'primary.main' : 'divider',
+                            bgcolor: formData.rosterEligible ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            transition: 'all 0.15s ease-in-out',
+                        }}
+                    >
+                        <Checkbox
+                            checked={Boolean(formData.rosterEligible)}
+                            onChange={(e) => setFormData((p) => ({ ...p, rosterEligible: e.target.checked }))}
+                            onClick={(e) => e.stopPropagation()}
+                            color="primary"
+                        />
+                        <Box>
+                            <Typography variant="body2" fontWeight={600} color="text.primary">
+                                Roster Eligible
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Allow employees with this position to be assigned to hospital duty rosters.
+                            </Typography>
+                        </Box>
+                    </Paper>
                 </Stack>
             </Modal>
 

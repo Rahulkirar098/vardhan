@@ -115,7 +115,7 @@ const listEmployees = async ({
             .skip(skip)
             .limit(take)
             .populate("userId", "role status permissions modules")
-            .populate("positionId", "name")
+            .populate("positionId", "name rosterEligible status")
             .populate("createdBy", "name email role")
             .lean(),
         Employee.countDocuments(filter),
@@ -138,7 +138,7 @@ const getEmployeeById = async ({ employeeMongoId, hospitalId }) => {
     })
         .select("-__v")
         .populate("userId", "role status")
-        .populate("positionId", "name")
+        .populate("positionId", "name rosterEligible status")
         .populate("createdBy", "name email role")
         .lean();
 

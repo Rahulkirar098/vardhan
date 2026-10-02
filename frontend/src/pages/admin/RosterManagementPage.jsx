@@ -46,6 +46,7 @@ import {
   CheckRounded,
   CloseRounded,
   CommentOutlined,
+  CopyAllRounded,
   DeleteOutlineRounded,
   DownloadOutlined,
   EditOutlined,
@@ -59,6 +60,8 @@ import {
   SearchRounded,
   ShareOutlined,
   ShareRounded,
+  ToggleOffRounded,
+  ToggleOnRounded,
   VisibilityOutlined,
   WarningAmberRounded,
 } from '@mui/icons-material';
@@ -92,10 +95,13 @@ export default function RosterManagementPage() {
     [canManage]
   );
 
-  // Active Tab: 'published-matrix' | 'drafts' | 'my-roster'
+  // Active Main Tab: 'published-matrix' | 'drafts' | 'history' | 'templates' | 'my-roster'
   const [activeTab, setActiveTab] = useState(
     canManage ? 'drafts' : 'published-matrix'
   );
+
+  // Sub-tab for My Roster: 'current' | 'history'
+  const [myRosterSubTab, setMyRosterSubTab] = useState('current');
 
   // Loading & Toast States
   const [loading, setLoading] = useState(false);
@@ -104,6 +110,7 @@ export default function RosterManagementPage() {
   // Data Collections
   const [rosters, setRosters] = useState([]);
   const [historyRosters, setHistoryRosters] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [myAssignments, setMyAssignments] = useState([]);
   const [activeEmployees, setActiveEmployees] = useState([]);
 
@@ -115,6 +122,7 @@ export default function RosterManagementPage() {
   const [rosterModalOpen, setRosterModalOpen] = useState(false);
   const [editingRoster, setEditingRoster] = useState(null);
   const [rosterForm, setRosterForm] = useState({
+    templateId: '',
     title: '',
     startDate: '',
     endDate: '',
@@ -133,11 +141,32 @@ export default function RosterManagementPage() {
     ],
   });
 
+  // Template Builder Modal (Create/Edit Template)
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    description: '',
+    columns: [
+      { id: 'col-1', title: 'MORNING', startTime: '08:00', endTime: '16:00', order: 1 },
+      { id: 'col-2', title: 'EVENING', startTime: '16:00', endTime: '00:00', order: 2 },
+      { id: 'col-3', title: 'NIGHT', startTime: '00:00', endTime: '08:00', order: 3 },
+    ],
+    dutyAreas: [
+      { id: 'da-1', name: 'ICU', order: 1 },
+      { id: 'da-2', name: 'EMERGENCY', order: 2 },
+      { id: 'da-3', name: 'OPD', order: 3 },
+      { id: 'da-4', name: 'OT', order: 4 },
+    ],
+    isActive: true,
+  });
+
   // PDF Download State
   const [downloading, setDownloading] = useState(false);
 
   // Add / Edit Assignment Modal
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+  const [assignmentMode, setAssignmentMode] = useState('range'); // 'range' | 'single'
   const [assignmentTarget, setAssignmentTarget] = useState({
     dutyArea: '',
     shift: null,
@@ -153,7 +182,16 @@ export default function RosterManagementPage() {
     dutyArea: '',
     notes: '',
   });
+  const [rangeForm, setRangeForm] = useState({
+    startDate: '',
+    endDate: '',
+  });
   const [leaveWarning, setLeaveWarning] = useState(null);
+  const [conflictPrompt, setConflictPrompt] = useState({
+    open: false,
+    message: '',
+    existingAssignments: [],
+  });
 
   // Share for Review Modal
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -206,17 +244,29 @@ export default function RosterManagementPage() {
     }
   }, []);
 
-  const fetchMyRoster = useCallback(async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await rosterService.getMyRoster();
+      const res = await rosterService.getTemplates();
+      setTemplates(res.data || []);
+    } catch (err) {
+      console.error('Failed to load roster templates:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchMyRoster = useCallback(async (tab = myRosterSubTab) => {
+    try {
+      setLoading(true);
+      const res = await rosterService.getMyRoster(tab);
       setMyAssignments(res.data || []);
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to load your personal roster', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [myRosterSubTab]);
 
   const fetchActiveEmployees = useCallback(async () => {
     try {
@@ -233,10 +283,11 @@ export default function RosterManagementPage() {
     if (canViewWorkforce) {
       fetchRosters();
       fetchHistory();
+      fetchTemplates();
       fetchActiveEmployees();
     }
-    fetchMyRoster();
-  }, [canViewWorkforce, fetchRosters, fetchHistory, fetchActiveEmployees, fetchMyRoster]);
+    fetchMyRoster(myRosterSubTab);
+  }, [canViewWorkforce, fetchRosters, fetchHistory, fetchTemplates, fetchActiveEmployees, fetchMyRoster, myRosterSubTab]);
 
   // Load Single Roster Details
   const handleOpenRosterDetails = async (rosterId) => {
@@ -263,6 +314,7 @@ export default function RosterManagementPage() {
     const today = getTodayDateStr();
     const tenDays = getTodayDateStr(new Date(Date.now() + 9 * 86400000));
     setRosterForm({
+      templateId: '',
       title: 'HOSPITAL NURSING ROSTER',
       startDate: today,
       endDate: tenDays,
@@ -283,12 +335,30 @@ export default function RosterManagementPage() {
     setRosterModalOpen(true);
   };
 
+  const handleSelectTemplateForRoster = (tId) => {
+    if (!tId) {
+      setRosterForm((p) => ({ ...p, templateId: '' }));
+      return;
+    }
+    const t = templates.find((item) => item._id === tId);
+    if (t) {
+      setRosterForm((p) => ({
+        ...p,
+        templateId: t._id,
+        title: p.title || t.name,
+        columns: Array.isArray(t.columns) && t.columns.length > 0 ? t.columns.map((c) => ({ ...c })) : p.columns,
+        dutyAreas: Array.isArray(t.dutyAreas) && t.dutyAreas.length > 0 ? t.dutyAreas.map((d) => ({ ...d })) : p.dutyAreas,
+      }));
+    }
+  };
+
   const handleOpenEditRoster = (roster) => {
     if (!roster) return;
     setEditingRoster(roster);
     const startStr = roster.startDate ? getTodayDateStr(roster.startDate) : '';
     const endStr = roster.endDate ? getTodayDateStr(roster.endDate) : '';
     setRosterForm({
+      templateId: roster.templateId || '',
       title: roster.title || '',
       startDate: startStr,
       endDate: endStr,
@@ -302,177 +372,279 @@ export default function RosterManagementPage() {
       dutyAreas: Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0
         ? roster.dutyAreas.map((d) => ({ ...d }))
         : [
-            { id: `da-${Date.now()}-1`, name: 'GENERAL WARD FEMALE + GENERAL WARD MALE + DAY CARE WARD', order: 1 },
-            { id: `da-${Date.now()}-2`, name: 'PRIVATE WARD + LABOUR ROOM (2ND FLOOR)', order: 2 },
-            { id: `da-${Date.now()}-3`, name: 'NICU 2ND FLOOR', order: 3 },
-            { id: `da-${Date.now()}-4`, name: 'PICU', order: 4 },
-            { id: `da-${Date.now()}-5`, name: 'ICU 3RD FLOOR + PRIVATE WARD', order: 5 },
-            { id: `da-${Date.now()}-6`, name: 'OT', order: 6 },
+            { id: `da-${Date.now()}-1`, name: 'GENERAL WARD', order: 1 },
+            { id: `da-${Date.now()}-2`, name: 'ICU', order: 2 },
           ],
     });
     setRosterModalOpen(true);
   };
 
   const handleSaveRoster = async () => {
-    if (!rosterForm.title.trim()) {
-      showToast('Roster Title is required', 'warning');
+    if (!rosterForm.title.trim() || !rosterForm.startDate || !rosterForm.endDate) {
+      showToast('Title, start date, and end date are required', 'warning');
       return;
     }
-    if (!rosterForm.startDate || !rosterForm.endDate) {
-      showToast('Start Date and End Date are required', 'warning');
+
+    const payload = {
+      ...rosterForm,
+      templateId: rosterForm.templateId || undefined,
+    };
+
+    const saveProc = async () => {
+      try {
+        setLoading(true);
+        if (editingRoster) {
+          await rosterService.updateRoster(editingRoster._id, payload);
+          showToast('Roster updated successfully', 'success');
+          handleOpenRosterDetails(editingRoster._id);
+        } else {
+          const res = await rosterService.createRoster(payload);
+          showToast('Draft roster created successfully', 'success');
+          if (res.data?._id) {
+            handleOpenRosterDetails(res.data._id);
+            setActiveTab('published-matrix');
+          }
+        }
+        setRosterModalOpen(false);
+        fetchRosters();
+      } catch (err) {
+        showToast(err.response?.data?.message || 'Failed to save roster', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (editingRoster && editingRoster.status === 'PUBLISHED') {
+      setPublishEditConfirm({
+        open: true,
+        pendingAction: saveProc,
+      });
+    } else {
+      await saveProc();
+    }
+  };
+
+  // --- Template Management (Create / Edit / Duplicate / Activate / Deactivate) ---
+  const handleOpenNewTemplate = () => {
+    setEditingTemplate(null);
+    setTemplateForm({
+      name: '',
+      description: '',
+      columns: [
+        { id: `col-${Date.now()}-1`, title: 'MORNING', startTime: '08:00', endTime: '16:00', order: 1 },
+        { id: `col-${Date.now()}-2`, title: 'EVENING', startTime: '16:00', endTime: '00:00', order: 2 },
+        { id: `col-${Date.now()}-3`, title: 'NIGHT', startTime: '00:00', endTime: '08:00', order: 3 },
+      ],
+      dutyAreas: [
+        { id: `da-${Date.now()}-1`, name: 'ICU', order: 1 },
+        { id: `da-${Date.now()}-2`, name: 'EMERGENCY', order: 2 },
+        { id: `da-${Date.now()}-3`, name: 'OPD', order: 3 },
+        { id: `da-${Date.now()}-4`, name: 'OT', order: 4 },
+      ],
+      isActive: true,
+    });
+    setTemplateModalOpen(true);
+  };
+
+  const handleOpenEditTemplate = (t) => {
+    setEditingTemplate(t);
+    setTemplateForm({
+      name: t.name || '',
+      description: t.description || '',
+      columns: Array.isArray(t.columns) ? t.columns.map((c) => ({ ...c })) : [],
+      dutyAreas: Array.isArray(t.dutyAreas) ? t.dutyAreas.map((d) => ({ ...d })) : [],
+      isActive: t.isActive !== false,
+    });
+    setTemplateModalOpen(true);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateForm.name.trim()) {
+      showToast('Template name is required', 'warning');
       return;
     }
     try {
       setLoading(true);
-      if (editingRoster) {
-        await rosterService.updateRoster(editingRoster._id, rosterForm);
-        showToast('Roster details updated successfully', 'success');
-        setRosterModalOpen(false);
-        handleOpenRosterDetails(editingRoster._id);
-        fetchRosters();
+      if (editingTemplate) {
+        await rosterService.updateTemplate(editingTemplate._id, templateForm);
+        showToast('Template updated successfully', 'success');
       } else {
-        const res = await rosterService.createRoster(rosterForm);
-        showToast('Draft Roster created successfully', 'success');
-        setRosterModalOpen(false);
-        setActiveRoster(res.data);
-        setActiveRosterDate(rosterForm.startDate);
-        setActiveTab('drafts');
-        fetchRosters();
+        await rosterService.createTemplate(templateForm);
+        showToast('Template created successfully', 'success');
       }
+      setTemplateModalOpen(false);
+      fetchTemplates();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to save roster', 'error');
+      showToast(err.response?.data?.message || 'Failed to save template', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDuplicateTemplate = async (tId) => {
+    try {
+      setLoading(true);
+      await rosterService.duplicateTemplate(tId);
+      showToast('Template duplicated successfully', 'success');
+      fetchTemplates();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to duplicate template', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleToggleTemplateStatus = async (t) => {
+    try {
+      setLoading(true);
+      if (t.isActive) {
+        await rosterService.deactivateTemplate(t._id);
+        showToast(`Template "${t.name}" deactivated (unavailable for new rosters)`, 'info');
+      } else {
+        await rosterService.updateTemplate(t._id, { isActive: true });
+        showToast(`Template "${t.name}" activated`, 'success');
+      }
+      fetchTemplates();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to update template status', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // --- PDF Export (Frontend Only) ---
-  const handleDownloadPDF = () => {
+  // --- PDF Generation ---
+  const handleDownloadPDF = async () => {
     if (!activeRoster) return;
     try {
       setDownloading(true);
-      generateFrontendRosterPDF(activeRoster);
-      showToast('Roster PDF downloaded successfully', 'success');
+      showToast('Generating official hospital PDF layout...', 'info');
+      await generateFrontendRosterPDF(activeRoster);
+      showToast('Roster PDF downloaded successfully!', 'success');
     } catch (err) {
-      console.error('Download PDF Error:', err);
-      showToast('Failed to generate roster PDF', 'error');
+      console.error('PDF Generation error:', err);
+      showToast('Failed to generate PDF download', 'error');
     } finally {
       setDownloading(false);
     }
   };
 
-  // --- Add / Edit Nurse Assignment ---
-  const handleOpenAddAssignment = (dutyAreaName, shift) => {
-    setAssignmentTarget({ dutyArea: dutyAreaName, shift, editingAssignment: null });
-    setLeaveWarning(null);
+  // --- Staff Assignment Flow (Single & Date Range) ---
+  const handleOpenAddAssignment = (dutyAreaName, shiftCol) => {
+    if (!activeRosterDate) {
+      showToast('Please select a date first', 'warning');
+      return;
+    }
+    setAssignmentTarget({
+      dutyArea: dutyAreaName,
+      shift: shiftCol,
+      editingAssignment: null,
+    });
+    setAssignmentMode('range');
     setAssignmentForm({
       employeeId: '',
       date: activeRosterDate,
-      columnId: shift.id,
-      shiftTitle: shift.title,
-      startTime: shift.startTime,
-      endTime: shift.endTime,
+      columnId: shiftCol.id || shiftCol._id,
+      shiftTitle: shiftCol.title,
+      startTime: shiftCol.startTime || '08:00',
+      endTime: shiftCol.endTime || '16:00',
       dutyArea: dutyAreaName,
       notes: '',
     });
+    setRangeForm({
+      startDate: activeRoster?.startDate ? getTodayDateStr(activeRoster.startDate) : activeRosterDate,
+      endDate: activeRoster?.endDate ? getTodayDateStr(activeRoster.endDate) : activeRosterDate,
+    });
+    setLeaveWarning(null);
     setAssignmentModalOpen(true);
   };
 
-  const handleOpenEditAssignment = (ass, dutyAreaName, shift) => {
-    const empId = ass.employeeId?._id || ass.employeeId;
-    setAssignmentTarget({ dutyArea: dutyAreaName, shift, editingAssignment: ass });
-    setLeaveWarning(null);
+  const handleOpenEditAssignment = (ass) => {
+    setAssignmentTarget({
+      dutyArea: ass.dutyArea,
+      shift: { id: ass.columnId, title: ass.shiftTitle, startTime: ass.startTime, endTime: ass.endTime },
+      editingAssignment: ass,
+    });
+    setAssignmentMode('single');
     setAssignmentForm({
-      employeeId: empId,
-      date: activeRosterDate,
-      columnId: shift.id || ass.columnId,
-      shiftTitle: shift.title || ass.shiftTitle,
-      startTime: ass.startTime || shift.startTime,
-      endTime: ass.endTime || shift.endTime,
-      dutyArea: dutyAreaName,
+      employeeId: ass.employeeId?._id || ass.employeeId || '',
+      date: getTodayDateStr(ass.date),
+      columnId: ass.columnId,
+      shiftTitle: ass.shiftTitle,
+      startTime: ass.startTime || '08:00',
+      endTime: ass.endTime || '16:00',
+      dutyArea: ass.dutyArea,
       notes: ass.notes || '',
     });
+    setLeaveWarning(null);
     setAssignmentModalOpen(true);
   };
 
-  // Check if selected employee already has an assignment on active date
-  const selectedEmpConflict = useMemo(() => {
-    if (!assignmentForm.employeeId || !activeRoster?.assignments || !assignmentForm.date) return null;
-    const empId = assignmentForm.employeeId;
-    const targetDateStr = getTodayDateStr(assignmentForm.date);
-    const editingId = assignmentTarget.editingAssignment?._id;
-
-    const existing = activeRoster.assignments.find((ass) => {
-      if (editingId && ass._id === editingId) return false;
-      const assEmpId = ass.employeeId?._id || ass.employeeId;
-      if (String(assEmpId) !== String(empId)) return false;
-      const assDateStr = ass.date ? getTodayDateStr(ass.date) : '';
-      return assDateStr === targetDateStr;
-    });
-
-    if (!existing) return null;
-
-    let empName = 'Employee';
-    const foundEmp = (activeEmployees || []).find((e) => String(e._id) === String(empId));
-    if (foundEmp) {
-      empName = `${foundEmp.firstName} ${foundEmp.lastName}`.trim();
-    } else if (existing.employeeId && typeof existing.employeeId === 'object') {
-      empName = `${existing.employeeId.firstName || ''} ${existing.employeeId.lastName || ''}`.trim();
-    }
-
-    return {
-      message: `${empName} is already assigned on this date.`,
-      details: `Current assignment: ${existing.shiftTitle} · ${existing.dutyArea}`,
-    };
-  }, [assignmentForm.employeeId, assignmentForm.date, activeRoster?.assignments, assignmentTarget.editingAssignment, activeEmployees]);
-
-  const handleSaveAssignment = async () => {
+  const handleSaveAssignment = async (overwriteConflicts = false) => {
     if (!assignmentForm.employeeId) {
       showToast('Please select an employee', 'warning');
-      return;
-    }
-
-    if (selectedEmpConflict) {
-      showToast(`${selectedEmpConflict.message} ${selectedEmpConflict.details}`, 'error');
       return;
     }
 
     const saveProc = async () => {
       try {
         setLoading(true);
+
         if (assignmentTarget.editingAssignment) {
+          // Edit existing single date assignment -> marks isOverride: true
           await rosterService.updateAssignment(
             activeRoster._id,
             assignmentTarget.editingAssignment._id,
-            assignmentForm
+            {
+              employeeId: assignmentForm.employeeId,
+              startTime: assignmentForm.startTime,
+              endTime: assignmentForm.endTime,
+              notes: assignmentForm.notes,
+            }
           );
-          showToast('Assignment updated successfully', 'success');
+          showToast('Assignment updated successfully (single date override)', 'success');
+        } else if (assignmentMode === 'range') {
+          // Bulk Range Assignment
+          const payload = {
+            employeeId: assignmentForm.employeeId,
+            startDate: rangeForm.startDate,
+            endDate: rangeForm.endDate,
+            columnId: assignmentForm.columnId,
+            shiftTitle: assignmentForm.shiftTitle,
+            startTime: assignmentForm.startTime,
+            endTime: assignmentForm.endTime,
+            dutyArea: assignmentForm.dutyArea,
+            notes: assignmentForm.notes || null,
+            overwriteConflicts,
+          };
+          const res = await rosterService.addBulkRangeAssignment(activeRoster._id, payload);
+          showToast(`Range duty assigned successfully (${res.data?.count || 'multiple'} days)`, 'success');
         } else {
-          const res = await rosterService.addAssignment(activeRoster._id, assignmentForm);
-          showToast('Assignment added to roster', 'success');
-          if (res.data?.leaveWarning) {
-            setLeaveWarning(res.data.leaveWarning);
-          }
+          // Single Date Assignment
+          await rosterService.addAssignment(activeRoster._id, assignmentForm);
+          showToast('Staff assigned to duty shift', 'success');
         }
-        handleOpenRosterDetails(activeRoster._id);
+
         setAssignmentModalOpen(false);
+        setConflictPrompt({ open: false, message: '', existingAssignments: [] });
+        handleOpenRosterDetails(activeRoster._id);
+        fetchRosters();
       } catch (err) {
-        const errMsg = err.response?.data?.message || 'Failed to save assignment';
-        const details = err.response?.data?.details;
-        let fullMsg = errMsg;
-        if (details && details.existingShift && details.existingDutyArea) {
-          fullMsg += ` (Current assignment: ${details.existingShift} · ${details.existingDutyArea})`;
+        if (err.response?.status === 409 && err.response?.data?.existingAssignments) {
+          // Open conflict handling confirmation
+          setConflictPrompt({
+            open: true,
+            message: err.response.data.message || 'Some dates in this range already have assignments.',
+            existingAssignments: err.response.data.existingAssignments,
+          });
+        } else {
+          showToast(err.response?.data?.message || 'Failed to save duty assignment', 'error');
         }
-        showToast(fullMsg, 'error');
       } finally {
         setLoading(false);
       }
     };
 
-    if (activeRoster?.status === 'PUBLISHED') {
-      setAssignmentModalOpen(false);
+    if (activeRoster && activeRoster.status === 'PUBLISHED') {
       setPublishEditConfirm({
         open: true,
         pendingAction: saveProc,
@@ -486,17 +658,18 @@ export default function RosterManagementPage() {
     const deleteProc = async () => {
       try {
         setLoading(true);
-        await rosterService.deleteAssignment(activeRoster._id, assignmentId);
-        showToast('Assignment removed from roster', 'info');
+        await rosterService.removeAssignment(activeRoster._id, assignmentId);
+        showToast('Assignment removed', 'info');
         handleOpenRosterDetails(activeRoster._id);
+        fetchRosters();
       } catch (err) {
-        showToast(err.response?.data?.message || 'Failed to remove assignment', 'error');
+        showToast(err.response?.data?.message || 'Failed to delete assignment', 'error');
       } finally {
         setLoading(false);
       }
     };
 
-    if (activeRoster?.status === 'PUBLISHED') {
+    if (activeRoster.status === 'PUBLISHED') {
       setPublishEditConfirm({
         open: true,
         pendingAction: deleteProc,
@@ -669,6 +842,11 @@ export default function RosterManagementPage() {
     );
   }, [activeEmployees, reviewerSearch]);
 
+  const selectedEmployeeInfo = useMemo(() => {
+    if (!assignmentForm.employeeId) return null;
+    return activeEmployees.find((e) => e._id === assignmentForm.employeeId);
+  }, [activeEmployees, assignmentForm.employeeId]);
+
   return (
     <AppLayout title="Hospital Duty Roster">
       <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -677,14 +855,24 @@ export default function RosterManagementPage() {
           subtitle="Hospital-wide duty planning, custom shift matrix layouts, and staff allocations."
           action={
             canManage && (
-              <Button
-                variant="contained"
-                startIcon={<AddRounded />}
-                onClick={handleOpenNewRoster}
-                sx={{ borderRadius: 2 }}
-              >
-                Create Roster
-              </Button>
+              <Stack direction="row" spacing={1.5}>
+                <Button
+                  variant="outlined"
+                  startIcon={<ScheduleRounded />}
+                  onClick={handleOpenNewTemplate}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Create Template
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<AddRounded />}
+                  onClick={handleOpenNewRoster}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Create Roster
+                </Button>
+              </Stack>
             )
           }
         />
@@ -726,6 +914,14 @@ export default function RosterManagementPage() {
                 iconPosition="start"
                 label={`Roster History (${historyRosters.length})`}
                 value="history"
+              />
+            )}
+            {canManage && (
+              <Tab
+                icon={<ScheduleRounded />}
+                iconPosition="start"
+                label={`Roster Templates (${templates.length})`}
+                value="templates"
               />
             )}
             <Tab icon={<CalendarMonthRounded />} iconPosition="start" label="My Roster" value="my-roster" />
@@ -963,18 +1159,27 @@ export default function RosterManagementPage() {
                                           key={ass._id}
                                           sx={{
                                             p: 1.25,
-                                            borderLeft: '4px solid #0284C7',
+                                            borderLeft: ass.isOverride ? '4px solid #D97706' : '4px solid #0284C7',
                                             bgcolor: '#F8FAFC',
                                             border: '1px solid #E2E8F0',
                                             borderLeftWidth: '4px',
                                             borderRadius: 1,
+                                            position: 'relative',
                                           }}
                                         >
                                           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                                            <Box>
-                                              <Typography variant="body2" fontWeight="800" sx={{ color: '#0F172A' }}>
-                                                {fullName}
-                                              </Typography>
+                                            <Box
+                                              onClick={() => canManage && !activeRoster?.isHistorical && handleOpenEditAssignment(ass)}
+                                              sx={{ cursor: canManage && !activeRoster?.isHistorical ? 'pointer' : 'default', flexGrow: 1 }}
+                                            >
+                                              <Stack direction="row" spacing={0.5} alignItems="center">
+                                                <Typography variant="body2" fontWeight="800" sx={{ color: '#0F172A' }}>
+                                                  {fullName}
+                                                </Typography>
+                                                {ass.isOverride && (
+                                                  <Chip label="Override" size="small" color="warning" sx={{ height: 16, fontSize: '0.625rem', fontWeight: 700 }} />
+                                                )}
+                                              </Stack>
                                               {isCustomTime && (
                                                 <Typography variant="caption" fontWeight="700" color="primary" sx={{ display: 'block' }}>
                                                   {formatTime12h(ass.startTime)} TO {formatTime12h(ass.endTime)}
@@ -1216,21 +1421,134 @@ export default function RosterManagementPage() {
           </Grid>
         )}
 
-        {/* ─── TAB 4: MY ROSTER (Employee Personal Schedule) ─── */}
+        {/* ─── TAB 4: ROSTER TEMPLATES ─── */}
+        {activeTab === 'templates' && canManage && (
+          <Box>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+              <Box>
+                <Typography variant="h6" fontWeight="bold">
+                  Reusable Roster Templates
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Create and manage reusable shift structures and duty area layouts.
+                </Typography>
+              </Box>
+              <Button variant="contained" startIcon={<AddRounded />} onClick={handleOpenNewTemplate}>
+                Create Template
+              </Button>
+            </Stack>
+
+            {templates.length === 0 ? (
+              <EmptyState
+                icon={ScheduleRounded}
+                title="No Roster Templates Created"
+                description="Save time by creating reusable roster templates for ICU, Nursing, Emergency, etc."
+                action={
+                  <Button variant="contained" startIcon={<AddRounded />} onClick={handleOpenNewTemplate}>
+                    Create Template
+                  </Button>
+                }
+              />
+            ) : (
+              <Grid container spacing={3}>
+                {templates.map((t) => (
+                  <Grid item xs={12} md={6} lg={4} key={t._id}>
+                    <GlassCard sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
+                        <Box>
+                          <Typography variant="h6" fontWeight="bold">
+                            {t.name}
+                          </Typography>
+                          {t.description && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                              {t.description}
+                            </Typography>
+                          )}
+                        </Box>
+                        <Chip
+                          label={t.isActive ? 'Active' : 'Inactive'}
+                          color={t.isActive ? 'success' : 'default'}
+                          size="small"
+                          sx={{ fontWeight: 700 }}
+                        />
+                      </Stack>
+
+                      <Typography variant="body2" color="text.secondary" mb={2}>
+                        Shift Columns: <strong>{t.columns?.length || 0}</strong> • Duty Areas: <strong>{t.dutyAreas?.length || 0}</strong>
+                      </Typography>
+
+                      <Stack spacing={1} sx={{ mt: 'auto' }}>
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<EditOutlined />}
+                            onClick={() => handleOpenEditTemplate(t)}
+                            fullWidth
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<CopyAllRounded />}
+                            onClick={() => handleDuplicateTemplate(t._id)}
+                            fullWidth
+                          >
+                            Duplicate
+                          </Button>
+                        </Stack>
+                        <Button
+                          variant="contained"
+                          color={t.isActive ? 'warning' : 'success'}
+                          size="small"
+                          startIcon={t.isActive ? <ToggleOffRounded /> : <ToggleOnRounded />}
+                          onClick={() => handleToggleTemplateStatus(t)}
+                          fullWidth
+                        >
+                          {t.isActive ? 'Deactivate' : 'Activate'}
+                        </Button>
+                      </Stack>
+                    </GlassCard>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </Box>
+        )}
+
+        {/* ─── TAB 5: MY ROSTER (Employee Personal Schedule with Current / History) ─── */}
         {activeTab === 'my-roster' && (
           <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              My Duty Assignments
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mb={3}>
-              Personal published shift schedule assigned by hospital management.
-            </Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
+              <Box>
+                <Typography variant="h6" fontWeight="bold">
+                  My Duty Assignments
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Personal published shift schedule assigned by hospital management.
+                </Typography>
+              </Box>
+
+              <Tabs
+                value={myRosterSubTab}
+                onChange={(e, val) => {
+                  setMyRosterSubTab(val);
+                  fetchMyRoster(val);
+                }}
+                indicatorColor="primary"
+                textColor="primary"
+              >
+                <Tab label="Current / Upcoming" value="current" />
+                <Tab label="History (Past)" value="history" />
+              </Tabs>
+            </Stack>
 
             {myAssignments.length === 0 ? (
               <EmptyState
                 icon={CalendarMonthRounded}
-                title="No Personal Duty Assignments Found"
-                description="You currently have no published shift assignments."
+                title={myRosterSubTab === 'current' ? "No Current or Upcoming Assignments" : "No Past Duty History Found"}
+                description={myRosterSubTab === 'current' ? "You have no upcoming duty shifts assigned." : "No past published shifts were found."}
               />
             ) : (
               <Grid container spacing={3}>
@@ -1266,24 +1584,34 @@ export default function RosterManagementPage() {
           </Paper>
         )}
 
-        {/* ─── MODAL 1: CREATE / EDIT ROSTER BUILDER ─── */}
+        {/* ─── MODAL 1: CREATE / EDIT ROSTER BUILDER (WITH TEMPLATE SELECTION) ─── */}
         <Modal
           open={rosterModalOpen}
           onClose={() => setRosterModalOpen(false)}
           title={editingRoster ? 'Edit Roster Details & Layout' : 'Create Hospital Roster'}
           maxWidth="md"
-          actions={
-            <>
-              <Button onClick={() => setRosterModalOpen(false)} sx={{ mr: 1 }}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleSaveRoster} loading={loading}>
-                {editingRoster ? 'Save Changes' : 'Create Draft Roster'}
-              </Button>
-            </>
-          }
         >
           <Stack spacing={3} sx={{ pt: 1 }}>
+            {!editingRoster && templates.length > 0 && (
+              <FormControl fullWidth>
+                <InputLabel>Use Template (Optional)</InputLabel>
+                <Select
+                  value={rosterForm.templateId}
+                  label="Use Template (Optional)"
+                  onChange={(e) => handleSelectTemplateForRoster(e.target.value)}
+                >
+                  <MenuItem value="">
+                    <em>No Template (Custom Roster)</em>
+                  </MenuItem>
+                  {templates.filter((t) => t.isActive).map((t) => (
+                    <MenuItem key={t._id} value={t._id}>
+                      {t.name} ({t.columns?.length || 0} Shifts, {t.dutyAreas?.length || 0} Duty Areas)
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
             <TextField
               label="Roster Title"
               value={rosterForm.title}
@@ -1467,40 +1795,223 @@ export default function RosterManagementPage() {
                 ))}
               </Stack>
             </Box>
+
+            <Box align="right" pt={2}>
+              <Button onClick={() => setRosterModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSaveRoster} loading={loading}>
+                {editingRoster ? 'Save Changes' : 'Create Draft Roster'}
+              </Button>
+            </Box>
           </Stack>
         </Modal>
 
+        {/* ─── MODAL 2: CREATE / EDIT TEMPLATE ─── */}
+        <Modal
+          open={templateModalOpen}
+          onClose={() => setTemplateModalOpen(false)}
+          title={editingTemplate ? 'Edit Roster Template' : 'Create Roster Template'}
+          maxWidth="md"
+        >
+          <Stack spacing={3} sx={{ pt: 1 }}>
+            <TextField
+              label="Template Name"
+              value={templateForm.name}
+              onChange={(e) => setTemplateForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="e.g. ICU 3 Shift Template"
+              fullWidth
+              required
+            />
 
+            <TextField
+              label="Description (Optional)"
+              value={templateForm.description}
+              onChange={(e) => setTemplateForm((p) => ({ ...p, description: e.target.value }))}
+              placeholder="e.g. Standard 3-shift pattern for Intensive Care Unit"
+              fullWidth
+            />
 
-        {/* ─── MODAL 3: ADD NURSE ASSIGNMENT ─── */}
+            {/* Shift Columns Config */}
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Template Shift Columns
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<AddRounded />}
+                  onClick={() =>
+                    setTemplateForm((p) => ({
+                      ...p,
+                      columns: [
+                        ...p.columns,
+                        { id: `col-${Date.now()}`, title: `SHIFT ${p.columns.length + 1}`, startTime: '08:00', endTime: '16:00', order: p.columns.length + 1 },
+                      ],
+                    }))
+                  }
+                >
+                  Add Shift
+                </Button>
+              </Stack>
+              <Stack spacing={1.5}>
+                {templateForm.columns.map((col, idx) => (
+                  <Paper key={col.id} variant="outlined" sx={{ p: 1.5 }}>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} sm={4}>
+                        <TextField
+                          label="Shift Title"
+                          size="small"
+                          fullWidth
+                          value={col.title}
+                          onChange={(e) => {
+                            const cols = [...templateForm.columns];
+                            cols[idx].title = e.target.value.toUpperCase();
+                            setTemplateForm((p) => ({ ...p, columns: cols }));
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={5} sm={3}>
+                        <TextField
+                          label="Start Time"
+                          type="time"
+                          size="small"
+                          fullWidth
+                          InputLabelProps={{ shrink: true }}
+                          value={col.startTime}
+                          onChange={(e) => {
+                            const cols = [...templateForm.columns];
+                            cols[idx].startTime = e.target.value;
+                            setTemplateForm((p) => ({ ...p, columns: cols }));
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={5} sm={3}>
+                        <TextField
+                          label="End Time"
+                          type="time"
+                          size="small"
+                          fullWidth
+                          InputLabelProps={{ shrink: true }}
+                          value={col.endTime}
+                          onChange={(e) => {
+                            const cols = [...templateForm.columns];
+                            cols[idx].endTime = e.target.value;
+                            setTemplateForm((p) => ({ ...p, columns: cols }));
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={2} sm={2} align="right">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          disabled={templateForm.columns.length <= 1}
+                          onClick={() =>
+                            setTemplateForm((p) => ({
+                              ...p,
+                              columns: p.columns.filter((c) => c.id !== col.id),
+                            }))
+                          }
+                        >
+                          <DeleteOutlineRounded fontSize="small" />
+                        </IconButton>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                ))}
+              </Stack>
+            </Box>
+
+            {/* Duty Areas Config */}
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Template Duty Areas
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<AddRounded />}
+                  onClick={() =>
+                    setTemplateForm((p) => ({
+                      ...p,
+                      dutyAreas: [
+                        ...p.dutyAreas,
+                        { id: `da-${Date.now()}`, name: `DUTY AREA ${p.dutyAreas.length + 1}`, order: p.dutyAreas.length + 1 },
+                      ],
+                    }))
+                  }
+                >
+                  Add Duty Area
+                </Button>
+              </Stack>
+              <Stack spacing={1.5}>
+                {templateForm.dutyAreas.map((da, idx) => (
+                  <Paper key={da.id} variant="outlined" sx={{ p: 1.5 }}>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={10}>
+                        <TextField
+                          label="Duty Area Name"
+                          size="small"
+                          fullWidth
+                          value={da.name}
+                          onChange={(e) => {
+                            const das = [...templateForm.dutyAreas];
+                            das[idx].name = e.target.value.toUpperCase();
+                            setTemplateForm((p) => ({ ...p, dutyAreas: das }));
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={2} align="right">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          disabled={templateForm.dutyAreas.length <= 1}
+                          onClick={() =>
+                            setTemplateForm((p) => ({
+                              ...p,
+                              dutyAreas: p.dutyAreas.filter((d) => d.id !== da.id),
+                            }))
+                          }
+                        >
+                          <DeleteOutlineRounded fontSize="small" />
+                        </IconButton>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                ))}
+              </Stack>
+            </Box>
+
+            <Box align="right" pt={2}>
+              <Button onClick={() => setTemplateModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSaveTemplate} loading={loading}>
+                {editingTemplate ? 'Save Template' : 'Create Template'}
+              </Button>
+            </Box>
+          </Stack>
+        </Modal>
+
+        {/* ─── MODAL 3: ASSIGN STAFF (SINGLE OR RANGE) ─── */}
         <Modal
           open={assignmentModalOpen}
           onClose={() => setAssignmentModalOpen(false)}
           title={`Assign Staff to ${assignmentTarget.dutyArea}`}
           maxWidth="sm"
-          actions={
-            <>
-              <Button onClick={() => setAssignmentModalOpen(false)} sx={{ mr: 1 }}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleSaveAssignment} loading={loading}>
-                Assign Staff
-              </Button>
-            </>
-          }
         >
           <Stack spacing={2.5} sx={{ pt: 1 }}>
-            {selectedEmpConflict && (
-              <Alert severity="error" icon={<ErrorOutlineRounded />}>
-                <Typography variant="subtitle2" fontWeight={600}>{selectedEmpConflict.message}</Typography>
-                <Typography variant="body2">{selectedEmpConflict.details}</Typography>
-              </Alert>
-            )}
-
-            {leaveWarning && (
-              <Alert severity="warning" icon={<WarningAmberRounded />}>
-                {leaveWarning.message || 'Employee has approved/pending leave on this date.'}
-              </Alert>
+            {!assignmentTarget.editingAssignment && (
+              <Tabs
+                value={assignmentMode}
+                onChange={(e, val) => setAssignmentMode(val)}
+                indicatorColor="primary"
+                textColor="primary"
+                variant="fullWidth"
+              >
+                <Tab label="Apply Date Range (Auto-Assign)" value="range" />
+                <Tab label="Single Date Only" value="single" />
+              </Tabs>
             )}
 
             <FormControl fullWidth required>
@@ -1517,6 +2028,33 @@ export default function RosterManagementPage() {
                 ))}
               </Select>
             </FormControl>
+
+            {assignmentMode === 'range' && !assignmentTarget.editingAssignment && (
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <TextField
+                    label="From Date"
+                    type="date"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    value={rangeForm.startDate}
+                    onChange={(e) => setRangeForm((p) => ({ ...p, startDate: e.target.value }))}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    label="To Date"
+                    type="date"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    value={rangeForm.endDate}
+                    onChange={(e) => setRangeForm((p) => ({ ...p, endDate: e.target.value }))}
+                    required
+                  />
+                </Grid>
+              </Grid>
+            )}
 
             <Grid container spacing={2}>
               <Grid item xs={6}>
@@ -1547,8 +2085,50 @@ export default function RosterManagementPage() {
               onChange={(e) => setAssignmentForm((p) => ({ ...p, notes: e.target.value }))}
               fullWidth
             />
+
+            <Box align="right" pt={1}>
+              <Button onClick={() => setAssignmentModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={() => handleSaveAssignment(false)} loading={loading}>
+                {assignmentMode === 'range' && !assignmentTarget.editingAssignment ? 'Apply Range Duty' : 'Assign Staff'}
+              </Button>
+            </Box>
           </Stack>
         </Modal>
+
+        {/* CONFLICT CONFIRMATION MODAL FOR RANGE ASSIGNMENT */}
+        <Dialog open={conflictPrompt.open} onClose={() => setConflictPrompt({ open: false, message: '', existingAssignments: [] })}>
+          <DialogTitle sx={{ fontWeight: 800, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningAmberRounded color="error" /> Existing Assignment Conflict
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" mb={2}>
+              {conflictPrompt.message}
+            </Typography>
+            <Paper variant="outlined" sx={{ p: 2, maxH: 180, overflowY: 'auto', bgcolor: '#FEF2F2' }}>
+              <Typography variant="subtitle2" fontWeight={700} color="error" gutterBottom>
+                Conflicting Dates:
+              </Typography>
+              {conflictPrompt.existingAssignments?.map((item, i) => (
+                <Typography key={i} variant="caption" sx={{ display: 'block', color: '#991B1B', fontWeight: 600 }}>
+                  • {item.date ? getTodayDateStr(item.date) : item}: {item.shiftTitle || 'Assigned'} in {item.dutyArea || 'Duty Area'}
+                </Typography>
+              ))}
+            </Paper>
+            <Typography variant="body2" color="text.secondary" mt={2}>
+              Choose whether to keep existing assignments or overwrite all conflicting dates with the new shift assignment.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setConflictPrompt({ open: false, message: '', existingAssignments: [] })}>
+              Cancel
+            </Button>
+            <Button variant="contained" color="warning" onClick={() => handleSaveAssignment(true)}>
+              Overwrite Existing
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* ─── MODAL 4: SHARE ROSTER FOR REVIEW ─── */}
         <Modal
@@ -1556,16 +2136,6 @@ export default function RosterManagementPage() {
           onClose={() => setShareModalOpen(false)}
           title="Share Roster for Review"
           maxWidth="sm"
-          actions={
-            <>
-              <Button onClick={() => setShareModalOpen(false)} sx={{ mr: 1 }}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleSaveShareReview} loading={loading}>
-                Share with Selected ({selectedReviewerIds.length})
-              </Button>
-            </>
-          }
         >
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography variant="body2" color="text.secondary">
@@ -1612,6 +2182,15 @@ export default function RosterManagementPage() {
                 })}
               </List>
             </Paper>
+
+            <Box align="right" pt={2}>
+              <Button onClick={() => setShareModalOpen(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSaveShareReview} loading={loading}>
+                Share with Selected ({selectedReviewerIds.length})
+              </Button>
+            </Box>
           </Stack>
         </Modal>
 
@@ -1621,16 +2200,6 @@ export default function RosterManagementPage() {
           onClose={() => setFeedbackModalOpen(false)}
           title="Roster Review Feedback Comments"
           maxWidth="sm"
-          actions={
-            <>
-              <Button onClick={() => setFeedbackModalOpen(false)} sx={{ mr: 1 }}>
-                Close
-              </Button>
-              <Button variant="contained" onClick={handleAddComment} disabled={!newCommentText.trim()}>
-                Post Comment
-              </Button>
-            </>
-          }
         >
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Box sx={{ maxHeight: 260, overflowY: 'auto' }}>
@@ -1678,6 +2247,15 @@ export default function RosterManagementPage() {
               rows={2}
               fullWidth
             />
+
+            <Box align="right" pt={1}>
+              <Button onClick={() => setFeedbackModalOpen(false)} sx={{ mr: 1 }}>
+                Close
+              </Button>
+              <Button variant="contained" onClick={handleAddComment} disabled={!newCommentText.trim()}>
+                Post Comment
+              </Button>
+            </Box>
           </Stack>
         </Modal>
 
@@ -1707,7 +2285,7 @@ export default function RosterManagementPage() {
           onClose={() => setDeleteConfirm({ open: false, type: '', id: '', title: '', description: '' })}
         />
 
-        {/* Toast Notification */}
+        {/* Global Toast Notification */}
         <Snackbar
           open={toast.open}
           autoHideDuration={5000}

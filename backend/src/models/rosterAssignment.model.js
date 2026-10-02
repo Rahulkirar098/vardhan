@@ -54,6 +54,10 @@ const rosterAssignmentSchema = new mongoose.Schema(
             default: null,
             trim: true,
         },
+        isOverride: {
+            type: Boolean,
+            default: false,
+        },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
@@ -65,7 +69,7 @@ const rosterAssignmentSchema = new mongoose.Schema(
     }
 );
 
-rosterAssignmentSchema.index({ hospitalId: 1, employeeId: 1, date: 1 });
+rosterAssignmentSchema.index({ hospitalId: 1, employeeId: 1, date: 1 }, { unique: true });
 
 const RosterAssignment = mongoose.model("RosterAssignment", rosterAssignmentSchema);
 

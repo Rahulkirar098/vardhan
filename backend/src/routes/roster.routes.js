@@ -90,6 +90,12 @@ router.patch(
 // ─── ASSIGNMENTS ─────────────────────────────────────────────────────────────
 
 router.post(
+    "/:id/assignments/bulk-range",
+    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
+    rosterController.addBulkRangeAssignments
+);
+
+router.post(
     "/:id/assignments",
     authorizePermission(PERMISSIONS.ROSTER_MANAGE),
     rosterController.addAssignment

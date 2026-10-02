@@ -18,6 +18,10 @@ const positionSchema = new mongoose.Schema(
             type: [String],
             default: [],
         },
+        rosterEligible: {
+            type: Boolean,
+            default: false,
+        },
         status: {
             type: String,
             enum: ['active', 'inactive'],

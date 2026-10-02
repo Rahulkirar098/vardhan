@@ -1,6 +1,37 @@
 import client from './api/client';
 
 export const rosterService = {
+  // --- Templates ---
+  getRosterTemplates: async (params) => {
+    const response = await client.get('/v1/roster-templates', { params });
+    return response.data;
+  },
+
+  getRosterTemplate: async (id) => {
+    const response = await client.get(`/v1/roster-templates/${id}`);
+    return response.data;
+  },
+
+  createRosterTemplate: async (data) => {
+    const response = await client.post('/v1/roster-templates', data);
+    return response.data;
+  },
+
+  updateRosterTemplate: async (id, data) => {
+    const response = await client.put(`/v1/roster-templates/${id}`, data);
+    return response.data;
+  },
+
+  duplicateRosterTemplate: async (id) => {
+    const response = await client.post(`/v1/roster-templates/${id}/duplicate`);
+    return response.data;
+  },
+
+  deactivateRosterTemplate: async (id) => {
+    const response = await client.patch(`/v1/roster-templates/${id}/deactivate`);
+    return response.data;
+  },
+
   // --- Rosters ---
   getRosters: async (params) => {
     const response = await client.get('/v1/rosters', { params });
@@ -59,6 +90,11 @@ export const rosterService = {
     return response.data;
   },
 
+  addBulkRangeAssignment: async (rosterId, data) => {
+    const response = await client.post(`/v1/rosters/${rosterId}/assignments/bulk-range`, data);
+    return response.data;
+  },
+
   updateAssignment: async (rosterId, assignmentId, data) => {
     const response = await client.put(`/v1/rosters/${rosterId}/assignments/${assignmentId}`, data);
     return response.data;
@@ -77,5 +113,3 @@ export const rosterService = {
 };
 
 export default rosterService;
-
-

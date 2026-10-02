@@ -86,7 +86,7 @@ const createRoster = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
-        const { title, startDate, endDate, columns, dutyAreas } = req.body;
+        const { title, startDate, endDate, columns, dutyAreas, templateId } = req.body;
         const roster = await rosterService.createRoster({
             hospitalId,
             userId: req.user.id || req.user._id,
@@ -95,6 +95,7 @@ const createRoster = async (req, res) => {
             endDate,
             columns,
             dutyAreas,
+            templateId,
         });
 
         return res.status(201).json({
@@ -474,6 +475,59 @@ const deleteAssignment = async (req, res) => {
     }
 };
 
+const addBulkRangeAssignments = async (req, res) => {
+    try {
+        const hospitalId = await getHospitalIdFromContext(req.user);
+        if (!hospitalId) {
+            return res.status(404).json({ success: false, message: "Hospital not found" });
+        }
+
+        const { employeeId, startDate, endDate, columnId, shiftTitle, startTime, endTime, dutyArea, notes, overwriteConflicts } = req.body;
+        const result = await rosterService.addBulkRangeAssignments({
+            hospitalId,
+            userId: req.user.id || req.user._id,
+            rosterId: req.params.id,
+            employeeId,
+            startDate,
+            endDate,
+            columnId,
+            shiftTitle,
+            startTime,
+            endTime,
+            dutyArea,
+            notes,
+            overwriteConflicts: !!overwriteConflicts,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: `${result.createdCount} assignments applied successfully`,
+            data: result.createdAssignments,
+            conflicts: result.conflicts,
+            leaveWarnings: result.leaveWarnings,
+        });
+    } catch (error) {
+        if (error.code === "DUPLICATE_ASSIGNMENT") {
+            return res.status(409).json({
+                success: false,
+                message: error.message,
+                details: error.existingAssignment,
+            });
+        }
+        if (error.code === "BUSINESS_CONFLICT") {
+            return res.status(409).json({ success: false, message: error.message });
+        }
+        if (error.code === "VALIDATION_ERROR") {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+        if (error.code === "NOT_FOUND") {
+            return res.status(404).json({ success: false, message: error.message });
+        }
+        console.error("Add Bulk Range Assignments Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 // ─── MY ROSTER ───────────────────────────────────────────────────────────────
 
 const getMyRoster = async (req, res) => {
@@ -483,10 +537,12 @@ const getMyRoster = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
+        const { tab } = req.query;
         const myShifts = await rosterService.getMyRoster({
             userId: req.user.id || req.user._id,
             hospitalId,
             employeeId: req.user.employeeId,
+            tab,
         });
 
         return res.status(200).json({
@@ -515,6 +571,7 @@ module.exports = {
     resolveReviewComment,
     // Assignments
     addAssignment,
+    addBulkRangeAssignments,
     updateAssignment,
     deleteAssignment,
     // My Roster
