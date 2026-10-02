@@ -220,10 +220,14 @@ export default function RosterManagementPage() {
       const list = res.data || [];
       setRosters(list);
 
-      // Auto-select latest published roster for workforce matrix view if none selected
-      const published = list.filter((r) => r.status === 'PUBLISHED');
-      if (published.length > 0 && !activeRoster) {
-        handleOpenRosterDetails(published[0]._id);
+      // Auto-select first current active published roster (endDate >= today) for matrix view if none selected
+      const activePublished = list.filter((r) => {
+        if (r.status !== 'PUBLISHED') return false;
+        const endIso = r.endDate ? getTodayDateStr(r.endDate) : '';
+        return endIso >= getTodayDateStr();
+      });
+      if (activePublished.length > 0 && (!activeRoster || activeRoster.isHistorical)) {
+        handleOpenRosterDetails(activePublished[0]._id);
       }
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to load rosters', 'error');
@@ -836,6 +840,15 @@ export default function RosterManagementPage() {
   const draftsList = useMemo(() => rosters.filter((r) => r.status === 'DRAFT'), [rosters]);
   const publishedList = useMemo(() => rosters.filter((r) => r.status === 'PUBLISHED'), [rosters]);
 
+  const activePublishedRosters = useMemo(() => {
+    const todayStr = getTodayDateStr();
+    return rosters.filter((r) => {
+      if (r.status !== 'PUBLISHED') return false;
+      const endIso = r.endDate ? getTodayDateStr(r.endDate) : '';
+      return endIso >= todayStr;
+    });
+  }, [rosters]);
+
   const filteredReviewerEmployees = useMemo(() => {
     const q = reviewerSearch.toLowerCase().trim();
     if (!q) return activeEmployees;
@@ -937,6 +950,31 @@ export default function RosterManagementPage() {
           <Box>
             {activeRoster ? (
               <Box>
+                {/* SELECT ACTIVE ROSTER DROPDOWN FOR MULTIPLE ACTIVE ROSTERS */}
+                {activePublishedRosters.length > 0 && !activeRoster.isHistorical && (
+                  <Paper sx={{ p: 1.5, px: 2, mb: 2.5, borderRadius: 2, border: '1px solid #CBD5E1', bgcolor: '#F8FAFC' }}>
+                    <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                      <Typography variant="caption" color="text.secondary" fontWeight="800" sx={{ letterSpacing: 0.5 }}>
+                        SELECT ACTIVE ROSTER:
+                      </Typography>
+                      <FormControl size="small" sx={{ minWidth: 320 }}>
+                        <Select
+                          value={activeRoster?._id || ''}
+                          onChange={(e) => handleOpenRosterDetails(e.target.value)}
+                          sx={{ bgcolor: '#FFFFFF', fontWeight: 700, fontSize: '0.875rem' }}
+                        >
+                          {activePublishedRosters.map((r) => (
+                            <MenuItem key={r._id} value={r._id}>
+                              <Typography variant="body2" fontWeight="700">
+                                {r.title} ({formatDate(r.startDate)} - {formatDate(r.endDate)})
+                              </Typography>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  </Paper>
+                )}
 
                 {/* REAL HOSPITAL ROSTER HEADER BANNER */}
                 <Paper
