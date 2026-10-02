@@ -373,6 +373,14 @@ const addAssignment = async (req, res) => {
             leaveWarning: result.leaveWarning,
         });
     } catch (error) {
+        if (error.code === "LEAVE_CONFLICT") {
+            return res.status(409).json({
+                success: false,
+                code: "LEAVE_CONFLICT",
+                message: error.message,
+                details: error.details,
+            });
+        }
         if (error.code === "DUPLICATE_ASSIGNMENT") {
             return res.status(409).json({
                 success: false,
@@ -422,6 +430,14 @@ const updateAssignment = async (req, res) => {
             data: assignment,
         });
     } catch (error) {
+        if (error.code === "LEAVE_CONFLICT") {
+            return res.status(409).json({
+                success: false,
+                code: "LEAVE_CONFLICT",
+                message: error.message,
+                details: error.details,
+            });
+        }
         if (error.code === "DUPLICATE_ASSIGNMENT") {
             return res.status(409).json({
                 success: false,
@@ -505,8 +521,17 @@ const addBulkRangeAssignments = async (req, res) => {
             data: result.createdAssignments,
             conflicts: result.conflicts,
             leaveWarnings: result.leaveWarnings,
+            approvedLeaveConflicts: result.approvedLeaveConflicts,
         });
     } catch (error) {
+        if (error.code === "LEAVE_CONFLICT") {
+            return res.status(409).json({
+                success: false,
+                code: "LEAVE_CONFLICT",
+                message: error.message,
+                details: error.details,
+            });
+        }
         if (error.code === "DUPLICATE_ASSIGNMENT") {
             return res.status(409).json({
                 success: false,

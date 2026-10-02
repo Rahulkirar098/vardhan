@@ -1788,7 +1788,7 @@ async function runTests() {
         assert.strictEqual(overwriteRes.body.data.length, 10);
         console.log("  ✓ C3. Explicit overwrite (overwriteConflicts: true) replaces existing assignments");
 
-        // C4: Leave conflict produces warning
+        // C4: Approved leave blocks roster assignment for that date in bulk range
         await Leave.create({
             hospitalId: hospitalA._id,
             employeeId: nurse2Employee._id,
@@ -1816,9 +1816,152 @@ async function runTests() {
             },
         });
         assert.strictEqual(leaveBulkRes.status, 201);
-        assert.ok(leaveBulkRes.body.leaveWarnings.length >= 1);
-        assert.strictEqual(leaveBulkRes.body.leaveWarnings[0].date, "2026-10-05");
-        console.log("  ✓ C4. Bulk range assignment over approved leave date produces leave warning");
+        assert.ok(leaveBulkRes.body.approvedLeaveConflicts.length >= 1);
+        assert.strictEqual(leaveBulkRes.body.approvedLeaveConflicts[0].date, "2026-10-05");
+        // Verify 2026-10-05 assignment was NOT created
+        const fetchRosterAssAfterBulk = await makeRequest(`/api/v1/rosters/${tplRoster._id}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        const nurse2Oct5 = fetchRosterAssAfterBulk.body.data.assignments.find(
+            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-05" && a.employeeId._id === nurse2Employee._id.toString()
+        );
+        assert.strictEqual(nurse2Oct5, undefined);
+        console.log("  ✓ C4. Bulk range assignment skips approved leave date (2026-10-05) and returns conflict info");
+
+        console.log("\n--- 9B. DEDICATED LEAVE ↔ ROSTER INTEGRATION TESTS ---");
+        // Create an approved leave for nurse1 on 2026-10-07 to 2026-10-08
+        await Leave.create({
+            hospitalId: hospitalA._id,
+            employeeId: nurse1Employee._id,
+            leaveType: "SICK",
+            startDate: new Date("2026-10-07"),
+            endDate: new Date("2026-10-08"),
+            totalDays: 2,
+            appliedBy: tempAdminIdA,
+            reason: "Medical leave",
+            status: "approved",
+            createdBy: tempAdminIdA,
+        });
+
+        // Test A: Single assignment on approved leave date -> 409 LEAVE_CONFLICT
+        const singleOnLeaveRes = await makeRequest(`/api/v1/rosters/${tplRoster._id}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-10-07",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "ICU 3rd Floor",
+            },
+        });
+        assert.strictEqual(singleOnLeaveRes.status, 409);
+        assert.strictEqual(singleOnLeaveRes.body.code, "LEAVE_CONFLICT");
+        console.log("  ✓ Test A. Single assignment on approved leave date blocked with 409 LEAVE_CONFLICT");
+
+        // Test B: Verify NO assignment document was created for blocked date
+        const verifyNoAssRes = await makeRequest(`/api/v1/rosters/${tplRoster._id}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        const nurse1Oct7 = verifyNoAssRes.body.data.assignments.find(
+            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-07" && a.employeeId._id === nurse1Employee._id.toString()
+        );
+        assert.strictEqual(nurse1Oct7, undefined);
+        console.log("  ✓ Test B. Confirmed 0 RosterAssignment documents created for blocked date");
+
+        // Test C: Single assignment on date AFTER approved leave -> 201 Success
+        const singleAfterLeaveRes = await makeRequest(`/api/v1/rosters/${tplRoster._id}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-10-09",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "ICU 3rd Floor",
+            },
+        });
+        assert.strictEqual(singleAfterLeaveRes.status, 201);
+        console.log("  ✓ Test C. Single assignment on date after approved leave succeeds (201)");
+
+        // Test D: Pending leave does NOT block assignment (allows creation)
+        await Leave.create({
+            hospitalId: hospitalA._id,
+            employeeId: nurse1Employee._id,
+            leaveType: "CASUAL",
+            startDate: new Date("2026-10-10"),
+            endDate: new Date("2026-10-10"),
+            totalDays: 1,
+            appliedBy: nurse1Employee._id,
+            reason: "Personal work",
+            status: "pending",
+            createdBy: nurse1Employee._id,
+        });
+        const pendingLeaveAssRes = await makeRequest(`/api/v1/rosters/${tplRoster._id}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-10-10",
+                shiftTitle: "Evening",
+                startTime: "14:00",
+                endTime: "20:00",
+                dutyArea: "ICU 3rd Floor",
+            },
+        });
+        assert.strictEqual(pendingLeaveAssRes.status, 201);
+        console.log("  ✓ Test D. Pending leave does NOT block assignment (201 PASS)");
+
+        // Test E & F: Rejected / Cancelled leave does NOT block assignment
+        await Leave.create({
+            hospitalId: hospitalA._id,
+            employeeId: nurse1Employee._id,
+            leaveType: "CASUAL",
+            startDate: new Date("2026-10-06"),
+            endDate: new Date("2026-10-06"),
+            totalDays: 1,
+            appliedBy: nurse1Employee._id,
+            reason: "Rejected leave",
+            status: "rejected",
+            createdBy: nurse1Employee._id,
+        });
+        const rejectedLeaveAssRes = await makeRequest(`/api/v1/rosters/${tplRoster._id}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-10-06",
+                shiftTitle: "Night",
+                startTime: "20:00",
+                endTime: "08:00",
+                dutyArea: "ICU 3rd Floor",
+            },
+        });
+        assert.strictEqual(rejectedLeaveAssRes.status, 201);
+        console.log("  ✓ Test E & F. Rejected/Cancelled leave does NOT block assignment (201 PASS)");
+
+        // Test G: Bulk assignment 01-10 Oct with leave 07-08 Oct -> 07-08 blocked, others assigned
+        const bulkOverLeaveRes = await makeRequest(`/api/v1/rosters/${tplRoster._id}/assignments/bulk-range`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                startDate: "2026-10-01",
+                endDate: "2026-10-10",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "ICU 3rd Floor",
+                overwriteConflicts: true,
+            },
+        });
+        assert.strictEqual(bulkOverLeaveRes.status, 201);
+        assert.strictEqual(bulkOverLeaveRes.body.approvedLeaveConflicts.length, 2); // 07, 08 Oct
+        console.log("  ✓ Test G. Bulk assignment 01-10 Oct: 07-08 Oct blocked by approved leave, others assigned");
 
         // O1, O2, O3, O4: Single-date manual override
         const fetchTplRosterAss = await makeRequest(`/api/v1/rosters/${tplRoster._id}`, {

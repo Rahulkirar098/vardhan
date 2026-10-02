@@ -601,23 +601,53 @@ const addAssignment = async ({
         throw err;
     }
 
-    // Check Leave database for conflicts / warnings
-    const leaveConflict = await Leave.findOne({
+    // 1. APPROVED Leave Check -> BLOCKS assignment completely
+    const approvedLeave = await Leave.findOne({
         hospitalId,
-        employeeId,
-        status: { $in: ["APPROVED", "PENDING", "approved", "pending"] },
+        employeeId: employee._id,
+        status: { $in: ["APPROVED", "approved"] },
+        startDate: { $lte: dateEnd },
+        endDate: { $gte: dateStart },
+    }).lean();
+
+    if (approvedLeave) {
+        const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
+        const fromFmt = approvedLeave.startDate.toISOString().split("T")[0];
+        const toFmt = approvedLeave.endDate.toISOString().split("T")[0];
+        const dateFmt = assignmentDate.toISOString().split("T")[0];
+        const err = new Error(
+            `${empName} has an approved leave from ${fromFmt} to ${toFmt} (${approvedLeave.leaveType}) and cannot be assigned on ${dateFmt}.`
+        );
+        err.code = "LEAVE_CONFLICT";
+        err.details = {
+            employeeId: employee._id,
+            employeeName: empName,
+            leaveId: approvedLeave._id,
+            leaveType: approvedLeave.leaveType,
+            startDate: approvedLeave.startDate,
+            endDate: approvedLeave.endDate,
+            blockedDate: assignmentDate,
+        };
+        throw err;
+    }
+
+    // 2. PENDING Leave Check -> Non-blocking notification warning
+    const pendingLeave = await Leave.findOne({
+        hospitalId,
+        employeeId: employee._id,
+        status: { $in: ["PENDING", "pending"] },
         startDate: { $lte: dateEnd },
         endDate: { $gte: dateStart },
     }).lean();
 
     let leaveWarning = null;
-    if (leaveConflict) {
+    if (pendingLeave) {
         leaveWarning = {
             hasLeave: true,
-            status: leaveConflict.status,
-            leaveType: leaveConflict.leaveType,
-            reason: leaveConflict.reason,
-            message: `Employee has ${leaveConflict.status} leave on this date (${leaveConflict.leaveType}).`,
+            status: pendingLeave.status,
+            leaveType: pendingLeave.leaveType,
+            reason: pendingLeave.reason,
+            message: `Employee has ${pendingLeave.status} leave on this date (${pendingLeave.leaveType}).`,
         };
     }
 
@@ -792,16 +822,25 @@ const addBulkRangeAssignments = async ({
         existingMap.set(dateKey, ass);
     });
 
-    const leaveConflicts = await Leave.find({
+    const approvedLeaves = await Leave.find({
         hospitalId,
         employeeId: employee._id,
-        status: { $in: ["APPROVED", "PENDING", "approved", "pending"] },
+        status: { $in: ["APPROVED", "approved"] },
+        startDate: { $lte: rangeEndBounds },
+        endDate: { $gte: rangeStartBounds },
+    }).lean();
+
+    const pendingLeaves = await Leave.find({
+        hospitalId,
+        employeeId: employee._id,
+        status: { $in: ["PENDING", "pending"] },
         startDate: { $lte: rangeEndBounds },
         endDate: { $gte: rangeStartBounds },
     }).lean();
 
     const conflicts = [];
     const leaveWarnings = [];
+    const approvedLeaveConflicts = [];
     const createdAssignments = [];
 
     if (!overwriteConflicts && existingAssignments.length === datesList.length && datesList.length > 0) {
@@ -823,16 +862,31 @@ const addBulkRangeAssignments = async ({
         const dateKey = d.toISOString().split("T")[0];
         const { start: dateStart, end: dateEnd } = getCalendarBounds(d);
 
-        const leaveOnDate = leaveConflicts.find(
+        // 1. APPROVED Leave Check -> BLOCKS assignment for date d
+        const approvedOnDate = approvedLeaves.find(
             (l) => new Date(l.startDate) <= dateEnd && new Date(l.endDate) >= dateStart
         );
-        if (leaveOnDate) {
+        if (approvedOnDate) {
+            approvedLeaveConflicts.push({
+                date: dateKey,
+                leaveType: approvedOnDate.leaveType,
+                reason: approvedOnDate.reason,
+                message: `Employee has APPROVED leave on ${dateKey} (${approvedOnDate.leaveType}) and cannot be assigned.`,
+            });
+            continue; // DO NOT create RosterAssignment document for date d
+        }
+
+        // 2. PENDING Leave Check -> Non-blocking warning
+        const pendingOnDate = pendingLeaves.find(
+            (l) => new Date(l.startDate) <= dateEnd && new Date(l.endDate) >= dateStart
+        );
+        if (pendingOnDate) {
             leaveWarnings.push({
                 date: dateKey,
-                status: leaveOnDate.status,
-                leaveType: leaveOnDate.leaveType,
-                reason: leaveOnDate.reason,
-                message: `Employee has ${leaveOnDate.status} leave on ${dateKey} (${leaveOnDate.leaveType}).`,
+                status: pendingOnDate.status,
+                leaveType: pendingOnDate.leaveType,
+                reason: pendingOnDate.reason,
+                message: `Employee has ${pendingOnDate.status} leave on ${dateKey} (${pendingOnDate.leaveType}).`,
             });
         }
 
@@ -871,6 +925,22 @@ const addBulkRangeAssignments = async ({
         createdAssignments.push(newAss);
     }
 
+    // If ALL requested dates were blocked due to approved leave, throw LEAVE_CONFLICT (409)
+    if (createdAssignments.length === 0 && approvedLeaveConflicts.length > 0) {
+        const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
+        const blockedDatesStr = approvedLeaveConflicts.map((c) => c.date).join(", ");
+        const err = new Error(
+            `${empName} has an approved leave covering dates (${blockedDatesStr}) and cannot be assigned to roster.`
+        );
+        err.code = "LEAVE_CONFLICT";
+        err.details = {
+            employeeId: employee._id,
+            employeeName: empName,
+            approvedLeaveConflicts,
+        };
+        throw err;
+    }
+
     roster.updatedBy = userId;
     await roster.save();
 
@@ -879,6 +949,7 @@ const addBulkRangeAssignments = async ({
         createdAssignments,
         conflicts,
         leaveWarnings,
+        approvedLeaveConflicts,
     };
 };
 
@@ -974,6 +1045,37 @@ const updateAssignment = async ({
     }
 
     const { start: dateStart, end: dateEnd } = getCalendarBounds(targetDate);
+
+    // APPROVED Leave Check for updateAssignment
+    const approvedLeaveUpdate = await Leave.findOne({
+        hospitalId,
+        employeeId: targetEmp._id,
+        status: { $in: ["APPROVED", "approved"] },
+        startDate: { $lte: dateEnd },
+        endDate: { $gte: dateStart },
+    }).lean();
+
+    if (approvedLeaveUpdate) {
+        const empName = `${targetEmp.firstName || ""} ${targetEmp.lastName || ""}`.trim() || "Employee";
+        const fromFmt = approvedLeaveUpdate.startDate.toISOString().split("T")[0];
+        const toFmt = approvedLeaveUpdate.endDate.toISOString().split("T")[0];
+        const dateFmt = targetDate.toISOString().split("T")[0];
+        const err = new Error(
+            `${empName} has an approved leave from ${fromFmt} to ${toFmt} (${approvedLeaveUpdate.leaveType}) and cannot be assigned on ${dateFmt}.`
+        );
+        err.code = "LEAVE_CONFLICT";
+        err.details = {
+            employeeId: targetEmp._id,
+            employeeName: empName,
+            leaveId: approvedLeaveUpdate._id,
+            leaveType: approvedLeaveUpdate.leaveType,
+            startDate: approvedLeaveUpdate.startDate,
+            endDate: approvedLeaveUpdate.endDate,
+            blockedDate: targetDate,
+        };
+        throw err;
+    }
+
     const existingAssignment = await RosterAssignment.findOne({
         _id: { $ne: assignment._id },
         hospitalId,
