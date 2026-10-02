@@ -45,4 +45,10 @@ router.patch(
     rosterTemplateController.deactivateTemplate
 );
 
+router.delete(
+    "/:id",
+    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
+    rosterTemplateController.deleteTemplate
+);
+
 module.exports = router;

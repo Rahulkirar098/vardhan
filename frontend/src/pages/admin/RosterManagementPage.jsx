@@ -247,7 +247,7 @@ export default function RosterManagementPage() {
   const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await rosterService.getTemplates();
+      const res = await rosterService.getTemplates({ includeInactive: true });
       setTemplates(res.data || []);
     } catch (err) {
       console.error('Failed to load roster templates:', err);
@@ -752,6 +752,10 @@ export default function RosterManagementPage() {
           setActiveRoster(null);
         }
         fetchRosters();
+      } else if (type === 'template') {
+        await rosterService.deleteTemplate(id);
+        showToast('Roster Template deleted permanently', 'info');
+        fetchTemplates();
       }
       setDeleteConfirm({ open: false, type: '', id: '', title: '' });
     } catch (err) {
@@ -1495,19 +1499,39 @@ export default function RosterManagementPage() {
                             onClick={() => handleDuplicateTemplate(t._id)}
                             fullWidth
                           >
-                            Duplicate
+                            Copy
                           </Button>
                         </Stack>
-                        <Button
-                          variant="contained"
-                          color={t.isActive ? 'warning' : 'success'}
-                          size="small"
-                          startIcon={t.isActive ? <ToggleOffRounded /> : <ToggleOnRounded />}
-                          onClick={() => handleToggleTemplateStatus(t)}
-                          fullWidth
-                        >
-                          {t.isActive ? 'Deactivate' : 'Activate'}
-                        </Button>
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            variant="contained"
+                            color={t.isActive ? 'warning' : 'success'}
+                            size="small"
+                            startIcon={t.isActive ? <ToggleOffRounded /> : <ToggleOnRounded />}
+                            onClick={() => handleToggleTemplateStatus(t)}
+                            fullWidth
+                          >
+                            {t.isActive ? 'Deactivate' : 'Activate'}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            startIcon={<DeleteOutlineRounded />}
+                            onClick={() =>
+                              setDeleteConfirm({
+                                open: true,
+                                type: 'template',
+                                id: t._id,
+                                title: t.name,
+                                description: `Are you sure you want to delete template "${t.name}"?`,
+                              })
+                            }
+                            fullWidth
+                          >
+                            Delete
+                          </Button>
+                        </Stack>
                       </Stack>
                     </GlassCard>
                   </Grid>

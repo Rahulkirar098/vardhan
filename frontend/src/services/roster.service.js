@@ -32,6 +32,11 @@ export const rosterService = {
     return response.data;
   },
 
+  deleteRosterTemplate: async (id) => {
+    const response = await client.delete(`/v1/roster-templates/${id}`);
+    return response.data;
+  },
+
   // --- Rosters ---
   getRosters: async (params) => {
     const response = await client.get('/v1/rosters', { params });
@@ -120,6 +125,7 @@ rosterService.createTemplate = rosterService.createRosterTemplate;
 rosterService.updateTemplate = rosterService.updateRosterTemplate;
 rosterService.duplicateTemplate = rosterService.duplicateRosterTemplate;
 rosterService.deactivateTemplate = rosterService.deactivateRosterTemplate;
+rosterService.deleteTemplate = rosterService.deleteRosterTemplate;
 rosterService.removeAssignment = rosterService.deleteAssignment;
 
 export default rosterService;

@@ -97,7 +97,7 @@ const updateTemplate = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
-        const { name, description, columns, dutyAreas } = req.body;
+        const { name, description, columns, dutyAreas, isActive } = req.body;
         const template = await rosterTemplateService.updateTemplate({
             templateId: req.params.id,
             hospitalId,
@@ -106,6 +106,7 @@ const updateTemplate = async (req, res) => {
             description,
             columns,
             dutyAreas,
+            isActive,
         });
 
         return res.status(200).json({
@@ -179,6 +180,32 @@ const deactivateTemplate = async (req, res) => {
     }
 };
 
+const deleteTemplate = async (req, res) => {
+    try {
+        const hospitalId = await getHospitalIdFromContext(req.user);
+        if (!hospitalId) {
+            return res.status(404).json({ success: false, message: "Hospital not found" });
+        }
+
+        const template = await rosterTemplateService.deleteTemplate({
+            templateId: req.params.id,
+            hospitalId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Roster template deleted successfully",
+            data: template,
+        });
+    } catch (error) {
+        if (error.code === "NOT_FOUND") {
+            return res.status(404).json({ success: false, message: error.message });
+        }
+        console.error("Delete Template Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 module.exports = {
     listTemplates,
     getTemplateById,
@@ -186,4 +213,5 @@ module.exports = {
     updateTemplate,
     duplicateTemplate,
     deactivateTemplate,
+    deleteTemplate,
 };

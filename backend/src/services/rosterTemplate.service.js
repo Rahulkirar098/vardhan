@@ -3,9 +3,9 @@ const RosterTemplate = require("../models/rosterTemplate.model");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-const listTemplates = async ({ hospitalId, includeInactive = false }) => {
+const listTemplates = async ({ hospitalId, includeInactive = true }) => {
     const query = { hospitalId };
-    if (!includeInactive) {
+    if (includeInactive === false || includeInactive === "false") {
         query.isActive = true;
     }
 
@@ -43,7 +43,7 @@ const createTemplate = async ({ hospitalId, userId, name, description = "", colu
     return template;
 };
 
-const updateTemplate = async ({ templateId, hospitalId, userId, name, description, columns, dutyAreas }) => {
+const updateTemplate = async ({ templateId, hospitalId, userId, name, description, columns, dutyAreas, isActive }) => {
     if (!isValidObjectId(templateId)) {
         const err = new Error("Invalid template ID.");
         err.code = "VALIDATION_ERROR";
@@ -76,6 +76,10 @@ const updateTemplate = async ({ templateId, hospitalId, userId, name, descriptio
 
     if (Array.isArray(dutyAreas)) {
         template.dutyAreas = dutyAreas;
+    }
+
+    if (isActive !== undefined) {
+        template.isActive = Boolean(isActive);
     }
 
     template.updatedBy = userId;
@@ -132,6 +136,23 @@ const deactivateTemplate = async ({ templateId, hospitalId, userId }) => {
     return template;
 };
 
+const deleteTemplate = async ({ templateId, hospitalId }) => {
+    if (!isValidObjectId(templateId)) {
+        const err = new Error("Invalid template ID.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const template = await RosterTemplate.findOneAndDelete({ _id: templateId, hospitalId });
+    if (!template) {
+        const err = new Error("Roster template not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    return template;
+};
+
 module.exports = {
     listTemplates,
     getTemplateById,
@@ -139,4 +160,5 @@ module.exports = {
     updateTemplate,
     duplicateTemplate,
     deactivateTemplate,
+    deleteTemplate,
 };
