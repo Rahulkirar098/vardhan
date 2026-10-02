@@ -1,7 +1,7 @@
 # Vardhan — Project Context
 
 Status: Standardized Target Architecture
-Updated: 2026-09-30
+Updated: 2026-10-02
 Purpose: Single source of truth for developers and coding agents.
 
 ---
@@ -28,9 +28,9 @@ VARDHAN SaaS
     └── HRMS
         ├── Employees (Workforce staff records)
         ├── Invitations (Single generic invitation system)
-        ├── Leave Management (Apply, My Leave, Workforce Leave, Approval, Cancellation, Balance, Stats)
+        ├── Leave Management (Apply, My Leave, Workforce Leave, Approval, Cancellation, Balance, Stats, Approved Leave Roster Blocking)
         ├── Attendance & Regularization (Check-in/out, My Attendance, Workforce Attendance, Background Automatic Absence Scheduler, Regularizations & Atomic Approval Transactions)
-        └── Roster Module (Simplified Direct Architecture, Shifts, Duty Areas, Draft/Published/History Lifecycle, Delete Draft Roster, Read-Only Immutability, Leave Warnings, UnifiedCalendar, Roster PDF)
+        └── Roster Module (Roster Templates with Active/Inactive lifecycle, Multiple Active Rosters with Roster Switcher, Direct Architecture, Shifts, Duty Areas, Draft/Published/History Lifecycle, Delete Draft Roster, Single-Page PDF Summary Exporter, Approved Leave Blocking, UnifiedCalendar)
 ```
 
 ---
@@ -63,22 +63,30 @@ VARDHAN SaaS
 - **Hierarchy:** `Hospital` -> `Floor` -> `Room`.
 - Part of Core Platform, independent of Roster Duty Areas.
 
-### Roster Models (`models/roster.model.js`, `models/rosterAssignment.model.js`)
-- **Direct Model Architecture:** No `RosterTemplate` model or `rosterTemplateId`. `Roster` stores `columns` (id, title, startTime, endTime, order) and `dutyAreas` (id, name, order) directly on the document.
-- **Roster:** Actual duty roster instance (`title`, `startDate`, `endDate`, `status` [DRAFT / PUBLISHED], `columns[]`, `dutyAreas[]`, `sharedWith[]`, `comments[]`).
-- **Single Current Roster Rule:** The latest published roster for a hospital (sorted by `startDate DESC`) is the single **Current Published Roster**.
+### Roster Models (`models/roster.model.js`, `models/rosterTemplate.model.js`, `models/rosterAssignment.model.js`)
+- **Roster & Template Architecture:**
+  - `RosterTemplate`: Operational duty layout master (`title`, `description`, `status` [ACTIVE / INACTIVE], `columns[]`, `dutyAreas[]`). Deactivation toggles `status: INACTIVE` and retains the template visible in Template Management with an `Activate` action.
+  - `Roster`: Duty roster instance (`title`, `startDate`, `endDate`, `status` [DRAFT / PUBLISHED], `columns[]`, `dutyAreas[]`, `sharedWith[]`, `comments[]`).
+- **Multiple Active Rosters & Roster Switcher:** Multiple published rosters can coexist simultaneously in the same date range. The Current Roster UI provides a dropdown roster switcher enabling users to select and view any active roster.
+- **My Roster (Current vs History):** Computes two independent datasets: Current/Upcoming (`assignment.date >= TODAY`) and Past Duty History (`assignment.date < TODAY`). Past history state does not restrict viewing current/upcoming duties.
 - **Delete Draft Roster:** Draft rosters can be permanently deleted by authorized managers (`roster.manage`) via `DELETE /api/v1/rosters/:id`.
-- **Roster History:** Previously published rosters move to **Roster History** (`GET /api/v1/rosters/history`). Historical rosters are strictly **read-only** (API rejects updates, deletion, or re-publishing with HTTP `409 Conflict`).
+- **Roster History:** Published rosters past their end date move to **Roster History** (`GET /api/v1/rosters/history`). Historical rosters are strictly **read-only** (API rejects updates, deletion, or re-publishing with HTTP `409 Conflict`).
+- **Single-Page Roster PDF Export:** Downloads an exact single-page summary PDF regardless of roster date range. Employees are deduplicated per Shift + Duty Area cell (no repeating daily entries), and unassigned cells remain empty without printing "No Staff Assigned".
 - **RosterAssignment:** Staff duty record (`rosterId`, `hospitalId`, `employeeId`, `date`, `columnId`, `shiftTitle`, `startTime`, `endTime`, `dutyArea`, `notes`). Identity links to `Employee` via `employeeId` without duplicating personal info.
 - **Duty Area:** Dynamic operational duty area rows (e.g. "General Ward Female + Male + Day Care", "NICU 2nd Floor", "PICU", "ICU 3rd Floor", "OT"). Does NOT depend on Floor/Room structure.
 
-### Leave (`models/leave.model.js`)
-- **Purpose:** Employee leave request management with conflict warnings during roster assignment.
+### Leave (`models/leave.model.js`) & Leave ↔ Roster Integration
+- **Purpose:** Employee leave request management with strict roster assignment blocking for approved leaves.
+- **Approved Leave Blocking Rule:** An **APPROVED** leave (`status: { $in: ["APPROVED", "approved"] }`) strictly **BLOCKS** roster assignment creation or modification for all dates within the leave period (`startDate` to `endDate`).
+  - Single-date assignment and update endpoints throw HTTP `409 Conflict` (`code: "LEAVE_CONFLICT"`).
+  - Bulk range assignment skips dates with approved leaves (and returns `approvedLeaveConflicts`); if all dates in range are blocked, throws HTTP `409 Conflict`.
+  - Zero `RosterAssignment` documents are generated for blocked dates.
+  - Pending leaves emit non-blocking `leaveWarnings`. Rejected and Cancelled leaves are ignored.
 - **Permissions:** `leave.apply`, `leave.view_own`, `leave.cancel_own` (default self-service), `leave.view_workforce`, `leave.approve`, `leave.manage` (workforce management).
 
 ### Attendance & Background Automatic Absence (`models/attendance.model.js`, `models/attendanceRegularization.model.js`)
 - **Purpose:** Real-time clock-in/out tracking, atomic regularization approval transactions, and automated background absence scheduler.
-- **Rule:** Automatic absence processing runs periodically and uses **ONLY** the single current published roster for each hospital, explicitly excluding historical rosters.
+- **Rule:** Automatic absence processing runs periodically and uses active published rosters for each hospital, explicitly excluding historical rosters. Approved leave records prevent automatic absence marking.
 
 ---
 
@@ -88,10 +96,10 @@ VARDHAN SaaS
 - **Default Employee Self-Service Permissions:**
   - `leave.apply`, `leave.view_own`, `leave.cancel_own`
   - `attendance.view_own`
-  - `roster.view` (View current published workforce hospital duty roster matrix and roster history)
+  - `roster.view` (View active workforce hospital duty roster matrix, My Roster, and roster history)
 - **Workforce Management Permissions:**
   - `roster.view`: View workforce published hospital duty rosters & roster history
-  - `roster.manage`: Create draft rosters, edit draft layout, share drafts for review, assign staff, delete draft rosters, publish rosters, edit current published roster
+  - `roster.manage`: Create draft rosters, edit draft layout, share drafts for review, assign staff, delete draft rosters, publish rosters, edit active published rosters, manage roster templates
   - `leave.view_workforce`, `leave.approve`, `leave.manage`
   - `attendance.view`, `attendance.regularization.view`, `attendance.regularization.approve`, `attendance.regularization.reject`, `attendance.regularization.manage`, `attendance.manage`
 - **Generic Access Management:** Admin manages permissions and module access for workforce users from `/access-management`.
@@ -110,7 +118,8 @@ VARDHAN SaaS
 - `/api/v1/employees/*` and `/api/v1/hrms/employees/*` (Employees & Invitations)
 - `/api/v1/hrms/leaves/*` (Leave Applications, Approvals & Cancellations)
 - `/api/v1/hrms/attendance/*` (Attendance Clock-In/Out & Regularizations)
-- `/api/v1/rosters/*` (List, Get, History, Create, Update Draft, Delete Draft, Publish, Review Comments, Assignments, My Roster)
+- `/api/v1/rosters/*` (List, Get, History, Create, Update Draft, Delete Draft, Publish, Review Comments, Assignments, Bulk Range Assignments, My Roster)
+- `/api/v1/roster-templates/*` (List, Get, Create, Update, Duplicate, Activate/Deactivate, Delete)
 - `/api/v1/modules/*` (Module Catalog & Access)
 - `/api/v1/super-admin/*` (Platform administration)
 
@@ -123,15 +132,15 @@ VARDHAN SaaS
 - `pages/shared/` (Profile)
 - `pages/super-admin/` (SuperAdminDashboard, SuperAdminHospitals, SuperAdminHospitalDetails)
 - `components/` (AppLayout, PageHeader, Sidebar, DataTable, StatCard, StatusBadge, Modal, ConfirmDialog, UnifiedCalendar)
-- `services/` (auth.service, employee.service, position.service, accessManagement.service, structure.service, leave.service, attendance.service, roster.service)
-- `utils/` (permissions.js with centralized permission registry, rosterPdfGenerator.js for client-side PDF export)
+- `services/` (auth.service, employee.service, position.service, accessManagement.service, structure.service, leave.service, attendance.service, roster.service, rosterTemplate.service)
+- `utils/` (permissions.js with centralized permission registry, rosterPdfGenerator.js for single-page client-side PDF export)
 
 ---
 
 ## 6. VERIFICATION & TESTING
 
 All flows are covered by automated integration test suites under `backend/tests/`:
-- `roster.test.js` (Roster creation, draft updates, review comments, shift assignments, single-assignment date rules, delete draft roster scenarios, roster history & read-only immutability scenarios)
+- `roster.test.js` (Roster creation, draft updates, review comments, shift assignments, single-assignment date rules, delete draft roster scenarios, roster history & read-only immutability, roster templates lifecycle, bulk-range assignment, dedicated Leave ↔ Roster assignment blocking tests)
 - `full-qa-audit.test.js` (Complete Access Management permissions matrix audit across all system modules)
 - `attendance-regularization.test.js` (Atomic regularization approval transactions & rollbacks)
 - `attendance.test.js` (Clock-in/out, workforce logs, tenant isolation)
@@ -140,3 +149,4 @@ All flows are covered by automated integration test suites under `backend/tests/
 - `unified-employees.test.js` (Full workforce employee lifecycle & invitations)
 - `hospital-structure.test.js` (Structure isolation & hierarchy)
 - `core-platform.test.js` (Auth, profile, passwords, module catalog)
+

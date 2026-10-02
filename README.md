@@ -71,20 +71,20 @@ VARDHAN SaaS
 ### 5. Leave Management
 - Self-service leave applications (`leave.apply`, `leave.view_own`, `leave.cancel_own`).
 - Workforce Leave access control (`leave.view_workforce`, `leave.approve`, `leave.manage`).
-- Real-time leave balance tracking and non-blocking leave conflict detection during shift roster allocation.
+- Real-time leave balance tracking and strict approved leave roster assignment blocking (HTTP 409 Conflict).
 
 ### 6. Attendance & Background Automatic Absence
 - Employee check-in/out tracking with working duration computation.
 - Attendance regularization submission, cancellation, and atomic approval transactions.
-- Automated background scheduler executing periodic absence marking for un-checked-in employees driven strictly by the current published roster.
+- Automated background scheduler executing periodic absence marking for un-checked-in employees driven by active published rosters.
 
-### 7. Simplified Roster Module
-- **Direct Model Architecture:** `Roster` documents directly contain embedded `columns` (shift titles, start/end times) and `dutyAreas` (operational rows). Obsolete Roster Templates have been permanently removed.
-- **Roster Lifecycle:** `DRAFT` → `PUBLISHED`.
-- **Delete Draft Roster:** Authorized managers (`roster.manage`) can delete draft rosters cleanly via modal confirmation dialogs. Published rosters cannot be deleted.
-- **Single Current Roster Rule:** The main screen displays the single active published roster directly. No multiple-published-roster dropdowns.
-- **Roster History & Immutability:** Previously published rosters move to **Roster History**. Historical rosters are read-only (API rejects updates, deletion, or re-publishing with HTTP `409 Conflict`).
-- **Calendar & PDF Integration:** PDF downloading via `generateFrontendRosterPDF` and visual schedule integration via `UnifiedCalendar`.
+### 7. Roster Module & Template Management
+- **Roster Templates:** Full template actions (Edit, Copy/Duplicate, Activate/Deactivate, Delete). Deactivated templates remain visible with `Status: INACTIVE` and an `Activate` action.
+- **Roster Switcher:** Current Roster tab supports multiple coexisting active rosters with a Roster Switcher dropdown selector.
+- **Roster Lifecycle:** `DRAFT` → `PUBLISHED`. Authorized managers (`roster.manage`) can delete draft rosters via modal confirmation dialogs.
+- **Roster History & Immutability:** Published rosters past their end date move to **Roster History**. Historical rosters are read-only (API rejects updates, deletion, or re-publishing with HTTP `409 Conflict`).
+- **Single-Page PDF Summary Export:** Clean single-page PDF export for any roster date range, deduplicating employee names per shift cell and omitting empty text placeholders.
+- **Approved Leave Blocking:** Roster creation, editing, and bulk assignments automatically block assignment creation on dates covered by an employee's approved leave.
 
 ### 8. Access Management
 - Unified Access Management screen for administrators to manage permissions and module access for workforce accounts (`employee` role).
