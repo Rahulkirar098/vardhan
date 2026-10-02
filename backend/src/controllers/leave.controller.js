@@ -242,13 +242,36 @@ const cancelLeave = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/v1/hrms/leaves/balance
+ * Get leave balance for current employee or specified employeeId
+ */
+const getLeaveBalance = async (req, res) => {
+    try {
+        const result = await leaveService.getLeaveBalance({
+            user: req.user,
+            employeeId: req.query.employeeId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Leave balance retrieved successfully",
+            data: result,
+        });
+    } catch (error) {
+        return handleServiceError(res, error, "Failed to retrieve leave balance");
+    }
+};
+
 module.exports = {
     applyLeave,
     getMyLeaves,
     getHospitalLeaves,
     getLeaveStats,
+    getLeaveBalance,
     getLeaveById,
     approveLeave,
     rejectLeave,
     cancelLeave,
 };
+

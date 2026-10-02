@@ -8,6 +8,7 @@ const {
     getMyLeaves,
     getHospitalLeaves,
     getLeaveStats,
+    getLeaveBalance,
     getLeaveById,
     approveLeave,
     rejectLeave,
@@ -32,6 +33,13 @@ leaveRoute.get(
     "/my",
     authorizePermission(PERMISSIONS.LEAVE_VIEW_OWN),
     getMyLeaves
+);
+
+// Leave Balance
+leaveRoute.get(
+    "/balance",
+    authorizeAnyPermission(PERMISSIONS.LEAVE_VIEW_OWN, PERMISSIONS.LEAVE_VIEW, PERMISSIONS.LEAVE_VIEW_WORKFORCE, PERMISSIONS.LEAVE_MANAGE),
+    getLeaveBalance
 );
 
 // Stats

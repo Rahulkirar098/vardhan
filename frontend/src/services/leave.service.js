@@ -34,6 +34,14 @@ export const leaveService = {
   },
 
   /**
+   * Get leave balance (Allocated, Used, Available)
+   */
+  getLeaveBalance: async (params) => {
+    const response = await client.get('/v1/hrms/leaves/balance', { params });
+    return response.data;
+  },
+
+  /**
    * Get a single leave request by ID
    */
   getLeaveById: async (id) => {

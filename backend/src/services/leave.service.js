@@ -515,14 +515,81 @@ const cancelLeave = async ({ user, leaveId }) => {
     return await getLeaveById({ user, leaveId });
 };
 
+const DEFAULT_LEAVE_ALLOCATIONS = Object.freeze({
+    CASUAL: 12,
+    SICK: 10,
+    ANNUAL: 15,
+    EMERGENCY: 5,
+    UNPAID: 0,
+});
+
+/**
+ * Get leave balance for an employee (Allocated, Used, Available)
+ */
+const getLeaveBalance = async ({ user, employeeId: targetEmpId }) => {
+    const hospitalId = user.hospitalId;
+    let employeeRecord = null;
+
+    if (targetEmpId && mongoose.Types.ObjectId.isValid(targetEmpId)) {
+        employeeRecord = await Employee.findOne({ _id: targetEmpId, hospitalId }).lean();
+    } else {
+        employeeRecord = await getEmployeeForUser(user.id || user._id, hospitalId);
+    }
+
+    if (!employeeRecord) {
+        return { balances: [] };
+    }
+
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1, 0, 0, 0, 0);
+    const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+
+    const { VALID_LEAVE_TYPES } = require("../constants/leave.constants");
+
+    const approvedLeaves = await Leave.find({
+        hospitalId,
+        employeeId: employeeRecord._id,
+        status: LEAVE_STATUSES.APPROVED,
+        startDate: { $lte: yearEnd },
+        endDate: { $gte: yearStart },
+    }).lean();
+
+    const usedMap = {};
+    approvedLeaves.forEach((l) => {
+        const type = l.leaveType;
+        usedMap[type] = (usedMap[type] || 0) + (l.totalDays || 0);
+    });
+
+    const balances = VALID_LEAVE_TYPES.map((type) => {
+        const allocated = DEFAULT_LEAVE_ALLOCATIONS[type] || 0;
+        const used = usedMap[type] || 0;
+        const available = type === "UNPAID" ? 999 : Math.max(0, allocated - used);
+        return {
+            leaveType: type,
+            allocated,
+            used,
+            available,
+        };
+    });
+
+    return {
+        employeeId: employeeRecord._id,
+        employeeName: `${employeeRecord.firstName} ${employeeRecord.lastName}`.trim(),
+        year: currentYear,
+        balances,
+    };
+};
+
 module.exports = {
     applyLeave,
     getMyLeaves,
     getHospitalLeaves,
     getLeaveStats,
+    getLeaveBalance,
     getLeaveById,
     approveLeave,
     rejectLeave,
     cancelLeave,
     calculateTotalDays,
 };
+

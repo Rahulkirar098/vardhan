@@ -370,6 +370,22 @@ const runTests = async () => {
             console.log("  ✓ 7. Authorized HR / Admin can view hospital leave list and stats");
         }
 
+        // Test 7b: Employee & Admin can view Leave Balance (Allocated, Used, Available)
+        {
+            const balRes = await request("/api/v1/hrms/leaves/balance", {
+                headers: { Authorization: `Bearer ${staffToken}` },
+            });
+            assert.strictEqual(balRes.status, 200);
+            assert.strictEqual(balRes.body.success, true);
+            assert(Array.isArray(balRes.body.data.balances));
+            const casualBal = balRes.body.data.balances.find((b) => b.leaveType === "CASUAL");
+            assert(casualBal);
+            assert.strictEqual(casualBal.allocated, 12);
+            assert.strictEqual(casualBal.used, 0); // Not approved yet
+            assert.strictEqual(casualBal.available, 12);
+            console.log("  ✓ 7b. Employee can view Leave Balance (Allocated = 12, Used = 0, Available = 12)");
+        }
+
         // ─── 3. APPROVAL & SELF-PROTECTION RULES ──────────────────────────────
         console.log("\n--- 3. APPROVAL & SELF-PROTECTION RULES ---");
 
