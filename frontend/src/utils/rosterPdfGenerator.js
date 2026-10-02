@@ -37,7 +37,9 @@ export function formatDatePeriod(startStr, endStr) {
 
 /**
  * Generate and download PDF in browser matching Hospital Reference Layout
- * Grouped strictly by DATE -> SHIFT -> DUTY AREA -> EMPLOYEES
+ * Pages are split strictly by CHANGE IN ROSTER ASSIGNMENT PATTERN.
+ * Consecutive dates with identical shift, duty area, employee, times, and notes assignments
+ * are grouped onto the SAME page displaying their effective date range (e.g. 01/10/26 TO 10/10/26).
  */
 export function generateFrontendRosterPDF(activeRoster) {
   if (!activeRoster) return;
@@ -54,7 +56,7 @@ export function generateFrontendRosterPDF(activeRoster) {
   const printableWidth = pageWidth - marginX * 2; // ~277 mm
 
   const monthYear = formatMonthYear(activeRoster.startDate);
-  const datePeriod = formatDatePeriod(activeRoster.startDate, activeRoster.endDate);
+  const overallDatePeriod = formatDatePeriod(activeRoster.startDate, activeRoster.endDate);
   const rosterTitle = (activeRoster.title || 'HOSPITAL DUTY ROSTER').toUpperCase();
 
   // Extract columns (shifts)
@@ -102,7 +104,7 @@ export function generateFrontendRosterPDF(activeRoster) {
 
   const assignmentsList = activeRoster.assignments || [];
 
-  // Parse date range into array of date ISO strings
+  // Parse roster date range into array of date ISO strings
   const datesList = [];
   if (activeRoster.startDate && activeRoster.endDate) {
     const start = parseLocalDateStr(activeRoster.startDate);
@@ -120,6 +122,45 @@ export function generateFrontendRosterPDF(activeRoster) {
   if (datesList.length === 0 && activeRoster.startDate) {
     datesList.push(getTodayDateStr(activeRoster.startDate));
   }
+
+  // Compute Fingerprint of Roster Assignment Pattern for a specific date
+  function getDateFingerprint(dStr) {
+    const dayAssigns = assignmentsList.filter((ass) => getTodayDateStr(ass.date) === dStr);
+    const items = dayAssigns.map((ass) => {
+      const area = (ass.dutyArea || '').trim().toLowerCase();
+      const shift = (ass.columnId || ass.shiftTitle || '').trim().toLowerCase();
+      let emp = '';
+      if (ass.employeeId) {
+        emp = typeof ass.employeeId === 'object'
+          ? (ass.employeeId._id || ass.employeeId.id || `${ass.employeeId.firstName}_${ass.employeeId.lastName}`)
+          : String(ass.employeeId);
+      } else {
+        emp = (ass.fullName || '').trim().toLowerCase();
+      }
+      const start = ass.startTime || '';
+      const end = ass.endTime || '';
+      const notes = ass.notes || '';
+      return `${area}::${shift}::${emp}::${start}::${end}::${notes}`;
+    });
+    items.sort();
+    return items.join('||');
+  }
+
+  // Group consecutive dates with identical assignment pattern fingerprints
+  const chunks = [];
+  datesList.forEach((dStr) => {
+    const fp = getDateFingerprint(dStr);
+    if (chunks.length === 0) {
+      chunks.push({ startDate: dStr, endDate: dStr, fingerprint: fp });
+    } else {
+      const lastChunk = chunks[chunks.length - 1];
+      if (lastChunk.fingerprint === fp) {
+        lastChunk.endDate = dStr;
+      } else {
+        chunks.push({ startDate: dStr, endDate: dStr, fingerprint: fp });
+      }
+    }
+  });
 
   // Helper to match assignments for a SPECIFIC DATE, duty area, and shift column
   function getCellAssignmentsForDate(dStr, dutyAreaName, col) {
@@ -146,25 +187,21 @@ export function generateFrontendRosterPDF(activeRoster) {
     columnStyles[idx] = { cellWidth: shiftColWidth };
   });
 
-  // Loop over each date in the roster range and render date-separated sections
-  datesList.forEach((dStr, dateIdx) => {
-    if (dateIdx > 0) {
+  // Render one PDF page per consecutive pattern chunk
+  chunks.forEach((chunk, chunkIdx) => {
+    if (chunkIdx > 0) {
       doc.addPage();
     }
 
-    const dateObj = parseLocalDateStr(dStr) || new Date(dStr);
-    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-    const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-    const dayNum = String(dateObj.getDate()).padStart(2, '0');
-    const yearNum = dateObj.getFullYear();
-    const dateBanner = `DATE: ${dayName}, ${dayNum} ${monthName} ${yearNum}`;
+    const chunkPeriodStr = formatDatePeriod(chunk.startDate, chunk.endDate);
 
-    // Prepare cell matrix for this specific date
+    // Prepare cell matrix for this chunk (using sample date from chunk)
+    const sampleDate = chunk.startDate;
     const cellMatrix = dutyAreas.map((da) => {
       const daName = (da.name || da.title || 'DUTY AREA').toUpperCase();
 
       return columns.map((col) => {
-        const matches = getCellAssignmentsForDate(dStr, daName, col);
+        const matches = getCellAssignmentsForDate(sampleDate, daName, col);
         const empLines = [];
 
         if (matches.length > 0) {
@@ -221,7 +258,6 @@ export function generateFrontendRosterPDF(activeRoster) {
       });
     });
 
-    // Render header title on every page
     const startY = 32;
 
     autoTable(doc, {
@@ -310,15 +346,15 @@ export function generateFrontendRosterPDF(activeRoster) {
           doc.text(monthYear, pageWidth / 2, 8, { align: 'center' });
         }
 
-        // Period Range & Roster Title (e.g. 01/10/26 TO 15/10/26 - OCTOBER NURSING ROSTER)
+        // Period Range & Roster Title (e.g. 01/10/26 TO 15/10/26 | OCTOBER NURSING ROSTER)
         doc.setFontSize(9);
         doc.setTextColor(51, 65, 85);
-        doc.text(`${datePeriod} | ${rosterTitle}`, pageWidth / 2, 14, { align: 'center' });
+        doc.text(`${overallDatePeriod} | ${rosterTitle}`, pageWidth / 2, 14, { align: 'center' });
 
-        // Date Banner (e.g. DATE: THU, 01 OCT 2026)
+        // Effective Date Range Banner for this Page Chunk (e.g. PATTERN PERIOD: 01/10/26 TO 10/10/26)
         doc.setFontSize(10);
         doc.setTextColor(2, 132, 199);
-        doc.text(dateBanner, pageWidth / 2, 22, { align: 'center' });
+        doc.text(`EFFECTIVE DATES: ${chunkPeriodStr}`, pageWidth / 2, 22, { align: 'center' });
 
         // Footer - Page Numbers
         const totalPages = doc.internal.getNumberOfPages();
