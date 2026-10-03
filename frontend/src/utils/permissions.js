@@ -50,6 +50,7 @@ export const PERMISSIONS = Object.freeze({
   POSITION_VIEW: 'position.view',
   POSITION_CREATE: 'position.create',
   POSITION_UPDATE: 'position.update',
+  POSITION_SCHEDULE_MANAGE: 'position.schedule.manage',
 });
 
 export const ROLE_PERMISSIONS = Object.freeze({
@@ -169,6 +170,14 @@ export const hasPermission = (permission, role, userPermissions) => {
     PERMISSIONS.REGULARIZATION_APPROVE,
     PERMISSIONS.REGULARIZATION_REJECT,
     PERMISSIONS.REGULARIZATION_MANAGE,
+  ].includes(permission)) {
+    return true;
+  }
+
+  if (Array.isArray(assigned) && assigned.includes(PERMISSIONS.POSITION_SCHEDULE_MANAGE) && [
+    PERMISSIONS.POSITION_VIEW,
+    PERMISSIONS.POSITION_UPDATE,
+    PERMISSIONS.POSITION_SCHEDULE_MANAGE,
   ].includes(permission)) {
     return true;
   }

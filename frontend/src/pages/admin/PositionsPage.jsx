@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Checkbox, Chip, IconButton, Paper, Stack, TextField, Tooltip, Typography, Snackbar, Alert } from '@mui/material';
-import { AddRounded, EditRounded, PowerSettingsNewRounded, BusinessCenterRounded } from '@mui/icons-material';
+import { Box, Button, Checkbox, Chip, FormControlLabel, FormGroup, IconButton, Paper, Stack, TextField, Tooltip, Typography, Snackbar, Alert } from '@mui/material';
+import { AddRounded, EditRounded, PowerSettingsNewRounded, BusinessCenterRounded, CalendarMonthRounded } from '@mui/icons-material';
 import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
 import PageHeader from '../../components/PageHeader';
@@ -18,6 +18,199 @@ const AVAILABLE_MODULES = [
     { key: 'hrms', label: 'HRMS Module', description: 'Workforce management, Roster, Attendance & Leaves' },
 ];
 
+const DEFAULT_SCHEDULE = {
+    monday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+    tuesday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+    wednesday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+    thursday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+    friday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+    saturday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+    sunday: { workingDay: false, startTime: null, endTime: null },
+};
+
+const DAYS = [
+    { key: 'monday', label: 'Monday', short: 'Mon' },
+    { key: 'tuesday', label: 'Tuesday', short: 'Tue' },
+    { key: 'wednesday', label: 'Wednesday', short: 'Wed' },
+    { key: 'thursday', label: 'Thursday', short: 'Thu' },
+    { key: 'friday', label: 'Friday', short: 'Fri' },
+    { key: 'saturday', label: 'Saturday', short: 'Sat' },
+    { key: 'sunday', label: 'Sunday', short: 'Sun' },
+];
+
+const formatScheduleSummary = (schedule) => {
+    if (!schedule) return 'Mon–Sat: 09:00–18:00 | Sun: OFF';
+
+    const items = DAYS.map((d) => {
+        const val = schedule[d.key];
+        let isWorking = false;
+        let start = '09:00';
+        let end = '18:00';
+
+        if (typeof val === 'boolean') {
+            isWorking = val;
+        } else if (val && typeof val === 'object') {
+            isWorking = Boolean(val.workingDay);
+            start = val.startTime || '09:00';
+            end = val.endTime || '18:00';
+        }
+
+        return {
+            short: d.short,
+            isWorking,
+            timingKey: isWorking ? `${start}–${end}` : 'OFF',
+        };
+    });
+
+    const groups = [];
+    let cur = null;
+    for (const item of items) {
+        if (!cur) {
+            cur = { startDay: item.short, endDay: item.short, timingKey: item.timingKey };
+        } else if (cur.timingKey === item.timingKey) {
+            cur.endDay = item.short;
+        } else {
+            groups.push(cur);
+            cur = { startDay: item.short, endDay: item.short, timingKey: item.timingKey };
+        }
+    }
+    if (cur) groups.push(cur);
+
+    return groups
+        .map((g) => {
+            const dayRange = g.startDay === g.endDay ? g.startDay : `${g.startDay}–${g.endDay}`;
+            return `${dayRange}: ${g.timingKey}`;
+        })
+        .join(' | ');
+};
+
+const normalizeScheduleForState = (schedule) => {
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const result = {};
+    for (const d of days) {
+        const val = schedule?.[d];
+        if (typeof val === 'boolean') {
+            result[d] = {
+                workingDay: val,
+                startTime: val ? '09:00' : null,
+                endTime: val ? '18:00' : null,
+            };
+        } else if (val && typeof val === 'object') {
+            const isWorking = Boolean(val.workingDay);
+            result[d] = {
+                workingDay: isWorking,
+                startTime: isWorking ? (val.startTime || '09:00') : null,
+                endTime: isWorking ? (val.endTime || '18:00') : null,
+            };
+        } else {
+            const defaultIsWorking = d !== 'sunday';
+            result[d] = {
+                workingDay: defaultIsWorking,
+                startTime: defaultIsWorking ? '09:00' : null,
+                endTime: defaultIsWorking ? '18:00' : null,
+            };
+        }
+    }
+    return result;
+};
+
+const ScheduleEditor = ({ value, onChange }) => {
+    return (
+        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: '#F8FAFC' }}>
+            <Stack spacing={1}>
+                {DAYS.map((day) => {
+                    const dayConfig = value?.[day.key] || { workingDay: false, startTime: null, endTime: null };
+                    const isWorking = typeof dayConfig === 'boolean' ? dayConfig : Boolean(dayConfig.workingDay);
+                    const startTime = typeof dayConfig === 'object' && dayConfig.startTime ? dayConfig.startTime : '09:00';
+                    const endTime = typeof dayConfig === 'object' && dayConfig.endTime ? dayConfig.endTime : '18:00';
+
+                    const handleToggle = (e) => {
+                        const checked = e.target.checked;
+                        onChange({
+                            ...value,
+                            [day.key]: {
+                                workingDay: checked,
+                                startTime: checked ? startTime : null,
+                                endTime: checked ? endTime : null,
+                            },
+                        });
+                    };
+
+                    const handleTimeChange = (field, val) => {
+                        onChange({
+                            ...value,
+                            [day.key]: {
+                                workingDay: true,
+                                startTime: field === 'startTime' ? val : startTime,
+                                endTime: field === 'endTime' ? val : endTime,
+                            },
+                        });
+                    };
+
+                    return (
+                        <Box
+                            key={day.key}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                py: 0.75,
+                                px: 1.5,
+                                borderRadius: 1.5,
+                                bgcolor: isWorking ? '#FFFFFF' : 'transparent',
+                                border: isWorking ? '1px solid #E2E8F0' : '1px solid transparent',
+                            }}
+                        >
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={isWorking}
+                                        onChange={handleToggle}
+                                        size="small"
+                                        color="primary"
+                                    />
+                                }
+                                label={
+                                    <Typography variant="body2" fontWeight={600} color={isWorking ? 'text.primary' : 'text.secondary'} sx={{ minWidth: 70 }}>
+                                        {day.label}
+                                    </Typography>
+                                }
+                                sx={{ mr: 0 }}
+                            />
+
+                            {isWorking ? (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <TextField
+                                        type="time"
+                                        size="small"
+                                        value={startTime}
+                                        onChange={(e) => handleTimeChange('startTime', e.target.value)}
+                                        inputProps={{ step: 300 }}
+                                        sx={{ width: 130, '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.8125rem' } }}
+                                    />
+                                    <Typography variant="caption" color="text.secondary">to</Typography>
+                                    <TextField
+                                        type="time"
+                                        size="small"
+                                        value={endTime}
+                                        onChange={(e) => handleTimeChange('endTime', e.target.value)}
+                                        inputProps={{ step: 300 }}
+                                        sx={{ width: 130, '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.8125rem' } }}
+                                    />
+                                </Stack>
+                            ) : (
+                                <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic', pr: 2 }}>
+                                    OFF
+                                </Typography>
+                            )}
+                        </Box>
+                    );
+                })}
+            </Stack>
+        </Paper>
+    );
+};
+
 const PositionsPage = () => {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const showSnack = (message, severity = 'success') => setSnackbar({ open: true, message, severity });
@@ -32,7 +225,12 @@ const PositionsPage = () => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     
     const [selectedPosition, setSelectedPosition] = useState(null);
-    const [formData, setFormData] = useState({ name: '', defaultModules: ['hrms'], rosterEligible: false });
+    const [formData, setFormData] = useState({
+        name: '',
+        defaultModules: ['hrms'],
+        rosterEligible: false,
+        workSchedule: normalizeScheduleForState(DEFAULT_SCHEDULE),
+    });
     const [submitting, setSubmitting] = useState(false);
 
     const fetchPositions = async () => {
@@ -61,7 +259,12 @@ const PositionsPage = () => {
     }, []);
 
     const handleOpenAdd = () => {
-        setFormData({ name: '', defaultModules: ['hrms'], rosterEligible: false });
+        setFormData({
+            name: '',
+            defaultModules: ['hrms'],
+            rosterEligible: false,
+            workSchedule: normalizeScheduleForState(DEFAULT_SCHEDULE),
+        });
         setIsAddOpen(true);
     };
 
@@ -71,6 +274,7 @@ const PositionsPage = () => {
             name: position.name,
             defaultModules: position.defaultModules || [],
             rosterEligible: Boolean(position.rosterEligible),
+            workSchedule: position.rosterEligible ? null : normalizeScheduleForState(position.workSchedule),
         });
         setIsEditOpen(true);
     };
@@ -103,6 +307,7 @@ const PositionsPage = () => {
                 name: formData.name.trim(),
                 defaultModules: formData.defaultModules || [],
                 rosterEligible: Boolean(formData.rosterEligible),
+                workSchedule: formData.rosterEligible ? null : (formData.workSchedule || DEFAULT_SCHEDULE),
             });
             showSnack('Position created successfully', 'success');
             setIsAddOpen(false);
@@ -126,6 +331,7 @@ const PositionsPage = () => {
                 name: formData.name.trim(),
                 defaultModules: formData.defaultModules || [],
                 rosterEligible: Boolean(formData.rosterEligible),
+                workSchedule: formData.rosterEligible ? null : (formData.workSchedule || DEFAULT_SCHEDULE),
             });
             showSnack('Position updated successfully', 'success');
             setIsEditOpen(false);
@@ -156,6 +362,7 @@ const PositionsPage = () => {
         { key: 'name', label: 'Position Name', sortable: true },
         { key: 'defaultModules', label: 'Default Modules' },
         { key: 'rosterEligible', label: 'Roster Eligible' },
+        { key: 'workSchedule', label: 'Work Schedule' },
         { key: 'status', label: 'Status' }
     ];
 
@@ -172,6 +379,21 @@ const PositionsPage = () => {
                     variant="outlined"
                     sx={{ fontSize: '0.75rem', fontWeight: 600 }}
                 />
+            );
+        }
+        if (column.key === 'workSchedule') {
+            if (pos.rosterEligible) {
+                return (
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main', display: 'block' }}>
+                        Roster Assignments
+                    </Typography>
+                );
+            }
+            const summaryText = formatScheduleSummary(pos.workSchedule);
+            return (
+                <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', display: 'block', maxWidth: 360 }}>
+                    {summaryText}
+                </Typography>
             );
         }
         if (column.key === 'defaultModules') {
@@ -198,7 +420,7 @@ const PositionsPage = () => {
     };
 
     const canCreate = hasPermission(PERMISSIONS.POSITION_CREATE);
-    const canUpdate = hasPermission(PERMISSIONS.POSITION_UPDATE);
+    const canUpdate = hasPermission(PERMISSIONS.POSITION_UPDATE) || hasPermission(PERMISSIONS.POSITION_SCHEDULE_MANAGE);
 
     const renderActions = (pos) => {
         if (!canUpdate) return null;
@@ -360,7 +582,7 @@ const PositionsPage = () => {
 
                     <Paper
                         variant="outlined"
-                        onClick={() => setFormData((p) => ({ ...p, rosterEligible: !p.rosterEligible }))}
+                        onClick={() => handleToggleRosterEligible(!formData.rosterEligible)}
                         sx={{
                             p: 1.5,
                             borderRadius: 2,
@@ -375,7 +597,7 @@ const PositionsPage = () => {
                     >
                         <Checkbox
                             checked={Boolean(formData.rosterEligible)}
-                            onChange={(e) => setFormData((p) => ({ ...p, rosterEligible: e.target.checked }))}
+                            onChange={(e) => handleToggleRosterEligible(e.target.checked)}
                             onClick={(e) => e.stopPropagation()}
                             color="primary"
                         />
@@ -388,6 +610,46 @@ const PositionsPage = () => {
                             </Typography>
                         </Box>
                     </Paper>
+
+                    {formData.rosterEligible ? (
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                p: 2,
+                                borderRadius: 2,
+                                bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#F0F9FF'),
+                                borderColor: 'primary.light',
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 1.5,
+                            }}
+                        >
+                            <Box sx={{ color: 'primary.main', mt: 0.25, display: 'flex' }}>
+                                <CalendarMonthRounded fontSize="small" />
+                            </Box>
+                            <Box>
+                                <Typography variant="subtitle2" fontWeight={700} color="primary.main">
+                                    Roster Employment Model Active
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, lineHeight: 1.4 }}>
+                                    Roster-eligible employees receive their expected work schedule through hospital duty roster assignments. Normal employment working days and shift timings are not applicable for this position.
+                                </Typography>
+                            </Box>
+                        </Paper>
+                    ) : (
+                        <Box>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: '#0F172A' }}>
+                                Normal Employment Work Schedule & Shift Timing
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                                Configure working days and shift timings (start and end times) for employees in this position when not assigned to duty rosters.
+                            </Typography>
+                            <ScheduleEditor
+                                value={formData.workSchedule || normalizeScheduleForState(DEFAULT_SCHEDULE)}
+                                onChange={(sched) => setFormData((prev) => ({ ...prev, workSchedule: sched }))}
+                            />
+                        </Box>
+                    )}
                 </Stack>
             </Modal>
 
@@ -458,7 +720,7 @@ const PositionsPage = () => {
 
                     <Paper
                         variant="outlined"
-                        onClick={() => setFormData((p) => ({ ...p, rosterEligible: !p.rosterEligible }))}
+                        onClick={() => handleToggleRosterEligible(!formData.rosterEligible)}
                         sx={{
                             p: 1.5,
                             borderRadius: 2,
@@ -473,7 +735,7 @@ const PositionsPage = () => {
                     >
                         <Checkbox
                             checked={Boolean(formData.rosterEligible)}
-                            onChange={(e) => setFormData((p) => ({ ...p, rosterEligible: e.target.checked }))}
+                            onChange={(e) => handleToggleRosterEligible(e.target.checked)}
                             onClick={(e) => e.stopPropagation()}
                             color="primary"
                         />
@@ -486,6 +748,46 @@ const PositionsPage = () => {
                             </Typography>
                         </Box>
                     </Paper>
+
+                    {formData.rosterEligible ? (
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                p: 2,
+                                borderRadius: 2,
+                                bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#F0F9FF'),
+                                borderColor: 'primary.light',
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 1.5,
+                            }}
+                        >
+                            <Box sx={{ color: 'primary.main', mt: 0.25, display: 'flex' }}>
+                                <CalendarMonthRounded fontSize="small" />
+                            </Box>
+                            <Box>
+                                <Typography variant="subtitle2" fontWeight={700} color="primary.main">
+                                    Roster Employment Model Active
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, lineHeight: 1.4 }}>
+                                    Roster-eligible employees receive their expected work schedule through hospital duty roster assignments. Normal employment working days and shift timings are not applicable for this position.
+                                </Typography>
+                            </Box>
+                        </Paper>
+                    ) : (
+                        <Box>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: '#0F172A' }}>
+                                Normal Employment Work Schedule & Shift Timing
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                                Configure working days and shift timings (start and end times) for employees in this position when not assigned to duty rosters.
+                            </Typography>
+                            <ScheduleEditor
+                                value={formData.workSchedule || normalizeScheduleForState(DEFAULT_SCHEDULE)}
+                                onChange={(sched) => setFormData((prev) => ({ ...prev, workSchedule: sched }))}
+                            />
+                        </Box>
+                    )}
                 </Stack>
             </Modal>
 

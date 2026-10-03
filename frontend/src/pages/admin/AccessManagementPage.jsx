@@ -77,6 +77,7 @@ const PERMISSION_GROUPS = [
       { key: 'position.view', label: 'View Positions', description: 'Inspect position master catalog' },
       { key: 'position.create', label: 'Create Positions', description: 'Add new job positions' },
       { key: 'position.update', label: 'Edit / Deactivate Positions', description: 'Update position details and status' },
+      { key: 'position.schedule.manage', label: 'Manage Position Schedules', description: 'Configure working days for normal employment positions' },
     ],
   },
   {

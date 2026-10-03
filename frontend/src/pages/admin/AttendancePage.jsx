@@ -719,8 +719,32 @@ const AttendancePage = () => {
               const status = todayAttendance?.status;
               const isAbsent = status === 'ABSENT';
               const isOnLeave = status === 'ON_LEAVE' || status === 'LEAVE';
+              const isWeeklyOff = status === 'WEEKLY_OFF' || todayAttendance?.isWeeklyOff;
               const hasCheckIn = Boolean(todayAttendance?.checkIn);
               const hasCheckOut = Boolean(todayAttendance?.checkOut);
+
+              if (isWeeklyOff) {
+                return (
+                  <Button
+                    variant="outlined"
+                    disabled
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      px: 2.5,
+                      py: 1,
+                      borderRadius: '10px',
+                      borderColor: '#CBD5E1',
+                      color: '#475569',
+                      backgroundColor: '#F1F5F9',
+                      '&.Mui-disabled': { color: '#475569', borderColor: '#CBD5E1', backgroundColor: '#F1F5F9' },
+                    }}
+                  >
+                    Weekly Off
+                  </Button>
+                );
+              }
 
               if (isAbsent || isOnLeave) {
                 return null;

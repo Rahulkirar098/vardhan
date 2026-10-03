@@ -1,7 +1,74 @@
 const Position = require('../models/position.model');
 const { VALID_MODULE_KEYS } = require('../config/modules.config');
 
-const createPosition = async (hospitalId, name, defaultModules = [], rosterEligible = false) => {
+const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+const normalizeAndValidateWorkSchedule = (inputSchedule, existingSchedule = null) => {
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const defaultWorkingDays = {
+        monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: true, sunday: false
+    };
+
+    const raw = (inputSchedule && typeof inputSchedule === 'object') ? inputSchedule : {};
+    const existing = (existingSchedule && typeof existingSchedule === 'object') ? existingSchedule : {};
+    const result = {};
+
+    for (const day of days) {
+        const val = raw[day] !== undefined ? raw[day] : existing[day];
+
+        if (typeof val === 'boolean') {
+            if (val) {
+                result[day] = { workingDay: true, startTime: '09:00', endTime: '18:00' };
+            } else {
+                result[day] = { workingDay: false, startTime: null, endTime: null };
+            }
+        } else if (val && typeof val === 'object') {
+            const isWorking = val.workingDay !== undefined
+                ? Boolean(val.workingDay)
+                : (val.isWorkingDay !== undefined ? Boolean(val.isWorkingDay) : defaultWorkingDays[day]);
+
+            if (!isWorking) {
+                result[day] = { workingDay: false, startTime: null, endTime: null };
+            } else {
+                const startTime = val.startTime !== undefined && val.startTime !== null ? String(val.startTime).trim() : '';
+                const endTime = val.endTime !== undefined && val.endTime !== null ? String(val.endTime).trim() : '';
+
+                if (!startTime) {
+                    const err = new Error(`Start time is required for working day (${day})`);
+                    err.code = 'VALIDATION_ERROR';
+                    throw err;
+                }
+                if (!endTime) {
+                    const err = new Error(`End time is required for working day (${day})`);
+                    err.code = 'VALIDATION_ERROR';
+                    throw err;
+                }
+                if (!TIME_REGEX.test(startTime)) {
+                    const err = new Error(`Invalid start time format (HH:mm) for ${day}`);
+                    err.code = 'VALIDATION_ERROR';
+                    throw err;
+                }
+                if (!TIME_REGEX.test(endTime)) {
+                    const err = new Error(`Invalid end time format (HH:mm) for ${day}`);
+                    err.code = 'VALIDATION_ERROR';
+                    throw err;
+                }
+                result[day] = { workingDay: true, startTime, endTime };
+            }
+        } else {
+            const isWorking = defaultWorkingDays[day];
+            if (isWorking) {
+                result[day] = { workingDay: true, startTime: '09:00', endTime: '18:00' };
+            } else {
+                result[day] = { workingDay: false, startTime: null, endTime: null };
+            }
+        }
+    }
+
+    return result;
+};
+
+const createPosition = async (hospitalId, name, defaultModules = [], rosterEligible = false, workSchedule = null) => {
     if (!name) {
         const err = new Error('Position name is required');
         err.code = 'VALIDATION_ERROR';
@@ -20,12 +87,15 @@ const createPosition = async (hospitalId, name, defaultModules = [], rosterEligi
         ? defaultModules.filter(m => VALID_MODULE_KEYS.includes(m))
         : [];
 
+    const finalSchedule = Boolean(rosterEligible) ? null : normalizeAndValidateWorkSchedule(workSchedule);
+
     try {
         const position = await Position.create({
             hospitalId,
             name: normalizedName,
             defaultModules: validatedModules,
             rosterEligible: Boolean(rosterEligible),
+            workSchedule: finalSchedule,
             status: 'active'
         });
         return position;
@@ -60,7 +130,7 @@ const getPositionById = async (hospitalId, positionId) => {
     return position;
 };
 
-const updatePosition = async (hospitalId, positionId, name, defaultModules, rosterEligible) => {
+const updatePosition = async (hospitalId, positionId, name, defaultModules, rosterEligible, workSchedule) => {
     const position = await getPositionById(hospitalId, positionId);
     
     if (name !== undefined) {
@@ -80,6 +150,14 @@ const updatePosition = async (hospitalId, positionId, name, defaultModules, rost
 
     if (rosterEligible !== undefined) {
         position.rosterEligible = Boolean(rosterEligible);
+    }
+
+    if (position.rosterEligible) {
+        position.workSchedule = null;
+    } else if (workSchedule !== undefined && workSchedule !== null && typeof workSchedule === 'object') {
+        position.workSchedule = normalizeAndValidateWorkSchedule(workSchedule, position.workSchedule);
+    } else if (!position.workSchedule) {
+        position.workSchedule = normalizeAndValidateWorkSchedule(null);
     }
     
     try {

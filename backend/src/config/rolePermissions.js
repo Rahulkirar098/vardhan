@@ -98,6 +98,14 @@ const hasPermission = (user, permission) => {
         return true;
     }
 
+    if (userSpecific.includes(PERMISSIONS.POSITION_SCHEDULE_MANAGE) && [
+        PERMISSIONS.POSITION_VIEW,
+        PERMISSIONS.POSITION_UPDATE,
+        PERMISSIONS.POSITION_SCHEDULE_MANAGE,
+    ].includes(permission)) {
+        return true;
+    }
+
     return false;
 };
 

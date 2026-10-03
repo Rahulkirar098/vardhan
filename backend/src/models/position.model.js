@@ -22,6 +22,18 @@ const positionSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        workSchedule: {
+            type: mongoose.Schema.Types.Mixed,
+            default: {
+                monday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+                tuesday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+                wednesday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+                thursday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+                friday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+                saturday: { workingDay: true, startTime: '09:00', endTime: '18:00' },
+                sunday: { workingDay: false, startTime: null, endTime: null },
+            },
+        },
         status: {
             type: String,
             enum: ['active', 'inactive'],

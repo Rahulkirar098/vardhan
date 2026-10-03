@@ -15,8 +15,8 @@ const {
 /**
  * Format Date to YYYY-MM-DD
  */
-const getTodayDateStr = () => {
-  const d = new Date();
+const getTodayDateStr = (dateObj) => {
+  const d = dateObj ? new Date(dateObj) : new Date();
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
@@ -94,7 +94,7 @@ const parseTimeToDate = (timeInput, baseDateStr) => {
       const hh = String(hours).padStart(2, "0");
       const mm = String(minutes).padStart(2, "0");
       const ss = String(seconds).padStart(2, "0");
-      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}`);
+      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}.000Z`);
       if (!isNaN(d.getTime())) return d;
     }
 
@@ -114,7 +114,7 @@ const parseTimeToDate = (timeInput, baseDateStr) => {
       const hh = String(hours).padStart(2, "0");
       const mm = String(minutes).padStart(2, "0");
       const ss = String(seconds).padStart(2, "0");
-      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}`);
+      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}.000Z`);
       if (!isNaN(d.getTime())) return d;
     }
 
@@ -141,78 +141,258 @@ const normalizeRequestedStatus = (status) => {
 
 
 /**
+ * Resolve schedule for a day (backward-compatible for boolean or object day schedules)
+ */
+const resolveDaySchedule = (schedule, dayOfWeek) => {
+  if (!schedule) {
+    return {
+      workingDay: dayOfWeek !== "sunday",
+      startTime: dayOfWeek !== "sunday" ? "09:00" : null,
+      endTime: dayOfWeek !== "sunday" ? "18:00" : null,
+    };
+  }
+
+  const rawDay = schedule[dayOfWeek];
+  if (typeof rawDay === "boolean") {
+    return {
+      workingDay: rawDay,
+      startTime: rawDay ? "09:00" : null,
+      endTime: rawDay ? "18:00" : null,
+    };
+  }
+
+  if (rawDay && typeof rawDay === "object") {
+    const isWorking = rawDay.workingDay !== undefined
+      ? Boolean(rawDay.workingDay)
+      : (rawDay.isWorkingDay !== undefined ? Boolean(rawDay.isWorkingDay) : (dayOfWeek !== "sunday"));
+
+    if (!isWorking) {
+      return { workingDay: false, startTime: null, endTime: null };
+    }
+
+    return {
+      workingDay: true,
+      startTime: rawDay.startTime || "09:00",
+      endTime: rawDay.endTime || "18:00",
+    };
+  }
+
+  return {
+    workingDay: dayOfWeek !== "sunday",
+    startTime: dayOfWeek !== "sunday" ? "09:00" : null,
+    endTime: dayOfWeek !== "sunday" ? "18:00" : null,
+  };
+};
+
+/**
  * Process automatic absence for scheduled employees whose shift end time has passed
  */
-const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
+const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
+  let hospitalId;
+  let dateStr;
+
+  const isPlainObj =
+    param1 &&
+    typeof param1 === "object" &&
+    param1.constructor === Object &&
+    (param1.hospitalId !== undefined || param1.dateStr !== undefined);
+
+  let customNow = null;
+  if (isPlainObj) {
+    hospitalId = param1.hospitalId;
+    dateStr = param1.dateStr;
+    customNow = param1.now;
+  } else {
+    hospitalId = param1;
+    if (param2 instanceof Date) {
+      dateStr = getTodayDateStr(param2);
+    } else {
+      dateStr = param2;
+    }
+    if (param3 instanceof Date) {
+      customNow = param3;
+    }
+  }
+
   const targetDateStr = dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : getTodayDateStr();
   const startOfDay = new Date(`${targetDateStr}T00:00:00.000Z`);
   const endOfDay = new Date(`${targetDateStr}T23:59:59.999Z`);
-  const now = new Date();
+  const now = customNow || new Date();
 
-  // Find all published rosters for hospital(s) covering target date
+  const processed = [];
+  const evaluatedEmployees = new Set();
+
+  const isValidHosp = hospitalId && mongoose.Types.ObjectId.isValid(hospitalId);
+
+  // ─── 1. ROSTER EMPLOYEES (rosterEligible = true) ───
   const rosterQuery = {
     status: "PUBLISHED",
     startDate: { $lte: endOfDay },
     endDate: { $gte: startOfDay },
   };
-  if (hospitalId) rosterQuery.hospitalId = hospitalId;
+  if (isValidHosp) rosterQuery.hospitalId = hospitalId;
   const allPublished = await Roster.find(rosterQuery)
     .select("_id hospitalId")
     .lean();
 
-  if (!allPublished.length) return [];
+  if (allPublished.length > 0) {
+    const rosterIds = allPublished.map((r) => r._id);
+    const assignmentQuery = {
+      rosterId: { $in: rosterIds },
+      date: { $gte: startOfDay, $lte: endOfDay },
+    };
+    if (hospitalId) assignmentQuery.hospitalId = hospitalId;
 
-  const rosterIds = allPublished.map((r) => r._id);
+    const assignments = await RosterAssignment.find(assignmentQuery).populate("employeeId").lean();
 
-  const assignmentQuery = {
-    rosterId: { $in: rosterIds },
-    date: { $gte: startOfDay, $lte: endOfDay },
-  };
-  if (hospitalId) assignmentQuery.hospitalId = hospitalId;
+    for (const assignment of assignments) {
+      const emp = assignment.employeeId;
+      if (!emp || emp.employmentStatus === "INACTIVE" || emp.status === "inactive" || emp.isDeleted) {
+        continue;
+      }
 
-  const assignments = await RosterAssignment.find(assignmentQuery).populate("employeeId").lean();
-  const processed = [];
-  const evaluatedEmployees = new Set();
+      const empId = emp._id;
+      const hospId = assignment.hospitalId;
 
-  for (const assignment of assignments) {
-    const emp = assignment.employeeId;
-    if (!emp || emp.employmentStatus === "INACTIVE" || emp.status === "inactive" || emp.isDeleted) {
-      continue;
+      const empKey = `${hospId.toString()}_${empId.toString()}`;
+      if (evaluatedEmployees.has(empKey)) {
+        continue;
+      }
+      evaluatedEmployees.add(empKey);
+
+      // 1. Calculate shift end timestamp
+      let shiftEndObj = null;
+      try {
+        shiftEndObj = parseTimeToDate(assignment.endTime, targetDateStr);
+      } catch {
+        shiftEndObj = null;
+      }
+
+      // Handle night shifts (e.g. 20:00 to 08:00 next day)
+      if (assignment.startTime && assignment.endTime) {
+        try {
+          const startObj = parseTimeToDate(assignment.startTime, targetDateStr);
+          if (startObj && shiftEndObj && shiftEndObj.getTime() <= startObj.getTime()) {
+            shiftEndObj = new Date(shiftEndObj.getTime() + 24 * 60 * 60 * 1000);
+          }
+        } catch {}
+      }
+
+      // If current server time <= shift end time, DO NOT mark absent yet
+      if (shiftEndObj && now.getTime() <= shiftEndObj.getTime()) {
+        continue;
+      }
+
+      // Check if employee has approved leave covering target date
+      const approvedLeave = await Leave.findOne({
+        hospitalId: hospId,
+        employeeId: empId,
+        status: { $in: ["APPROVED", "approved"] },
+        startDate: { $lte: endOfDay },
+        endDate: { $gte: startOfDay },
+      }).lean();
+
+      if (approvedLeave) {
+        continue;
+      }
+
+      // Check if attendance record already exists
+      const existing = await Attendance.findOne({
+        hospitalId: hospId,
+        employeeId: empId,
+        dateStr: targetDateStr,
+      });
+
+      if (existing) {
+        if (existing.checkIn || existing.status === ATTENDANCE_STATUSES.PRESENT || existing.status === ATTENDANCE_STATUSES.HALF_DAY || existing.status === ATTENDANCE_STATUSES.ABSENT || existing.status === ATTENDANCE_STATUSES.ON_LEAVE) {
+          continue;
+        }
+        existing.status = ATTENDANCE_STATUSES.ABSENT;
+        await existing.save();
+        processed.push(existing);
+      } else {
+        const newAbsence = await Attendance.create({
+          hospitalId: hospId,
+          employeeId: empId,
+          userId: emp.userId || null,
+          dateStr: targetDateStr,
+          date: startOfDay,
+          status: ATTENDANCE_STATUSES.ABSENT,
+          checkIn: null,
+          checkOut: null,
+          workingMinutes: 0,
+          notes: "Automatically marked absent after scheduled shift end.",
+        });
+        processed.push(newAbsence);
+      }
     }
+  }
+
+  // ─── 2. NORMAL EMPLOYEES (rosterEligible = false) ───
+  const normalEmpQuery = {
+    employmentStatus: "ACTIVE",
+  };
+  if (isValidHosp) normalEmpQuery.hospitalId = hospitalId;
+
+  const normalEmployees = await Employee.find(normalEmpQuery).populate("positionId").lean();
+
+  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const targetDateObj = new Date(`${targetDateStr}T00:00:00.000Z`);
+  const dayOfWeek = dayNames[targetDateObj.getUTCDay()];
+
+  for (const emp of normalEmployees) {
+    if (!emp || emp.isDeleted || !emp.positionId) continue;
+    const position = emp.positionId;
+    if (position.rosterEligible || position.status === "inactive") continue;
 
     const empId = emp._id;
-    const hospId = assignment.hospitalId;
-
+    const hospId = emp.hospitalId;
     const empKey = `${hospId.toString()}_${empId.toString()}`;
-    if (evaluatedEmployees.has(empKey)) {
-      continue;
-    }
+    if (evaluatedEmployees.has(empKey)) continue;
     evaluatedEmployees.add(empKey);
 
-    // 1. Calculate shift end timestamp
-    let shiftEndObj = null;
-    try {
-      shiftEndObj = parseTimeToDate(assignment.endTime, targetDateStr);
-    } catch {
-      shiftEndObj = null;
+    // Joining Date check: if targetDateStr < dateOfJoining, skip!
+    if (emp.dateOfJoining) {
+      const joiningStr = getTodayDateStr(emp.dateOfJoining);
+      if (targetDateStr < joiningStr) continue;
     }
 
-    // Handle night shifts (e.g. 20:00 to 08:00 next day)
-    if (assignment.startTime && assignment.endTime) {
-      try {
-        const startObj = parseTimeToDate(assignment.startTime, targetDateStr);
-        if (startObj && shiftEndObj && shiftEndObj.getTime() <= startObj.getTime()) {
-          shiftEndObj = new Date(shiftEndObj.getTime() + 24 * 60 * 60 * 1000);
-        }
-      } catch {}
+    // Exit/Leaving Date check: if leavingDate exists and targetDateStr > leavingDate, skip!
+    if (emp.leavingDate) {
+      const leavingStr = getTodayDateStr(emp.leavingDate);
+      if (targetDateStr > leavingStr) continue;
     }
 
-    // RULE 8: If current server time <= shift end time, DO NOT mark absent yet
-    if (shiftEndObj && now.getTime() <= shiftEndObj.getTime()) {
+    // Work Schedule check
+    const daySched = resolveDaySchedule(position.workSchedule, dayOfWeek);
+    if (!daySched.workingDay) {
+      // Non-working day / Weekly off -> DO NOT mark ABSENT
       continue;
     }
 
-    // RULE 10: Check if employee has approved leave covering target date
+    // Determine exact scheduled end datetime for shift timing
+    let shiftStartObj = null;
+    let shiftEndObj = null;
+    try {
+      if (daySched.startTime) shiftStartObj = parseTimeToDate(daySched.startTime, targetDateStr);
+      if (daySched.endTime) shiftEndObj = parseTimeToDate(daySched.endTime, targetDateStr);
+    } catch {}
+
+    if (!shiftEndObj) {
+      shiftEndObj = parseTimeToDate("18:00", targetDateStr);
+    }
+
+    // Overnight schedule check: if endTime <= startTime (e.g. 22:00 -> 06:00), shift ends next morning (+24h)
+    if (shiftStartObj && shiftEndObj && shiftEndObj.getTime() <= shiftStartObj.getTime()) {
+      shiftEndObj = new Date(shiftEndObj.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    // If current time <= shift end time, shift has NOT ended yet -> DO NOT mark ABSENT
+    if (now.getTime() <= shiftEndObj.getTime()) {
+      continue;
+    }
+
+    // Approved Leave check
     const approvedLeave = await Leave.findOne({
       hospitalId: hospId,
       employeeId: empId,
@@ -221,12 +401,9 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
       endDate: { $gte: startOfDay },
     }).lean();
 
-    if (approvedLeave) {
-      // Approved leave overrides absence. Do NOT mark ABSENT.
-      continue;
-    }
+    if (approvedLeave) continue;
 
-    // RULE 4 & 5: Check if attendance record already exists
+    // Existing Attendance check
     const existing = await Attendance.findOne({
       hospitalId: hospId,
       employeeId: empId,
@@ -234,18 +411,9 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
     });
 
     if (existing) {
-      // If employee checked in (checkIn != null) or PRESENT/HALF_DAY -> DO NOT mark ABSENT
-      if (existing.checkIn || existing.status === ATTENDANCE_STATUSES.PRESENT || existing.status === ATTENDANCE_STATUSES.HALF_DAY) {
+      if (existing.checkIn || existing.status === ATTENDANCE_STATUSES.PRESENT || existing.status === ATTENDANCE_STATUSES.HALF_DAY || existing.status === ATTENDANCE_STATUSES.ABSENT || existing.status === ATTENDANCE_STATUSES.ON_LEAVE) {
         continue;
       }
-      // If already marked ABSENT or ON_LEAVE -> skip
-      if (existing.status === ATTENDANCE_STATUSES.ABSENT || existing.status === ATTENDANCE_STATUSES.ON_LEAVE) {
-        continue;
-      }
-    }
-
-    // Mark as ABSENT
-    if (existing) {
       existing.status = ATTENDANCE_STATUSES.ABSENT;
       await existing.save();
       processed.push(existing);
@@ -260,7 +428,7 @@ const processAutomaticAbsence = async ({ hospitalId, dateStr } = {}) => {
         checkIn: null,
         checkOut: null,
         workingMinutes: 0,
-        notes: "Automatically marked absent after scheduled shift end.",
+        notes: "Automatically marked absent for scheduled normal employment working day.",
       });
       processed.push(newAbsence);
     }
@@ -400,10 +568,30 @@ const getTodayAttendance = async ({ hospitalId, employeeId, dateStr }) => {
     employeeId,
     dateStr: effectiveDateStr,
   })
-    .populate("employeeId", "firstName lastName employeeId positionId")
-    .lean();
+  if (record) {
+    return record;
+  }
 
-  return record || null;
+  // Check if today is a non-working day for normal employee position
+  const employee = await Employee.findOne({ _id: employeeId, hospitalId }).populate("positionId").lean();
+  if (employee && employee.positionId && !employee.positionId.rosterEligible) {
+    const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const targetDateObj = new Date(`${effectiveDateStr}T00:00:00.000Z`);
+    const dayOfWeek = dayNames[targetDateObj.getUTCDay()];
+    const daySched = resolveDaySchedule(employee.positionId.workSchedule, dayOfWeek);
+    if (!daySched.workingDay) {
+      return {
+        hospitalId,
+        employeeId,
+        dateStr: effectiveDateStr,
+        status: "WEEKLY_OFF",
+        isWeeklyOff: true,
+        isWorkingDay: false,
+      };
+    }
+  }
+
+  return null;
 };
 
 /**

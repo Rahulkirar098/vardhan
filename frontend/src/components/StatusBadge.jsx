@@ -11,6 +11,11 @@ const STATUS_STYLES = {
   absent: { backgroundColor: '#FEF2F2', color: '#991B1B', borderColor: '#FECACA' },
   not_checked_in: { backgroundColor: '#F8FAFC', color: '#64748B', borderColor: '#E2E8F0' },
   'not checked in': { backgroundColor: '#F8FAFC', color: '#64748B', borderColor: '#E2E8F0' },
+  weekly_off: { backgroundColor: '#F1F5F9', color: '#475569', borderColor: '#CBD5E1' },
+  'weekly off': { backgroundColor: '#F1F5F9', color: '#475569', borderColor: '#CBD5E1' },
+  on_leave: { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE' },
+  'on leave': { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE' },
+  leave: { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE' },
   pending: { backgroundColor: '#FFFBEB', color: '#B45309', borderColor: '#FDE68A' },
   invited: { backgroundColor: '#FFF7E6', color: '#B45309', borderColor: '#F1DFBF' },
   inactive: { backgroundColor: '#F5F5F5', color: '#525252', borderColor: '#E5E5E5' },
@@ -28,6 +33,8 @@ const formatLabel = (value) => {
   if (text.toUpperCase() === 'PRESENT') return 'Present';
   if (text.toUpperCase() === 'ABSENT') return 'Absent';
   if (text.toUpperCase() === 'NOT_CHECKED_IN') return 'Not Checked In';
+  if (text.toUpperCase() === 'WEEKLY_OFF') return 'Weekly Off';
+  if (text.toUpperCase() === 'ON_LEAVE' || text.toUpperCase() === 'LEAVE') return 'On Leave';
 
   return text.charAt(0).toUpperCase() + text.slice(1);
 };

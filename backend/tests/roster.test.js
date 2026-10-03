@@ -2022,6 +2022,29 @@ async function runTests() {
 
         console.log("\n--- 11. ROSTER DUTY REMOVAL SCENARIOS ---");
 
+        // Create dedicated fresh employee for Duty Removal tests to prevent date index collisions
+        const remNurseUser = await User.create({
+            hospitalId: hospitalA._id,
+            name: `Duty Rem Nurse ${testSuffix}`,
+            email: `rem_nurse_${testSuffix}@hospital.com`,
+            password: "password123",
+            role: "employee",
+            status: "active",
+        });
+
+        const remNurseEmployee = await Employee.create({
+            hospitalId: hospitalA._id,
+            userId: remNurseUser._id,
+            firstName: "Rem",
+            lastName: "Nurse",
+            email: `rem_nurse_${testSuffix}@hospital.com`,
+            employeeId: `EMP_REM_${testSuffix}`,
+            positionId: nursingPosition._id,
+            department: "ICU",
+            status: "active",
+            createdBy: hrUser._id,
+        });
+
         // Create a test roster: 01 Oct 2026 to 10 Oct 2026 for Duty Removal tests
         const remRoster = await Roster.create({
             hospitalId: hospitalA._id,
@@ -2037,14 +2060,14 @@ async function runTests() {
             createdBy: hrUser._id,
         });
 
-        // Create assignments for nurse1: Morning -> ICU from 01 Oct to 10 Oct
+        // Create assignments for remNurseEmployee: Morning -> ICU from 01 Oct to 10 Oct
         const nurse1AssignIds = {};
         for (let d = 1; d <= 10; d++) {
             const dateStr = `2026-10-${String(d).padStart(2, "0")}`;
             const ass = await RosterAssignment.create({
                 rosterId: remRoster._id,
                 hospitalId: hospitalA._id,
-                employeeId: nurse1Employee._id,
+                employeeId: remNurseEmployee._id,
                 date: new Date(`${dateStr}T00:00:00.000Z`),
                 shiftTitle: "Morning",
                 startTime: "08:00",

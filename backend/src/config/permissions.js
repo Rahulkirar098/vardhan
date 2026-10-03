@@ -49,6 +49,7 @@ const PERMISSIONS = Object.freeze({
     POSITION_VIEW: "position.view",
     POSITION_CREATE: "position.create",
     POSITION_UPDATE: "position.update",
+    POSITION_SCHEDULE_MANAGE: "position.schedule.manage",
 });
 
 module.exports = {

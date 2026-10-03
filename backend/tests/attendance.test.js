@@ -131,6 +131,7 @@ const runTests = async () => {
             hospitalId: hospitalA._id,
             name: `Staff Position ${testTimestamp}`,
             code: `STF_${String(testTimestamp).slice(-4)}`,
+            rosterEligible: true,
             status: "active",
             createdBy: adminUser._id,
         });
@@ -170,6 +171,7 @@ const runTests = async () => {
             hospitalId: hospitalB._id,
             name: `Staff Position B ${testTimestamp}`,
             code: `STFB_${String(testTimestamp).slice(-4)}`,
+            rosterEligible: true,
             status: "active",
             createdBy: creatorIdB,
         });
@@ -597,8 +599,8 @@ const runTests = async () => {
             employeeId: staffEmp3._id,
             date: todayDateObj,
             shiftTitle: "Past Shift",
-            startTime: "01:00",
-            endTime: "02:00",
+            startTime: "00:00",
+            endTime: "00:01",
             dutyArea: "General Ward",
             createdBy: adminUser._id,
         });
