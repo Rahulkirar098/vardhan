@@ -609,7 +609,7 @@ const updateEmployee = async ({
     employee.updatedBy = updatedBy;
     await employee.save();
 
-    return employee;
+    return getEmployeeById({ employeeMongoId: employee._id, hospitalId });
 };
 
 // ─── Update Employee Status ───────────────────────────────────────────────────
@@ -645,11 +645,6 @@ const updateEmployeeStatus = async ({
     }
 
     employee.employmentStatus = status;
-    if (status === "INACTIVE") {
-        employee.leavingDate = new Date();
-    } else {
-        employee.leavingDate = null;
-    }
     employee.updatedBy = updatedBy;
     await employee.save();
 

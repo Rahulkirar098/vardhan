@@ -605,7 +605,7 @@ const runTests = async () => {
             employeeId: `EMP_EXIT_${testTimestamp}`,
             positionId: hrPos._id,
             dateOfJoining: new Date("2026-01-01"),
-            leavingDate: new Date("2026-09-25"), // Exits Sep 25
+            lastWorkingDay: new Date("2026-09-25"), // Exits Sep 25
             employmentStatus: "INACTIVE",
             createdBy: adminUser._id,
         });
@@ -613,8 +613,8 @@ const runTests = async () => {
         const sep28Str = "2026-09-28"; // Monday (working day for HR)
         await attendanceService.processAutomaticAbsence(hospitalA._id, new Date(sep28Str));
         const exitedSep28Att = await Attendance.findOne({ employeeId: exitedEmp._id, dateStr: sep28Str });
-        assert.strictEqual(exitedSep28Att, null, "Date after employee leavingDate must NOT get ABSENT");
-        console.log("✓ TEST 12 PASSED: Date after employee leavingDate is protected from ABSENT.");
+        assert.strictEqual(exitedSep28Att, null, "Date after employee lastWorkingDay must NOT get ABSENT");
+        console.log("✓ TEST 12 PASSED: Date after employee lastWorkingDay is protected from ABSENT.");
 
         // TEST 13: Roster-based employee (rosterEligible = true) is ignored by normal employment schedule
         const nurseUser = await User.create({

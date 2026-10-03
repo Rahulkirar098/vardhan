@@ -368,7 +368,6 @@ const updateEmployeeStatus = async (req, res) => {
                 firstName: employee.firstName,
                 lastName: employee.lastName,
                 employmentStatus: employee.employmentStatus,
-                leavingDate: employee.leavingDate,
             },
         });
     } catch (error) {

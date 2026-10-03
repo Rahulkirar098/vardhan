@@ -45,7 +45,7 @@ VARDHAN SaaS
 
 ### Employee (`models/employee.model.js`)
 - **Purpose:** Represents the single workforce staff record in a hospital.
-- **Fields:** `employeeId`, `firstName`, `lastName`, `email`, `phone`, `dateOfJoining`, `lastWorkingDay`, `positionId`, `employmentStatus` (ACTIVE/INACTIVE), `leavingDate`, `hospitalId`, `userId`, `createdBy`, `updatedBy`, timestamps.
+- **Fields:** `employeeId`, `firstName`, `lastName`, `email`, `phone`, `dateOfJoining`, `lastWorkingDay`, `positionId`, `employmentStatus` (ACTIVE/INACTIVE), `hospitalId`, `userId`, `createdBy`, `updatedBy`, timestamps.
 - **Last Working Day (LWD) Rules:**
   - `lastWorkingDay` (Date, default `null`) represents the inclusive last day of employment.
   - Employment date checks are evaluated in local Hospital Timezone via `utils/employment.utils.js` (`isEmployeeEmployedOnDate`).

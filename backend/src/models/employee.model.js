@@ -62,11 +62,6 @@ const employeeSchema = new mongoose.Schema(
             default: "ACTIVE",
         },
 
-        leavingDate: {
-            type: Date,
-            default: null,
-        },
-
         hospitalId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Hospital",

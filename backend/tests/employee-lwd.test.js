@@ -200,15 +200,42 @@ async function runTests() {
         assert.strictEqual(invalidRes.status, 400, "Test 4 Failed: Expected 400 for LWD < DOJ");
         console.log("✓ TEST 4 PASSED: LWD before joining date returns HTTP 400.");
 
-        // --- TEST 5: Admin can set LWD ---
+        // --- TEST 5: Admin can set LWD & verify PATCH, MongoDB, GET by ID, GET list (and NO leavingDate) ---
+        assert.strictEqual(Employee.schema.paths.leavingDate, undefined, "Test 5 Failed: leavingDate path must be completely removed from Employee schema");
+
         const setRes = await request(`/api/v1/hrms/employees/${targetEmployee._id}`, {
             method: "PATCH",
             headers: { Authorization: `Bearer ${adminToken}` },
             body: { lastWorkingDay: "2026-10-15" },
         });
-        assert.strictEqual(setRes.status, 200, "Test 5 Failed");
-        assert.strictEqual(setRes.body.data.lastWorkingDay.split("T")[0], "2026-10-15");
-        console.log("✓ TEST 5 PASSED: Admin can set LWD.");
+        assert.strictEqual(setRes.status, 200, "Test 5 Failed: Expected status 200");
+        assert.strictEqual(setRes.body.data.lastWorkingDay, "2026-10-15T00:00:00.000Z", "Test 5 Failed: PATCH response must contain full ISO string");
+        assert.strictEqual(setRes.body.data.leavingDate, undefined, "Test 5 Failed: PATCH response MUST NOT contain leavingDate");
+
+        // Verify fresh MongoDB document
+        const freshDoc5 = await Employee.findById(targetEmployee._id).lean();
+        assert.ok(freshDoc5.lastWorkingDay, "Test 5 Failed: Fresh Mongo doc must have lastWorkingDay");
+        assert.strictEqual(freshDoc5.lastWorkingDay.toISOString(), "2026-10-15T00:00:00.000Z", "Test 5 Failed: Mongo doc date mismatch");
+        assert.strictEqual(freshDoc5.leavingDate, undefined, "Test 5 Failed: Mongo doc MUST NOT have leavingDate");
+
+        // Verify GET by ID
+        const getByIdRes5 = await request(`/api/v1/hrms/employees/${targetEmployee._id}`, {
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        assert.strictEqual(getByIdRes5.status, 200, "Test 5 Failed: GET by ID status 200");
+        assert.strictEqual(getByIdRes5.body.data.lastWorkingDay, "2026-10-15T00:00:00.000Z", "Test 5 Failed: GET by ID lastWorkingDay mismatch");
+        assert.strictEqual(getByIdRes5.body.data.leavingDate, undefined, "Test 5 Failed: GET by ID MUST NOT contain leavingDate");
+
+        // Verify GET list
+        const getListRes5 = await request(`/api/v1/hrms/employees`, {
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        assert.strictEqual(getListRes5.status, 200, "Test 5 Failed: GET list status 200");
+        const listEmp5 = getListRes5.body.data.employees.find(e => e._id.toString() === targetEmployee._id.toString());
+        assert.ok(listEmp5, "Test 5 Failed: Target employee not found in list");
+        assert.strictEqual(listEmp5.lastWorkingDay, "2026-10-15T00:00:00.000Z", "Test 5 Failed: GET list lastWorkingDay mismatch");
+        assert.strictEqual(listEmp5.leavingDate, undefined, "Test 5 Failed: GET list MUST NOT contain leavingDate");
+        console.log("✓ TEST 5 PASSED: Admin can set LWD (verified in PATCH response, Mongo doc, GET by ID, and GET list; leavingDate is completely absent).");
 
         // --- TEST 6: Authorized HR can set LWD ---
         const hrSetRes = await request(`/api/v1/hrms/employees/${targetEmployee._id}`, {
@@ -217,6 +244,8 @@ async function runTests() {
             body: { lastWorkingDay: "2026-10-20" },
         });
         assert.strictEqual(hrSetRes.status, 200, "Test 6 Failed");
+        assert.strictEqual(hrSetRes.body.data.lastWorkingDay, "2026-10-20T00:00:00.000Z", "Test 6 Failed: HR PATCH response LWD mismatch");
+        assert.strictEqual(hrSetRes.body.data.leavingDate, undefined);
         console.log("✓ TEST 6 PASSED: Authorized HR can set LWD.");
 
         // --- TEST 7: Unauthorized employee cannot set own LWD ---
@@ -235,17 +264,64 @@ async function runTests() {
             body: { lastWorkingDay: "2026-10-15" },
         });
         assert.strictEqual(editRes.status, 200, "Test 8 Failed");
+        assert.strictEqual(editRes.body.data.lastWorkingDay, "2026-10-15T00:00:00.000Z", "Test 8 Failed: Admin edit PATCH response LWD mismatch");
+        assert.strictEqual(editRes.body.data.leavingDate, undefined);
         console.log("✓ TEST 8 PASSED: Admin can edit LWD.");
 
-        // --- TEST 9: Admin can clear LWD ---
+        // --- TEST 9: Admin can clear LWD (verify null in PATCH, Mongo, GET by ID, GET list) ---
         const clearRes = await request(`/api/v1/hrms/employees/${targetEmployee._id}`, {
             method: "PATCH",
             headers: { Authorization: `Bearer ${adminToken}` },
             body: { lastWorkingDay: null },
         });
         assert.strictEqual(clearRes.status, 200, "Test 9 Failed");
-        assert.strictEqual(clearRes.body.data.lastWorkingDay, null);
-        console.log("✓ TEST 9 PASSED: Admin can clear LWD to null.");
+        assert.strictEqual(clearRes.body.data.lastWorkingDay, null, "Test 9 Failed: PATCH response must be null");
+        assert.strictEqual(clearRes.body.data.leavingDate, undefined);
+
+        const freshClearDoc = await Employee.findById(targetEmployee._id).lean();
+        assert.strictEqual(freshClearDoc.lastWorkingDay, null, "Test 9 Failed: Mongo doc lastWorkingDay must be null");
+        assert.strictEqual(freshClearDoc.leavingDate, undefined);
+
+        const getByIdClear = await request(`/api/v1/hrms/employees/${targetEmployee._id}`, {
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        assert.strictEqual(getByIdClear.body.data.lastWorkingDay, null, "Test 9 Failed: GET by ID clear lastWorkingDay must be null");
+        assert.strictEqual(getByIdClear.body.data.leavingDate, undefined);
+
+        const getListClear = await request(`/api/v1/hrms/employees`, {
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        const listEmpClear = getListClear.body.data.employees.find(e => e._id.toString() === targetEmployee._id.toString());
+        assert.strictEqual(listEmpClear.lastWorkingDay, null, "Test 9 Failed: GET list clear lastWorkingDay must be null");
+        assert.strictEqual(listEmpClear.leavingDate, undefined);
+
+        console.log("✓ TEST 9 PASSED: Admin can clear LWD to null (verified in PATCH response, Mongo doc, GET by ID, and GET list; no leavingDate).");
+
+        // --- TEST 9B: Deactivating/Reactivating employee status changes ONLY employmentStatus and DOES NOT create or alter leavingDate or lastWorkingDay ---
+        const deactivateRes = await request(`/api/v1/hrms/employees/${targetEmployee._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminToken}` },
+            body: { status: "INACTIVE" },
+        });
+        assert.strictEqual(deactivateRes.status, 200);
+        assert.strictEqual(deactivateRes.body.data.employmentStatus, "INACTIVE");
+        assert.strictEqual(deactivateRes.body.data.leavingDate, undefined, "Deactivating status MUST NOT create leavingDate");
+
+        const freshInactiveDoc = await Employee.findById(targetEmployee._id).lean();
+        assert.strictEqual(freshInactiveDoc.employmentStatus, "INACTIVE");
+        assert.strictEqual(freshInactiveDoc.leavingDate, undefined, "Mongo doc MUST NOT contain leavingDate");
+        assert.strictEqual(freshInactiveDoc.lastWorkingDay, null, "Deactivating status MUST NOT set lastWorkingDay");
+
+        const reactivateRes = await request(`/api/v1/hrms/employees/${targetEmployee._id}/status`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminToken}` },
+            body: { status: "ACTIVE" },
+        });
+        assert.strictEqual(reactivateRes.status, 200);
+        assert.strictEqual(reactivateRes.body.data.employmentStatus, "ACTIVE");
+        assert.strictEqual(reactivateRes.body.data.leavingDate, undefined, "Reactivating status MUST NOT touch leavingDate");
+
+        console.log("✓ TEST 9B PASSED: Changing employmentStatus to INACTIVE/ACTIVE modifies ONLY employmentStatus (leavingDate is not populated/updated).");
 
         // Set LWD back to 2026-10-15 for remaining tests
         await request(`/api/v1/hrms/employees/${targetEmployee._id}`, {

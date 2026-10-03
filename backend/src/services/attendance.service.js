@@ -307,18 +307,6 @@ const processAutomaticAbsence = async (param1, param2, param3) => {
     if (evaluatedEmployees.has(empKey)) continue;
     evaluatedEmployees.add(empKey);
 
-    // Joining Date check: if targetDateStr < dateOfJoining, skip!
-    if (emp.dateOfJoining) {
-      const joiningStr = getTodayDateStr(emp.dateOfJoining);
-      if (targetDateStr < joiningStr) continue;
-    }
-
-    // Exit/Leaving Date check: if leavingDate exists and targetDateStr > leavingDate, skip!
-    if (emp.leavingDate) {
-      const leavingStr = getTodayDateStr(emp.leavingDate);
-      if (targetDateStr > leavingStr) continue;
-    }
-
     // Work Schedule check
     const daySched = resolveDaySchedule(position.workSchedule, dayOfWeek);
     if (!daySched.workingDay) {
