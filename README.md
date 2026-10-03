@@ -1,4 +1,4 @@
-# Vardhan
+# Nuvince
 
 A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management with dual-model attendance expectations (roster-based vs normal working days/shift timing), IANA hospital timezone support, workforce employee management, leave management, attendance & regularization with hospital timezone-aware background automatic absence scheduling, simplified duty roster planning, roster history auditing, and generic access management.
 
@@ -16,7 +16,7 @@ A full-stack hospital management SaaS platform built with Node.js, Express, Mong
 ## 🏛️ System Architecture
 
 ```
-VARDHAN SaaS
+NUVINCE SaaS
 │
 ├── CORE PLATFORM
 │   ├── Authentication (JWT with token revocation)
@@ -68,7 +68,7 @@ VARDHAN SaaS
 - Centralized Employee table with reciprocal references between User and Employee records.
 - Status filters (`All`, `Active`, `Inactive`).
 - Single generic invitation flow with SHA-256 token hashing and 48-hour expiration.
-- Every invited employee receives a linked Vardhan login account.
+- Every invited employee receives a linked Nuvince login account.
 - Employee deactivation disables login without deleting historical data; reactivation restores login.
 - Employee Edit manages profile details and is strictly decoupled from Access Management.
 
@@ -130,7 +130,7 @@ SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USER=your_email@example.com
 SMTP_PASS=your_email_password
-SMTP_FROM_NAME=Vardhan
+SMTP_FROM_NAME=Nuvince
 SMTP_FROM_EMAIL=your_email@example.com
 FRONTEND_URL=http://localhost:5173
 ```
@@ -171,4 +171,4 @@ The test suite includes:
 
 ## 📄 License
 
-Internal Vardhan SaaS Platform.
+Internal Nuvince SaaS Platform.

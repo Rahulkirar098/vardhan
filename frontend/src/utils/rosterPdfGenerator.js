@@ -396,7 +396,7 @@ export function generateFrontendRosterPDF(activeRoster) {
   });
 
   // Save PDF file directly in browser
-  const titleClean = (activeRoster.title || 'Vardhan_Roster').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const titleClean = (activeRoster.title || 'Nuvince_Roster').replace(/[^a-zA-Z0-9_-]/g, '_');
   const startFmt = activeRoster.startDate ? getTodayDateStr(activeRoster.startDate) : 'period';
   const endFmt = activeRoster.endDate ? getTodayDateStr(activeRoster.endDate) : 'end';
   const filename = `${titleClean}_${startFmt}_to_${endFmt}.pdf`;

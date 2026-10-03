@@ -21,7 +21,7 @@ const PAGE_META = [
 ];
 
 const getPageMeta = (pathname) =>
-  PAGE_META.find((meta) => meta.test(pathname)) || { title: 'Vardhan', breadcrumb: '' };
+  PAGE_META.find((meta) => meta.test(pathname)) || { title: 'Nuvince', breadcrumb: '' };
 
 const Navbar = ({ userName = 'User', userRole, userPosition, showMenu = false, onMenuClick }) => {
   const { pathname } = useLocation();

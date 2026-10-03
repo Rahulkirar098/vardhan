@@ -1,5 +1,5 @@
 /**
- * Vardhan SaaS Module Foundation Catalog
+ * Nuvince SaaS Module Foundation Catalog
  *
  * Defines core and extensible platform modules, their activation state,
  * and role/permission requirements.

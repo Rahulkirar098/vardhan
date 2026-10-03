@@ -1,4 +1,4 @@
-# Vardhan — Project Context
+# Nuvince — Project Context
 
 Status: Standardized Target Architecture
 Updated: 2026-10-03
@@ -9,7 +9,7 @@ Purpose: Single source of truth for developers and coding agents.
 ## 1. PRIMARY ARCHITECTURE
 
 ```
-VARDHAN SaaS
+NUVINCE SaaS
 │
 ├── CORE PLATFORM
 │   ├── Authentication (JWT with token revocation)
@@ -52,7 +52,7 @@ VARDHAN SaaS
   - LWD is inclusive: an employee is employed through LWD, and employment ends starting the day after LWD.
   - Post-LWD operational access is strictly blocked across Login, JWT middleware (`auth.middleware.js` returning HTTP 403 `EMPLOYMENT_ENDED`), Roster assignments (returns `EMPLOYMENT_ENDED`), Leaves, and Attendance automatic absence.
   - Data Safety: Historical records (attendance, leave, rosters) are never deleted or corrupted when LWD is set.
-- **Relationship:** Every invited employee receives a Vardhan login account. `Employee.userId` <-> `User.employeeId` form a reciprocal link.
+- **Relationship:** Every invited employee receives a Nuvince login account. `Employee.userId` <-> `User.employeeId` form a reciprocal link.
 
 ### Position (`models/position.model.js`)
 - **Purpose:** Hospital-specific designation master (e.g. HR Manager, Staff Nurse, Medical Officer).

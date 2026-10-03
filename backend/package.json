@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Vardhan Hospital SaaS API",
+  "description": "Nuvince Hospital SaaS API",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",

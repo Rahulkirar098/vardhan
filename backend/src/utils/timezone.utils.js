@@ -1,5 +1,5 @@
 /**
- * Centralized Timezone and Date-Time Utility for Vardhan Hospital SaaS
+ * Centralized Timezone and Date-Time Utility for Nuvince Hospital SaaS
  */
 
 /**

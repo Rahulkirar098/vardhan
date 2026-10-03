@@ -51,7 +51,7 @@ const AcceptInvitation = () => {
   const handleAccept = async () => {
     setError('');
     if (!password) {
-      setError('Please set a password for your Vardhan login account.');
+      setError('Please set a password for your Nuvince login account.');
       return;
     }
     if (password.length < 6) {

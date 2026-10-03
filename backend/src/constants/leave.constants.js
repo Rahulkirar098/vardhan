@@ -1,5 +1,5 @@
 /**
- * Vardhan Leave Management Constants
+ * Nuvince Leave Management Constants
  */
 
 const LEAVE_TYPES = Object.freeze({

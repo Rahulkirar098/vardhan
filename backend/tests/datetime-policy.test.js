@@ -78,7 +78,7 @@ function makeRequest(method, path, body = null, userToken = token) {
 
 async function runTests() {
   console.log('\n==================================================================');
-  console.log('=== VARDHAN HOSPITAL TIMEZONE & ATTENDANCE DAY-END TEST SUITE ===');
+  console.log('=== NUVINCE HOSPITAL TIMEZONE & ATTENDANCE DAY-END TEST SUITE ===');
   console.log('==================================================================\n');
 
   await mongoose.connect(process.env.MONGODB_URI);

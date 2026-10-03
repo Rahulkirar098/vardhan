@@ -1,5 +1,5 @@
 /**
- * Centralized Date & Time Utilities for Vardhan HRMS
+ * Centralized Date & Time Utilities for Nuvince HRMS
  */
 
 /**

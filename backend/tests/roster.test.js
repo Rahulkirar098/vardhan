@@ -65,7 +65,7 @@ const makeRequest = (pathUrl, { method = "GET", headers = {}, body = null } = {}
 
 async function runTests() {
     console.log("\n=======================================================");
-    console.log("=== VARDHAN PHASE 9 ROSTER TEST SUITE ===");
+    console.log("=== NUVINCE PHASE 9 ROSTER TEST SUITE ===");
     console.log("=======================================================\n");
 
     if (mongoose.connection.readyState === 0) {

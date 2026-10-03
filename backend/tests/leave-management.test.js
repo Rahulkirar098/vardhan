@@ -64,7 +64,7 @@ const request = (pathUrl, { method = "GET", headers = {}, body = null } = {}) =>
 
 const runTests = async () => {
     console.log("\n=======================================================");
-    console.log("=== VARDHAN PHASE 7 LEAVE MANAGEMENT TEST SUITE ===");
+    console.log("=== NUVINCE PHASE 7 LEAVE MANAGEMENT TEST SUITE ===");
     console.log("=======================================================\n");
 
     const testTimestamp = Date.now();

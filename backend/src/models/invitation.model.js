@@ -66,7 +66,7 @@ const invitationSchema = new mongoose.Schema(
             default: null,
         },
 
-        // Vardhan Role for the new User account
+        // Nuvince Role for the new User account
         role: {
             type: String,
             enum: ["employee"],

@@ -43,7 +43,7 @@ const buildInvitationEmailTemplate = ({ hospitalName, recipientName, inviterName
             </p>
             <p>This invitation expires in 48 hours.</p>
             <p>If you did not expect this invitation, you can ignore this email.</p>
-            <p>Regards,<br />Vardhan</p>
+            <p>Regards,<br />Nuvince</p>
         </div>
     `;
 

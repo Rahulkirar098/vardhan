@@ -464,7 +464,7 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
           { label: 'Date of Joining', value: formatDate(employee.dateOfJoining) },
           { label: 'Last Working Day', value: employee.lastWorkingDay ? formatDate(employee.lastWorkingDay) : 'Not Set' },
           { label: 'Employment Status', value: employee.employmentStatus },
-          { label: 'Vardhan Account', value: employee.userId ? (employee.employmentStatus === 'INACTIVE' ? 'Disabled' : 'Active') : 'No Login' },
+          { label: 'Nuvince Account', value: employee.userId ? (employee.employmentStatus === 'INACTIVE' ? 'Disabled' : 'Active') : 'No Login' },
           { label: 'Role', value: employee.userId ? 'Employee' : '—' },
           { label: 'Modules', value: employee.userId?.modules?.length ? employee.userId.modules.join(', ') : '—' },
           { label: 'Permissions', value: employee.userId?.permissions?.length ? employee.userId.permissions.length + ' permissions' : '—' },

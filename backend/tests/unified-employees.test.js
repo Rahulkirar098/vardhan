@@ -64,7 +64,7 @@ const request = (pathUrl, { method = "GET", headers = {}, body = null } = {}) =>
 
 const runTests = async () => {
     console.log("\n=======================================================");
-    console.log("=== VARDHAN END-TO-END EMPLOYEE LIFECYCLE & AUTH TESTS ===");
+    console.log("=== NUVINCE END-TO-END EMPLOYEE LIFECYCLE & AUTH TESTS ===");
     console.log("=======================================================\n");
 
     const testTimestamp = Date.now();

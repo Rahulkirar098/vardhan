@@ -1227,7 +1227,7 @@ const AdminDashboard = () => {
   // ───────────────────────────────────────────────────────────────────────────
   // ADMIN DASHBOARD VIEW
   // ───────────────────────────────────────────────────────────────────────────
-  const hospitalDisplayName = hospital?.name || 'Vardhan Multispeciality Hospital';
+  const hospitalDisplayName = hospital?.name || 'Nuvince Multispeciality Hospital';
 
   return (
     <AppLayout onLogout={handleLogout}>

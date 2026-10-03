@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
  * Employee Model
  *
  * Represents an HRMS Employee managed by HR.
- * Every Employee is linked to a Vardhan User login account via userId.
+ * Every Employee is linked to a Nuvince User login account via userId.
  */
 const employeeSchema = new mongoose.Schema(
     {
@@ -69,7 +69,7 @@ const employeeSchema = new mongoose.Schema(
         },
 
         /**
-         * Link to the Vardhan User login account.
+         * Link to the Nuvince User login account.
          * Created when the employee accepts their invitation.
          */
         userId: {

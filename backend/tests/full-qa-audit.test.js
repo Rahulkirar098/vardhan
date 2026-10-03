@@ -72,7 +72,7 @@ const recordResult = (moduleName, permission, userType, notGrantedResult, grante
 
 const runFullQA = async () => {
     console.log("\n=======================================================");
-    console.log("=== VARDHAN ACCESS MANAGEMENT AUTHORIZATION QA AUDIT ===");
+    console.log("=== NUVINCE ACCESS MANAGEMENT AUTHORIZATION QA AUDIT ===");
     console.log("=======================================================\n");
 
     const timestamp = Date.now();
@@ -565,7 +565,7 @@ const runFullQA = async () => {
 
         // ─── 8. TEST ACCESS MANAGEMENT PERMISSIONS ───────────────
         console.log("\n--- TESTING ACCESS MANAGEMENT PERMISSIONS ---");
-        // Access Management is strictly restricted to Admin/Super Admin roles in Vardhan backend architecture
+        // Access Management is strictly restricted to Admin/Super Admin roles in Nuvince backend architecture
         console.log("  [INFO] Access Management is strictly restricted to Admin role. Non-admin access is always blocked by role checks.");
 
         // ─── 9. POSITION VS PERMISSION AUDIT ─────────────────────

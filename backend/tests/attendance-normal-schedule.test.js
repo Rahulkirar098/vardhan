@@ -66,7 +66,7 @@ const request = (pathUrl, { method = "GET", headers = {}, body = null } = {}) =>
 
 const runTests = async () => {
     console.log("\n==================================================================");
-    console.log("=== VARDHAN NORMAL EMPLOYMENT ATTENDANCE SCHEDULING TEST SUITE ===");
+    console.log("=== NUVINCE NORMAL EMPLOYMENT ATTENDANCE SCHEDULING TEST SUITE ===");
     console.log("==================================================================\n");
 
     const testTimestamp = Date.now();

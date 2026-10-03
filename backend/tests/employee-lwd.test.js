@@ -71,7 +71,7 @@ const request = (pathUrl, { method = "GET", headers = {}, body = null } = {}) =>
 
 async function runTests() {
     console.log("==================================================================");
-    console.log("=== VARDHAN EMPLOYEE LAST WORKING DAY (LWD) TEST SUITE        ===");
+    console.log("=== NUVINCE EMPLOYEE LAST WORKING DAY (LWD) TEST SUITE        ===");
     console.log("==================================================================");
 
     if (mongoose.connection.readyState === 0) {
