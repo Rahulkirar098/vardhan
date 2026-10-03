@@ -45,7 +45,13 @@ VARDHAN SaaS
 
 ### Employee (`models/employee.model.js`)
 - **Purpose:** Represents the single workforce staff record in a hospital.
-- **Fields:** `employeeId`, `firstName`, `lastName`, `email`, `phone`, `dateOfJoining`, `positionId`, `employmentStatus` (ACTIVE/INACTIVE), `leavingDate`, `hospitalId`, `userId`, `createdBy`, `updatedBy`, timestamps.
+- **Fields:** `employeeId`, `firstName`, `lastName`, `email`, `phone`, `dateOfJoining`, `lastWorkingDay`, `positionId`, `employmentStatus` (ACTIVE/INACTIVE), `leavingDate`, `hospitalId`, `userId`, `createdBy`, `updatedBy`, timestamps.
+- **Last Working Day (LWD) Rules:**
+  - `lastWorkingDay` (Date, default `null`) represents the inclusive last day of employment.
+  - Employment date checks are evaluated in local Hospital Timezone via `utils/employment.utils.js` (`isEmployeeEmployedOnDate`).
+  - LWD is inclusive: an employee is employed through LWD, and employment ends starting the day after LWD.
+  - Post-LWD operational access is strictly blocked across Login, JWT middleware (`auth.middleware.js` returning HTTP 403 `EMPLOYMENT_ENDED`), Roster assignments (returns `EMPLOYMENT_ENDED`), Leaves, and Attendance automatic absence.
+  - Data Safety: Historical records (attendance, leave, rosters) are never deleted or corrupted when LWD is set.
 - **Relationship:** Every invited employee receives a Vardhan login account. `Employee.userId` <-> `User.employeeId` form a reciprocal link.
 
 ### Position (`models/position.model.js`)
@@ -150,6 +156,7 @@ VARDHAN SaaS
 ## 6. VERIFICATION & TESTING
 
 All flows are covered by automated integration test suites under `backend/tests/`:
+- `employee-lwd.test.js` (Employee Last Working Day [LWD] inclusive boundaries, centralized employment access rules, post-LWD auth/JWT blocking, roster assignment blocking, leave suppression, automatic absence suppression, and multi-hospital timezone isolation)
 - `datetime-policy.test.js` (Hospital IANA timezone validation, UTC instant resolution, shift timing boundary cutoffs, and timezone policy enforcement)
 - `attendance-normal-schedule.test.js` (Normal employment working-day scheduling, per-day shift timing persistence, position `workSchedule` regression checks, and automatic absence evaluation)
 - `roster.test.js` (Roster creation, draft updates, review comments, shift assignments, single-assignment date rules, delete draft roster scenarios, roster history & read-only immutability, roster templates lifecycle, bulk-range assignment, dedicated Leave ↔ Roster assignment blocking tests)

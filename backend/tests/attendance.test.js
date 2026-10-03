@@ -830,7 +830,7 @@ const runTests = async () => {
             email: `rostera_${testTimestamp}@test.com`,
             phone: "9876500001",
             employeeId: `EMPA-${String(testTimestamp).slice(-4)}`,
-            dateOfJoining: new Date(),
+            dateOfJoining: new Date("2026-09-01"),
             status: "active",
             createdBy: adminUser._id,
         });
@@ -856,7 +856,7 @@ const runTests = async () => {
             email: `rosterb_${testTimestamp}@test.com`,
             phone: "9876500002",
             employeeId: `EMPB-${String(testTimestamp).slice(-4)}`,
-            dateOfJoining: new Date(),
+            dateOfJoining: new Date("2026-09-01"),
             status: "active",
             createdBy: adminUser._id,
         });
@@ -967,7 +967,7 @@ const runTests = async () => {
             email: `leavepend_${testTimestamp}@test.com`,
             phone: "9876500004",
             employeeId: `EMPPEND-${String(testTimestamp).slice(-4)}`,
-            dateOfJoining: new Date(),
+            dateOfJoining: new Date("2026-09-01"),
             status: "active",
             createdBy: adminUser._id,
         });
@@ -1015,7 +1015,7 @@ const runTests = async () => {
             email: `leaverej_${testTimestamp}@test.com`,
             phone: "9876500005",
             employeeId: `EMPREJ-${String(testTimestamp).slice(-4)}`,
-            dateOfJoining: new Date(),
+            dateOfJoining: new Date("2026-09-01"),
             status: "active",
             createdBy: adminUser._id,
         });
