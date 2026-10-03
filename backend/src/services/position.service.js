@@ -154,10 +154,13 @@ const updatePosition = async (hospitalId, positionId, name, defaultModules, rost
 
     if (position.rosterEligible) {
         position.workSchedule = null;
+        position.markModified('workSchedule');
     } else if (workSchedule !== undefined && workSchedule !== null && typeof workSchedule === 'object') {
-        position.workSchedule = normalizeAndValidateWorkSchedule(workSchedule, position.workSchedule);
+        position.workSchedule = normalizeAndValidateWorkSchedule(workSchedule);
+        position.markModified('workSchedule');
     } else if (!position.workSchedule) {
         position.workSchedule = normalizeAndValidateWorkSchedule(null);
+        position.markModified('workSchedule');
     }
     
     try {

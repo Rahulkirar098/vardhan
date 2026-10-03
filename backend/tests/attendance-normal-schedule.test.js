@@ -336,6 +336,75 @@ const runTests = async () => {
         console.log("✓ TEST 14 PASSED: Cross-hospital position access blocked.");
 
         // ---------------------------------------------------------------------
+        // TEST 21: ROUND-TRIP STRUCTURED SCHEDULE PERSISTENCE REGRESSION TEST
+        // ---------------------------------------------------------------------
+        const structuredPayload = {
+            name: `HR Structured Test ${testTimestamp}`,
+            defaultModules: ["hrms"],
+            rosterEligible: false,
+            workSchedule: {
+                monday: { workingDay: true, startTime: "09:00", endTime: "18:00" },
+                tuesday: { workingDay: true, startTime: "09:00", endTime: "18:00" },
+                wednesday: { workingDay: true, startTime: "09:00", endTime: "18:00" },
+                thursday: { workingDay: true, startTime: "09:00", endTime: "18:00" },
+                friday: { workingDay: true, startTime: "09:00", endTime: "18:00" },
+                saturday: { workingDay: true, startTime: "09:00", endTime: "11:00" },
+                sunday: { workingDay: false, startTime: null, endTime: null },
+            },
+        };
+
+        // 1. Send PATCH request
+        const patchRes = await request(`/api/positions/${hrPos._id}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminToken}` },
+            body: structuredPayload,
+        });
+
+        assert.strictEqual(patchRes.status, 200, "PATCH position with structured schedule must return 200 OK");
+        const patchData = patchRes.body.data;
+
+        // 2. Assert PATCH response structure
+        assert.strictEqual(typeof patchData.workSchedule.saturday, "object", "Saturday schedule in PATCH response MUST be an object, not boolean");
+        assert.strictEqual(patchData.workSchedule.saturday.workingDay, true, "Saturday workingDay must be true");
+        assert.strictEqual(patchData.workSchedule.saturday.startTime, "09:00", "Saturday startTime must be '09:00'");
+        assert.strictEqual(patchData.workSchedule.saturday.endTime, "11:00", "Saturday endTime must be '11:00'");
+
+        assert.strictEqual(typeof patchData.workSchedule.sunday, "object", "Sunday schedule in PATCH response MUST be an object, not boolean");
+        assert.strictEqual(patchData.workSchedule.sunday.workingDay, false, "Sunday workingDay must be false");
+        assert.strictEqual(patchData.workSchedule.sunday.startTime, null, "Sunday startTime must be null");
+        assert.strictEqual(patchData.workSchedule.sunday.endTime, null, "Sunday endTime must be null");
+
+        // 3. Perform GET /positions
+        const getRes = await request(`/api/positions`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${adminToken}` },
+        });
+
+        assert.strictEqual(getRes.status, 200, "GET /positions must return 200 OK");
+        const fetchedHrPos = getRes.body.data.find(p => p._id === hrPos._id.toString());
+        assert.ok(fetchedHrPos, "Fetched HR position must exist in GET response");
+
+        // 4. Assert GET response structure
+        assert.strictEqual(typeof fetchedHrPos.workSchedule.saturday, "object", "Saturday schedule in GET response MUST be an object, not boolean");
+        assert.strictEqual(fetchedHrPos.workSchedule.saturday.workingDay, true, "GET Saturday workingDay must be true");
+        assert.strictEqual(fetchedHrPos.workSchedule.saturday.startTime, "09:00", "GET Saturday startTime must be '09:00'");
+        assert.strictEqual(fetchedHrPos.workSchedule.saturday.endTime, "11:00", "GET Saturday endTime must be '11:00'");
+
+        assert.strictEqual(typeof fetchedHrPos.workSchedule.sunday, "object", "Sunday schedule in GET response MUST be an object, not boolean");
+        assert.strictEqual(fetchedHrPos.workSchedule.sunday.workingDay, false, "GET Sunday workingDay must be false");
+        assert.strictEqual(fetchedHrPos.workSchedule.sunday.startTime, null, "GET Sunday startTime must be null");
+        assert.strictEqual(fetchedHrPos.workSchedule.sunday.endTime, null, "GET Sunday endTime must be null");
+
+        // 5. Verify direct database read via Mongoose
+        const dbPos = await Position.findById(hrPos._id);
+        assert.strictEqual(typeof dbPos.workSchedule.saturday, "object", "Database Saturday schedule MUST be an object, not boolean");
+        assert.strictEqual(dbPos.workSchedule.saturday.startTime, "09:00", "DB Saturday startTime must be '09:00'");
+        assert.strictEqual(dbPos.workSchedule.saturday.endTime, "11:00", "DB Saturday endTime must be '11:00'");
+        assert.strictEqual(dbPos.workSchedule.sunday.workingDay, false, "DB Sunday workingDay must be false");
+
+        console.log("✓ TEST 21 PASSED: Round-trip structured schedule persistence (Frontend -> PATCH -> DB -> GET) verified 100%.");
+
+        // ---------------------------------------------------------------------
         // TEST SET 2: Automatic Absence & Working Day Calculations
         // ---------------------------------------------------------------------
         console.log("\n--- Test Set 2: Attendance Expectations & Automatic Absence ---");
