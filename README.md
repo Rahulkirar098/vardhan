@@ -1,6 +1,6 @@
 # Vardhan
 
-A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management, workforce employee management, leave management, attendance & regularization with background automatic absence scheduling, simplified duty roster planning, roster history auditing, and generic access management.
+A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management with dual-model attendance expectations (roster-based vs normal working days/shift timing), IANA hospital timezone support, workforce employee management, leave management, attendance & regularization with hospital timezone-aware background automatic absence scheduling, simplified duty roster planning, roster history auditing, and generic access management.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white" alt="Node.js 18+" />
@@ -20,7 +20,7 @@ VARDHAN SaaS
 │
 ├── CORE PLATFORM
 │   ├── Authentication (JWT with token revocation)
-│   ├── Hospital / Tenant (Strict tenant isolation)
+│   ├── Hospital / Tenant (Strict tenant isolation & IANA Hospital Timezone support)
 │   ├── Users (Authentication & Identity)
 │   ├── Roles (super_admin, admin, employee)
 │   ├── Permissions (Centralized capability registry)
@@ -29,14 +29,14 @@ VARDHAN SaaS
 │   ├── Hospital Structure
 │   │   ├── Floor
 │   │   └── Room
-│   └── Positions (Hospital-scoped designation master with default modules)
+│   └── Positions (Hospital designation master, rosterEligible flag & per-day work schedule/timing)
 │
 └── MODULES
     └── HRMS
         ├── Employees (Workforce staff record reciprocal to User)
         ├── Invitations (Centralized invitation flow with token hashing)
         ├── Leave Management (Apply, My Leave, Approval, Balance, Stats, Workforce Leave)
-        ├── Attendance & Regularization (Clock-In/Out, Regularization Requests, Background Automatic Absence Scheduler)
+        ├── Attendance & Regularization (Clock-In/Out, Regularization Requests, Dual-Model Expectations & Hospital Timezone-Aware Background Scheduler)
         └── Roster Module (Simplified Direct Architecture, Shift Columns, Duty Areas, Draft/Current/History Lifecycle, Delete Draft, Immutability, Leave Warnings)
 ```
 
@@ -53,12 +53,16 @@ VARDHAN SaaS
 
 ### 2. Hospital Administration & Multi-Tenancy
 - Hospital creation and management (1:1 Admin to Hospital ownership).
+- Configurable **Hospital Timezone** using IANA identifiers (`Asia/Kolkata`, `Asia/Dubai`, `Asia/Singapore`, etc.) ensuring shift timings and automatic absence logic execute in local hospital time.
 - Hospital Structure: Floors and generic Rooms with deletion/deactivation safety checks.
 
-### 3. Positions Master
+### 3. Positions Master & Attendance Expectations
 - Hospital-specific position/designation master (e.g. HR Manager, Staff Nurse, Medical Officer, Doctor).
 - Configurable default module access assigned during employee onboarding.
 - Position active/inactive status lifecycle.
+- **Roster Eligibility Toggle (`rosterEligible`):**
+  - `rosterEligible = true`: Expected work shifts derived strictly from Roster assignments.
+  - `rosterEligible = false`: Expected work schedule derived from Position per-day working days & shift start/end times (`workSchedule`).
 
 ### 4. Workforce & Employee Management
 - Centralized Employee table with reciprocal references between User and Employee records.
@@ -72,11 +76,13 @@ VARDHAN SaaS
 - Self-service leave applications (`leave.apply`, `leave.view_own`, `leave.cancel_own`).
 - Workforce Leave access control (`leave.view_workforce`, `leave.approve`, `leave.manage`).
 - Real-time leave balance tracking and strict approved leave roster assignment blocking (HTTP 409 Conflict).
+- Approved leaves suppress automatic absence marking across both rostered and normal employment employees.
 
 ### 6. Attendance & Background Automatic Absence
 - Employee check-in/out tracking with working duration computation.
+- Dual expectation evaluation model (Roster assignments for `rosterEligible = true`, Position `workSchedule` for `rosterEligible = false`).
 - Attendance regularization submission, cancellation, and atomic approval transactions.
-- Automated background scheduler executing periodic absence marking for un-checked-in employees driven by active published rosters.
+- Automated background scheduler executing periodic absence marking in local **Hospital Timezone** once shift end times pass.
 
 ### 7. Roster Module & Template Management
 - **Roster Templates:** Full template actions (Edit, Copy/Duplicate, Activate/Deactivate, Delete). Deactivated templates remain visible with `Status: INACTIVE` and an `Activate` action.
@@ -155,6 +161,8 @@ cd backend
 npm test
 ```
 The test suite includes:
+- `datetime-policy.test.js`: IANA timezone parsing, UTC conversion, shift timing cutoffs, and timezone policy checks.
+- `attendance-normal-schedule.test.js`: Normal employment per-day work schedule timing persistence and automatic absence evaluation.
 - `roster.test.js`: Roster builder, draft updates, review comments, double-booking prevention, delete draft roster, and roster history immutability.
 - `full-qa-audit.test.js`: Comprehensive permission matrix verification across all modules.
 - `attendance-regularization.test.js`, `attendance.test.js`, `leave-management.test.js`, `access-management.test.js`, `unified-employees.test.js`, `hospital-structure.test.js`, `core-platform.test.js`.
