@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Stack, TextField } from '@mui/material';
+import { Box, Button, MenuItem, Stack, TextField } from '@mui/material';
 import { AddBusinessRounded, EditRounded, LocalHospitalRounded } from '@mui/icons-material';
 import hospitalService from '../../services/hospital.service';
 import auth from '../../services/auth.service';
@@ -18,6 +18,14 @@ import Modal from '../../components/Modal';
 
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
+const TIMEZONE_OPTIONS = [
+  { value: 'Asia/Kolkata', label: 'India — Asia/Kolkata' },
+  { value: 'Asia/Dubai', label: 'UAE — Asia/Dubai' },
+  { value: 'Asia/Singapore', label: 'Singapore — Asia/Singapore' },
+  { value: 'Europe/London', label: 'UK — Europe/London' },
+  { value: 'America/New_York', label: 'US East — America/New_York' },
+];
+
 const formatStatus = (status) => {
   if (!status) return 'Active';
   return String(status).charAt(0).toUpperCase() + String(status).slice(1);
@@ -27,6 +35,7 @@ const initialHospitalForm = {
   name: '',
   code: '',
   registrationNumber: '',
+  timezone: 'Asia/Kolkata',
   phone: '',
   email: '',
   website: '',
@@ -70,6 +79,7 @@ const CreateHospitalModal = ({ open, onClose, onSuccess, resetKey = 0 }) => {
         name: form.name.trim(),
         code: form.code.trim(),
         registrationNumber: form.registrationNumber.trim() || null,
+        timezone: form.timezone || 'Asia/Kolkata',
         contact: {
           phone: form.phone.trim(),
           email: form.email.trim(),
@@ -113,7 +123,20 @@ const CreateHospitalModal = ({ open, onClose, onSuccess, resetKey = 0 }) => {
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <TextField label="Registration Number" name="registrationNumber" value={form.registrationNumber} onChange={handleChange} />
-          <TextField label="Phone" name="phone" value={form.phone} onChange={handleChange} />
+          <TextField
+            select
+            label="Hospital Timezone"
+            name="timezone"
+            value={form.timezone || 'Asia/Kolkata'}
+            onChange={handleChange}
+            required
+          >
+            {TIMEZONE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <TextField label="Email" type="email" name="email" value={form.email} onChange={handleChange} />
@@ -145,6 +168,7 @@ const EditHospitalModal = ({ open, onClose, onSuccess, hospital, resetKey = 0 })
         name: hospital.name || '',
         code: hospital.code || '',
         registrationNumber: hospital.registrationNumber || '',
+        timezone: hospital.timezone || 'Asia/Kolkata',
         phone: hospital.contact?.phone || '',
         email: hospital.contact?.email || '',
         website: hospital.contact?.website || '',
@@ -179,6 +203,7 @@ const EditHospitalModal = ({ open, onClose, onSuccess, hospital, resetKey = 0 })
         name: form.name.trim(),
         code: form.code.trim(),
         registrationNumber: form.registrationNumber.trim() || null,
+        timezone: form.timezone || 'Asia/Kolkata',
         contact: {
           phone: form.phone.trim(),
           email: form.email.trim(),
@@ -222,7 +247,20 @@ const EditHospitalModal = ({ open, onClose, onSuccess, hospital, resetKey = 0 })
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <TextField label="Registration Number" name="registrationNumber" value={form.registrationNumber || ''} onChange={handleChange} />
-          <TextField label="Phone" name="phone" value={form.phone || ''} onChange={handleChange} />
+          <TextField
+            select
+            label="Hospital Timezone"
+            name="timezone"
+            value={form.timezone || 'Asia/Kolkata'}
+            onChange={handleChange}
+            required
+          >
+            {TIMEZONE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <TextField label="Email" type="email" name="email" value={form.email || ''} onChange={handleChange} />
@@ -302,6 +340,7 @@ const Hospital = () => {
   };
 
   const location = [hospital?.address?.city, hospital?.address?.state].filter(Boolean).join(', ') || 'Not provided';
+  const timezoneDisplay = TIMEZONE_OPTIONS.find((tz) => tz.value === hospital?.timezone)?.label || hospital?.timezone || 'India — Asia/Kolkata';
 
   return (
     <AppLayout onLogout={handleLogout}>
@@ -364,6 +403,7 @@ const Hospital = () => {
                   <InfoRow label="Hospital Name" value={hospital.name} />
                   <InfoRow label="Hospital Code" value={hospital.code} />
                   <InfoRow label="Registration No." value={hospital.registrationNumber} />
+                  <InfoRow label="Timezone" value={timezoneDisplay} />
                   <InfoRow label="Phone" value={hospital.contact?.phone} />
                   <InfoRow label="Email" value={hospital.contact?.email} />
                   <InfoRow label="Website" value={hospital.contact?.website} />

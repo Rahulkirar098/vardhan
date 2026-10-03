@@ -6,6 +6,7 @@ const Leave = require("../models/leave.model");
 const Attendance = require("../models/attendance.model");
 const RosterAssignment = require("../models/rosterAssignment.model");
 const AttendanceRegularization = require("../models/attendanceRegularization.model");
+const { isValidTimezone } = require("../utils/timezone.utils");
 
 const getMyHospital = async (userId) => {
     const hospital = await Hospital.findOne({ createdBy: userId })
@@ -22,10 +23,17 @@ const getMyHospital = async (userId) => {
 };
 
 const createHospital = async (user, hospitalData) => {
-    const { name, code, registrationNumber, contact, address, logo, status } = hospitalData;
+    const { name, code, registrationNumber, contact, address, logo, status, timezone } = hospitalData;
 
     const normalizedName = String(name).trim();
     const normalizedCode = String(code).trim().toUpperCase();
+
+    const selectedTz = timezone ? String(timezone).trim() : "Asia/Kolkata";
+    if (!isValidTimezone(selectedTz)) {
+        const err = new Error("Invalid IANA timezone identifier");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
 
     const existingHospitalByAdmin = await Hospital.findOne({
         createdBy: user.id,
@@ -49,6 +57,7 @@ const createHospital = async (user, hospitalData) => {
         name: normalizedName,
         code: normalizedCode,
         registrationNumber: registrationNumber ? String(registrationNumber).trim() : null,
+        timezone: selectedTz,
         contact: contact || {},
         address: address || {},
         logo: logo || null,
@@ -204,6 +213,16 @@ const updateHospital = async (userId, hospitalId, updatesData) => {
 
     if (logo !== undefined) {
         updates.logo = logo || null;
+    }
+
+    if (updatesData.timezone !== undefined) {
+        const tz = String(updatesData.timezone).trim();
+        if (!isValidTimezone(tz)) {
+            const err = new Error("Invalid IANA timezone identifier");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+        updates.timezone = tz;
     }
 
     if (status !== undefined) {

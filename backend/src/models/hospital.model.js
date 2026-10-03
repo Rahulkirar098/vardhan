@@ -22,6 +22,13 @@ const hospitalSchema = new mongoose.Schema(
       default: null,
     },
 
+    timezone: {
+      type: String,
+      required: true,
+      default: "Asia/Kolkata",
+      trim: true,
+    },
+
     contact: {
       phone: {
         type: String,

@@ -677,20 +677,23 @@ const runTests = async () => {
         });
 
         // 2026-09-28 is a Monday. Shift starts 22:00 Sep 28 and ends 06:00 Sep 29.
-        // If automatic absence runs at 2026-09-29 03:00 (before shift end), guard should NOT be marked ABSENT yet.
+        // If automatic absence runs at 2026-09-29 03:00 local time (before 06:00 shift end), guard should NOT be marked ABSENT yet.
+        const { parseHospitalTimeToDate } = require("../src/utils/timezone.utils");
+        const at0300Local = parseHospitalTimeToDate("03:00", "2026-09-29", "Asia/Kolkata");
         await attendanceService.processAutomaticAbsence(
             hospitalA._id,
             new Date("2026-09-28"),
-            new Date("2026-09-29T03:00:00.000Z")
+            at0300Local
         );
         const guardBeforeEndAtt = await Attendance.findOne({ employeeId: nightGuardEmp._id, dateStr: "2026-09-28" });
         assert.strictEqual(guardBeforeEndAtt, null, "Overnight shift before end time (06:00) should NOT create ABSENT");
 
-        // If automatic absence runs at 2026-09-29 07:00 (after shift end), guard SHOULD be marked ABSENT.
+        // If automatic absence runs at 2026-09-29 07:00 local time (after 06:00 shift end), guard SHOULD be marked ABSENT.
+        const at0700Local = parseHospitalTimeToDate("07:00", "2026-09-29", "Asia/Kolkata");
         await attendanceService.processAutomaticAbsence(
             hospitalA._id,
             new Date("2026-09-28"),
-            new Date("2026-09-29T07:00:00.000Z")
+            at0700Local
         );
         const guardAfterEndAtt = await Attendance.findOne({ employeeId: nightGuardEmp._id, dateStr: "2026-09-28" });
         assert.strictEqual(guardAfterEndAtt?.status, "ABSENT", "Overnight shift after end time (06:00 next day) SHOULD create ABSENT");

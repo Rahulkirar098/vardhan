@@ -68,11 +68,15 @@ const createHospital = async (req, res) => {
                 code: hospital.code,
                 status: hospital.status,
                 registrationNumber: hospital.registrationNumber,
+                timezone: hospital.timezone,
                 contact: hospital.contact,
                 address: hospital.address,
             },
         });
     } catch (error) {
+        if (error.code === "VALIDATION_ERROR") {
+            return res.status(400).json({ success: false, message: error.message });
+        }
         if (error.code === "LIMIT_REACHED" || error.code === "DUPLICATE_CODE" || (error && error.code === 11000)) {
             return res.status(409).json({ success: false, message: error.message || "You can create only one hospital" });
         }
@@ -141,6 +145,9 @@ const updateHospital = async (req, res) => {
 
         return res.status(200).json({ success: true, message: "Hospital updated successfully", data: hospital });
     } catch (error) {
+        if (error.code === "VALIDATION_ERROR") {
+            return res.status(400).json({ success: false, message: error.message });
+        }
         if (error.code === "NOT_FOUND") {
             return res.status(404).json({ success: false, message: error.message });
         }

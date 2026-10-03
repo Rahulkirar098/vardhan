@@ -5,12 +5,19 @@ const Employee = require("../models/employee.model");
 const Roster = require("../models/roster.model");
 const RosterAssignment = require("../models/rosterAssignment.model");
 const Leave = require("../models/leave.model");
+const Hospital = require("../models/hospital.model");
 const {
   ATTENDANCE_STATUSES,
   REGULARIZATION_STATUSES,
   VALID_REGULARIZATION_STATUSES,
   VALID_REQUESTED_ATTENDANCE_STATUSES,
 } = require("../constants/attendance.constants");
+const {
+  isValidTimezone,
+  getHospitalTodayDateStr,
+  getHospitalDayOfWeek,
+  parseHospitalTimeToDate,
+} = require("../utils/timezone.utils");
 
 /**
  * Format Date to YYYY-MM-DD
@@ -56,75 +63,10 @@ const parseAttendanceDate = (inputDate) => {
 };
 
 /**
- * Parse time string to Date object on baseDateStr
+ * Parse time string to Date object on baseDateStr in hospital timezone
  */
-const parseTimeToDate = (timeInput, baseDateStr) => {
-  if (!timeInput) return null;
-
-  if (timeInput instanceof Date && !isNaN(timeInput.getTime())) {
-    return timeInput;
-  }
-
-  if (typeof timeInput === "string") {
-    const trimmed = timeInput.trim();
-    if (!trimmed) return null;
-
-    if (trimmed.includes("T") || trimmed.includes("Z")) {
-      const d = new Date(trimmed);
-      if (!isNaN(d.getTime())) return d;
-    }
-
-    // 12-hour time: "09:15 AM", "9:15 pm", "09:15:00 AM"
-    const match12 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)$/i);
-    if (match12) {
-      let hours = parseInt(match12[1], 10);
-      const minutes = parseInt(match12[2], 10);
-      const seconds = match12[3] ? parseInt(match12[3], 10) : 0;
-      const meridiem = match12[4].toUpperCase();
-
-      if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
-        const error = new Error("Invalid time format.");
-        error.code = "VALIDATION_ERROR";
-        throw error;
-      }
-
-      if (meridiem === "PM" && hours !== 12) hours += 12;
-      if (meridiem === "AM" && hours === 12) hours = 0;
-
-      const hh = String(hours).padStart(2, "0");
-      const mm = String(minutes).padStart(2, "0");
-      const ss = String(seconds).padStart(2, "0");
-      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}.000Z`);
-      if (!isNaN(d.getTime())) return d;
-    }
-
-    // 24-hour time: "09:15", "09:15:00", "9:15"
-    const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-    if (match24) {
-      const hours = parseInt(match24[1], 10);
-      const minutes = parseInt(match24[2], 10);
-      const seconds = match24[3] ? parseInt(match24[3], 10) : 0;
-
-      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
-        const error = new Error("Invalid time format.");
-        error.code = "VALIDATION_ERROR";
-        throw error;
-      }
-
-      const hh = String(hours).padStart(2, "0");
-      const mm = String(minutes).padStart(2, "0");
-      const ss = String(seconds).padStart(2, "0");
-      const d = new Date(`${baseDateStr}T${hh}:${mm}:${ss}.000Z`);
-      if (!isNaN(d.getTime())) return d;
-    }
-
-    const fallback = new Date(`${baseDateStr} ${trimmed}`);
-    if (!isNaN(fallback.getTime())) return fallback;
-  }
-
-  const error = new Error("Invalid time format.");
-  error.code = "VALIDATION_ERROR";
-  throw error;
+const parseTimeToDate = (timeInput, baseDateStr, timezone = "Asia/Kolkata") => {
+  return parseHospitalTimeToDate(timeInput, baseDateStr, timezone);
 };
 
 /**
@@ -187,30 +129,24 @@ const resolveDaySchedule = (schedule, dayOfWeek) => {
 /**
  * Process automatic absence for scheduled employees whose shift end time has passed
  */
-const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
-  let hospitalId;
-  let dateStr;
-
-  const isPlainObj =
-    param1 &&
-    typeof param1 === "object" &&
-    param1.constructor === Object &&
-    (param1.hospitalId !== undefined || param1.dateStr !== undefined);
-
+const processAutomaticAbsence = async (param1, param2, param3) => {
+  let hospitalId = null;
+  let dateStr = null;
   let customNow = null;
-  if (isPlainObj) {
-    hospitalId = param1.hospitalId;
-    dateStr = param1.dateStr;
-    customNow = param1.now;
+
+  if (param1 && typeof param1 === "object" && param1.constructor === Object) {
+    hospitalId = param1.hospitalId || null;
+    dateStr = param1.dateStr || null;
+    customNow = param1.now || null;
   } else {
-    hospitalId = param1;
+    hospitalId = param1 || null;
     if (param2 instanceof Date) {
       dateStr = getTodayDateStr(param2);
     } else {
-      dateStr = param2;
+      dateStr = param2 || null;
     }
     if (param3 instanceof Date) {
-      customNow = param3;
+      customNow = param3 || null;
     }
   }
 
@@ -223,6 +159,16 @@ const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
   const evaluatedEmployees = new Set();
 
   const isValidHosp = hospitalId && mongoose.Types.ObjectId.isValid(hospitalId);
+  const validHospId = isValidHosp ? hospitalId : null;
+
+  // Fetch hospital timezone map
+  const allHospitals = await Hospital.find({}).select("_id timezone").lean();
+  const hospTzMap = {};
+  for (const h of allHospitals) {
+    if (h && h._id) {
+      hospTzMap[h._id.toString()] = h.timezone || "Asia/Kolkata";
+    }
+  }
 
   // ─── 1. ROSTER EMPLOYEES (rosterEligible = true) ───
   const rosterQuery = {
@@ -230,7 +176,7 @@ const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
     startDate: { $lte: endOfDay },
     endDate: { $gte: startOfDay },
   };
-  if (isValidHosp) rosterQuery.hospitalId = hospitalId;
+  if (validHospId) rosterQuery.hospitalId = validHospId;
   const allPublished = await Roster.find(rosterQuery)
     .select("_id hospitalId")
     .lean();
@@ -241,7 +187,7 @@ const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
       rosterId: { $in: rosterIds },
       date: { $gte: startOfDay, $lte: endOfDay },
     };
-    if (hospitalId) assignmentQuery.hospitalId = hospitalId;
+    if (validHospId) assignmentQuery.hospitalId = validHospId;
 
     const assignments = await RosterAssignment.find(assignmentQuery).populate("employeeId").lean();
 
@@ -260,10 +206,12 @@ const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
       }
       evaluatedEmployees.add(empKey);
 
+      const hospTz = hospTzMap[hospId ? hospId.toString() : ""] || "Asia/Kolkata";
+
       // 1. Calculate shift end timestamp
       let shiftEndObj = null;
       try {
-        shiftEndObj = parseTimeToDate(assignment.endTime, targetDateStr);
+        shiftEndObj = parseTimeToDate(assignment.endTime, targetDateStr, hospTz);
       } catch {
         shiftEndObj = null;
       }
@@ -271,7 +219,7 @@ const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
       // Handle night shifts (e.g. 20:00 to 08:00 next day)
       if (assignment.startTime && assignment.endTime) {
         try {
-          const startObj = parseTimeToDate(assignment.startTime, targetDateStr);
+          const startObj = parseTimeToDate(assignment.startTime, targetDateStr, hospTz);
           if (startObj && shiftEndObj && shiftEndObj.getTime() <= startObj.getTime()) {
             shiftEndObj = new Date(shiftEndObj.getTime() + 24 * 60 * 60 * 1000);
           }
@@ -332,13 +280,9 @@ const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
   const normalEmpQuery = {
     employmentStatus: "ACTIVE",
   };
-  if (isValidHosp) normalEmpQuery.hospitalId = hospitalId;
+  if (validHospId) normalEmpQuery.hospitalId = validHospId;
 
   const normalEmployees = await Employee.find(normalEmpQuery).populate("positionId").lean();
-
-  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  const targetDateObj = new Date(`${targetDateStr}T00:00:00.000Z`);
-  const dayOfWeek = dayNames[targetDateObj.getUTCDay()];
 
   for (const emp of normalEmployees) {
     if (!emp || emp.isDeleted || !emp.positionId) continue;
@@ -347,6 +291,9 @@ const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
 
     const empId = emp._id;
     const hospId = emp.hospitalId;
+    const hospTz = hospTzMap[hospId ? hospId.toString() : ""] || "Asia/Kolkata";
+    const dayOfWeek = getHospitalDayOfWeek(targetDateStr, hospTz);
+
     const empKey = `${hospId.toString()}_${empId.toString()}`;
     if (evaluatedEmployees.has(empKey)) continue;
     evaluatedEmployees.add(empKey);
@@ -374,12 +321,12 @@ const processAutomaticAbsence = async (param1 = {}, param2, param3) => {
     let shiftStartObj = null;
     let shiftEndObj = null;
     try {
-      if (daySched.startTime) shiftStartObj = parseTimeToDate(daySched.startTime, targetDateStr);
-      if (daySched.endTime) shiftEndObj = parseTimeToDate(daySched.endTime, targetDateStr);
+      if (daySched.startTime) shiftStartObj = parseTimeToDate(daySched.startTime, targetDateStr, hospTz);
+      if (daySched.endTime) shiftEndObj = parseTimeToDate(daySched.endTime, targetDateStr, hospTz);
     } catch {}
 
     if (!shiftEndObj) {
-      shiftEndObj = parseTimeToDate("18:00", targetDateStr);
+      shiftEndObj = parseTimeToDate("18:00", targetDateStr, hospTz);
     }
 
     // Overnight schedule check: if endTime <= startTime (e.g. 22:00 -> 06:00), shift ends next morning (+24h)
