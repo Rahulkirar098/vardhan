@@ -16,6 +16,7 @@ const Roster = require("../src/models/roster.model");
 const RosterAssignment = require("../src/models/rosterAssignment.model");
 const attendanceService = require("../src/services/attendance.service");
 const rosterService = require("../src/services/roster.service");
+const employeeService = require("../src/services/employee.service");
 const { isEmployeeEmployedOnDate } = require("../src/utils/employment.utils");
 const { generateToken } = require("../src/utils/jwt");
 const { hashPassword } = require("../src/utils/password");
@@ -176,6 +177,33 @@ async function runTests() {
         targetUser.employeeId = targetEmployee._id;
         await targetUser.save();
         const targetToken = generateToken({ id: targetUser._id, role: targetUser.role, hospitalId: hospital._id });
+
+        // --- TEST 0A & 0B: createEmployee without LWD and with LWD ---
+        const empNoLwd = await employeeService.createEmployee({
+            hospitalId: hospital._id,
+            createdBy: adminUser._id,
+            firstName: "NoLwd",
+            lastName: "Emp",
+            email: `nolwd.${testSuffix}@hosp.com`,
+            positionId: nursePosition._id,
+            dateOfJoining: "2026-10-01",
+        });
+        assert.strictEqual(empNoLwd.lastWorkingDay, null, "Test 0A Failed: New employee without LWD should have null lastWorkingDay");
+        assert.strictEqual(empNoLwd.leavingDate, undefined, "Test 0A Failed: No leavingDate field");
+
+        const empWithLwd = await employeeService.createEmployee({
+            hospitalId: hospital._id,
+            createdBy: adminUser._id,
+            firstName: "WithLwd",
+            lastName: "Emp",
+            email: `withlwd.${testSuffix}@hosp.com`,
+            positionId: nursePosition._id,
+            dateOfJoining: "2026-10-01",
+            lastWorkingDay: "2026-10-31",
+        });
+        assert.strictEqual(new Date(empWithLwd.lastWorkingDay).toISOString(), "2026-10-31T00:00:00.000Z", "Test 0B Failed: New employee with LWD must have formatted date");
+        assert.strictEqual(empWithLwd.leavingDate, undefined, "Test 0B Failed: No leavingDate field");
+        console.log("✓ TEST 0A & 0B PASSED: createEmployee with and without LWD verified.");
 
         // --- TEST 1: Employee without LWD remains normally employed ---
         assert.strictEqual(isEmployeeEmployedOnDate(targetEmployee, "2026-10-10", "Asia/Kolkata"), true, "Test 1 Failed");

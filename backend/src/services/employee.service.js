@@ -155,6 +155,7 @@ const createEmployee = async ({
     email,
     phone,
     dateOfJoining,
+    lastWorkingDay,
     positionId,
     employeeId: providedEmployeeId,
 }) => {
@@ -196,6 +197,26 @@ const createEmployee = async ({
         }
     }
 
+    let parsedLwd = null;
+    if (lastWorkingDay) {
+        parsedLwd = new Date(lastWorkingDay);
+        if (isNaN(parsedLwd.getTime())) {
+            const err = new Error("Invalid last working day date format.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+        if (dateOfJoining) {
+            const dojDate = new Date(dateOfJoining);
+            const dojMid = new Date(dojDate.getFullYear(), dojDate.getMonth(), dojDate.getDate()).getTime();
+            const lwdMid = new Date(parsedLwd.getFullYear(), parsedLwd.getMonth(), parsedLwd.getDate()).getTime();
+            if (lwdMid < dojMid) {
+                const err = new Error("Last Working Day cannot be earlier than Date of Joining.");
+                err.code = "VALIDATION_ERROR";
+                throw err;
+            }
+        }
+    }
+
     const employee = await Employee.create({
         employeeId: resolvedEmployeeId,
         firstName: String(firstName).trim(),
@@ -203,6 +224,7 @@ const createEmployee = async ({
         email: normalizedEmail,
         phone: phone ? String(phone).trim() : null,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
+        lastWorkingDay: parsedLwd,
         positionId,
         employmentStatus: "ACTIVE",
         hospitalId,
@@ -210,7 +232,7 @@ const createEmployee = async ({
         userId: null,
     });
 
-    return employee;
+    return getEmployeeById({ employeeMongoId: employee._id, hospitalId });
 };
 
 // ─── Invite Employee ─────────────────────────────────────────────────────────

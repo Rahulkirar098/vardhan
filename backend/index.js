@@ -56,7 +56,13 @@ app.use(async (req, res, next) => {
 });
 
 app.get("/", (req, res) => {
-    res.send("Welcome to the API!");
+    const Employee = require("./src/models/employee.model");
+    res.json({
+        message: "Welcome to the API!",
+        version: "1.0.0-LWD-VERIFIED",
+        runtimeMarker: "VARDHAN-LWD-V1",
+        employeeModelSchemaPaths: Object.keys(Employee.schema.paths),
+    });
 });
 
 app.use("/api/auth", authUserRoute);
