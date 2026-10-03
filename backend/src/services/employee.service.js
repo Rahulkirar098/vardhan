@@ -6,6 +6,7 @@ const Position = require("../models/position.model");
 const User = require("../models/user.model");
 const { sendEmail } = require("../utils/mail");
 const { hashPassword } = require("../utils/password");
+const { getFrontendUrl } = require("../utils/url.utils");
 const { hashTokenValue, generateInvitationToken, getStandardExpiry, buildInvitationEmailTemplate } = require("./invitation.service");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -322,7 +323,7 @@ const inviteEmployee = async ({
         createdBy: invitedBy,
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = getFrontendUrl();
     const invitationUrl = `${frontendUrl}/invite/${rawToken}`;
     const fullName = `${invitation.firstName} ${invitation.lastName}`;
 
@@ -781,7 +782,7 @@ const resendInvitation = async ({ invitationId, hospitalId }) => {
     invitation.expiresAt = getStandardExpiry();
     await invitation.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = getFrontendUrl();
     const invitationUrl = `${frontendUrl}/invite/${rawToken}`;
     const fullName = `${invitation.firstName} ${invitation.lastName || ""}`.trim();
 

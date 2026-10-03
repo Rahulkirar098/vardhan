@@ -3,6 +3,7 @@ const User = require("../models/user.model");
 const { hashPassword, comparePassword } = require("../utils/password");
 const { generateToken, revokeToken } = require("../utils/jwt");
 const { sendEmail } = require("../utils/mail");
+const { getFrontendUrl } = require("../utils/url.utils");
 
 const getCurrentUser = async (userId) => {
     const user = await User.findById(userId).select("-password");
@@ -99,7 +100,7 @@ const forgotPassword = async (email) => {
     user.resetPasswordExpires = expiresAt;
     await user.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = getFrontendUrl();
     const resetUrl = `${frontendUrl}/reset-password/${rawToken}`;
 
     try {
