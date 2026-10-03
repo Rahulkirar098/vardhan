@@ -310,6 +310,9 @@ const updateEmployee = async (req, res) => {
         if (error.code === "UNAUTHORIZED_POSITION_UPDATE") {
             return res.status(403).json({ success: false, message: error.message });
         }
+        if (error.code === "DUPLICATE_EMAIL" || error.code === "DUPLICATE_USER") {
+            return res.status(409).json({ success: false, message: error.message });
+        }
         if (error.code === "INVALID_POSITION" || error.code === "VALIDATION_ERROR") {
             return res.status(400).json({ success: false, message: error.message });
         }

@@ -53,15 +53,38 @@ const Modal = forwardRef(
       }
     };
 
+    const handleClose = (event, reason) => {
+      if (submitting) return;
+      if (onClose) {
+        onClose(event, reason);
+      }
+    };
+
+    const handleBackdropClick = (event) => {
+      if (!submitting && onClose) {
+        onClose(event, 'backdropClick');
+      }
+    };
+
     return (
       <Dialog
         open={open}
-        onClose={submitting ? undefined : onClose}
+        onClose={handleClose}
         maxWidth={maxWidth}
         fullWidth={fullWidth}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         disableEscapeKeyDown={submitting}
+        slotProps={{
+          backdrop: {
+            onClick: handleBackdropClick,
+          },
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !submitting && onClose) {
+            onClose(e, 'backdropClick');
+          }
+        }}
         {...rest}
         ref={ref}
       >

@@ -2199,7 +2199,20 @@ export default function RosterManagementPage() {
         </Modal>
 
         {/* CONFLICT CONFIRMATION MODAL FOR RANGE ASSIGNMENT */}
-        <Dialog open={conflictPrompt.open} onClose={() => setConflictPrompt({ open: false, message: '', existingAssignments: [] })}>
+        <Dialog 
+          open={conflictPrompt.open} 
+          onClose={() => setConflictPrompt({ open: false, message: '', existingAssignments: [] })}
+          slotProps={{
+            backdrop: {
+              onClick: () => setConflictPrompt({ open: false, message: '', existingAssignments: [] }),
+            },
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setConflictPrompt({ open: false, message: '', existingAssignments: [] });
+            }
+          }}
+        >
           <DialogTitle sx={{ fontWeight: 800, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
             <WarningAmberRounded color="error" /> Existing Assignment Conflict
           </DialogTitle>
@@ -2392,6 +2405,16 @@ export default function RosterManagementPage() {
           onClose={() => setRemoveDutyModal((prev) => ({ ...prev, open: false }))}
           maxWidth="xs"
           fullWidth
+          slotProps={{
+            backdrop: {
+              onClick: () => setRemoveDutyModal((prev) => ({ ...prev, open: false })),
+            },
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setRemoveDutyModal((prev) => ({ ...prev, open: false }));
+            }
+          }}
           PaperProps={{
             sx: { borderRadius: '16px', p: 1 }
           }}

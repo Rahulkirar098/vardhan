@@ -715,6 +715,16 @@ const Profile = () => {
           onClose={handleCloseEditModal}
           maxWidth="sm"
           fullWidth
+          slotProps={{
+            backdrop: {
+              onClick: handleCloseEditModal,
+            },
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCloseEditModal();
+            }
+          }}
           PaperProps={{
             sx: {
               borderRadius: '16px',

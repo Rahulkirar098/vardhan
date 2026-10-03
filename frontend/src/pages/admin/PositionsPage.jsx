@@ -295,6 +295,18 @@ const PositionsPage = () => {
         });
     };
 
+    const handleToggleRosterEligible = (targetState) => {
+        setFormData((prev) => {
+            const isEligible = typeof targetState === 'boolean' ? targetState : !prev.rosterEligible;
+            return {
+                ...prev,
+                rosterEligible: isEligible,
+                workSchedule: isEligible ? null : (prev.workSchedule || normalizeScheduleForState(DEFAULT_SCHEDULE))
+            };
+        });
+    };
+
+
     const handleSubmitAdd = async () => {
         if (!formData.name.trim()) {
             showSnack('Position name is required', 'error');

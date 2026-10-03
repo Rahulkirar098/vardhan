@@ -573,7 +573,38 @@ const updateEmployee = async ({
     for (const field of allowedFields) {
         if (updates[field] !== undefined) {
             if (field === "email") {
-                employee.email = String(updates.email).trim().toLowerCase();
+                const newEmail = String(updates.email).trim().toLowerCase();
+                if (!EMAIL_REGEX.test(newEmail)) {
+                    const err = new Error("Please enter a valid email address.");
+                    err.code = "VALIDATION_ERROR";
+                    throw err;
+                }
+                if (newEmail !== employee.email) {
+                    const existingActiveEmp = await Employee.findOne({
+                        hospitalId,
+                        email: newEmail,
+                        employmentStatus: "ACTIVE",
+                        _id: { $ne: employee._id },
+                    });
+                    if (existingActiveEmp) {
+                        const err = new Error("An active employee with this email already exists in this hospital.");
+                        err.code = "DUPLICATE_EMAIL";
+                        throw err;
+                    }
+                    if (employee.userId) {
+                        const emailRegex = new RegExp(`^\\s*${newEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, "i");
+                        const existingUser = await User.findOne({
+                            email: emailRegex,
+                            _id: { $ne: employee.userId },
+                        });
+                        if (existingUser) {
+                            const err = new Error("A user account with this email address already exists.");
+                            err.code = "DUPLICATE_USER";
+                            throw err;
+                        }
+                    }
+                    employee.email = newEmail;
+                }
             } else if (field === "dateOfJoining") {
                 employee.dateOfJoining = updates.dateOfJoining
                     ? new Date(updates.dateOfJoining)
@@ -630,6 +661,13 @@ const updateEmployee = async ({
 
     employee.updatedBy = updatedBy;
     await employee.save();
+
+    if (employee.userId && employee.email) {
+        await User.updateOne(
+            { _id: employee.userId },
+            { email: employee.email, name: `${employee.firstName} ${employee.lastName}`.trim() }
+        );
+    }
 
     return getEmployeeById({ employeeMongoId: employee._id, hospitalId });
 };

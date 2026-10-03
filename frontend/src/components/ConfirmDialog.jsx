@@ -35,13 +35,36 @@ const ConfirmDialog = ({
   const isSubmitting = submitting || loading;
   const isDanger = danger || destructive || confirmColor === 'error';
 
+  const handleClose = (event, reason) => {
+    if (isSubmitting) return;
+    if (effectiveOnClose) {
+      effectiveOnClose(event, reason);
+    }
+  };
+
+  const handleBackdropClick = (event) => {
+    if (!isSubmitting && effectiveOnClose) {
+      effectiveOnClose(event, 'backdropClick');
+    }
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={isSubmitting ? undefined : effectiveOnClose}
+      onClose={handleClose}
       maxWidth="xs"
       fullWidth
       aria-labelledby="confirm-dialog-title"
+      slotProps={{
+        backdrop: {
+          onClick: handleBackdropClick,
+        },
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSubmitting && effectiveOnClose) {
+          effectiveOnClose(e, 'backdropClick');
+        }
+      }}
     >
       <DialogTitle
         id="confirm-dialog-title"
