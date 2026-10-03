@@ -19,6 +19,7 @@ import AccessManagementPage from '../pages/admin/AccessManagementPage';
 import LeaveManagementPage from '../pages/admin/LeaveManagementPage';
 import AttendancePage from '../pages/admin/AttendancePage';
 import RosterManagementPage from '../pages/admin/RosterManagementPage';
+import NotFoundPage from '../pages/shared/NotFoundPage';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 
 const getUserRole = () => {
@@ -317,7 +318,7 @@ const AppRoutes = () => {
         path="/invite/:token"
         element={<AcceptInvitation />}
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };
