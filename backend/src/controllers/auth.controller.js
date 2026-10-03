@@ -164,6 +164,22 @@ const loginUser = async (req, res) => {
                 }
             }
             positionName = employee?.positionId?.name || null;
+
+            if (employee) {
+                const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+                let timezone = 'Asia/Kolkata';
+                if (hospitalId) {
+                    const hospTz = await Hospital.findById(hospitalId).select("timezone").lean();
+                    if (hospTz?.timezone) timezone = hospTz.timezone;
+                }
+                if (!isEmployeeEmployedOnDate(employee, new Date(), timezone)) {
+                    return res.status(403).json({
+                        success: false,
+                        code: "EMPLOYMENT_ENDED",
+                        message: "Your employment with this hospital has ended. Please contact the hospital administrator.",
+                    });
+                }
+            }
         }
 
         if (userUpdated) {

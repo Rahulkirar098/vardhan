@@ -18,7 +18,7 @@ const handleServiceError = (res, error, defaultMsg = "Internal Server Error") =>
     if (error.code === "CONFLICT") {
         return res.status(409).json({ success: false, message: error.message });
     }
-    if (error.code === "BAD_REQUEST" || error.name === "ValidationError") {
+    if (error.code === "EMPLOYMENT_ENDED" || error.code === "BAD_REQUEST" || error.name === "ValidationError") {
         return res.status(400).json({ success: false, message: error.message });
     }
     console.error("Leave Controller Error:", error);

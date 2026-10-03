@@ -137,6 +137,17 @@ const applyLeave = async ({ user, leaveData }) => {
     const isHalfDay = Boolean(leaveData.isHalfDay);
     const halfDaySession = leaveData.halfDaySession || (isHalfDay ? "FIRST_HALF" : null);
 
+    const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+    const Hospital = require("../models/hospital.model");
+    const hospitalObj = await Hospital.findById(hospitalId).select("timezone").lean();
+    const tz = hospitalObj?.timezone || "Asia/Kolkata";
+
+    if (!isEmployeeEmployedOnDate(employeeRecord, start, tz) || !isEmployeeEmployedOnDate(employeeRecord, end, tz)) {
+        const err = new Error("Cannot apply for leave for dates outside your employment period / after last working day.");
+        err.code = "EMPLOYMENT_ENDED";
+        throw err;
+    }
+
     let totalDays = calculateTotalDays(start, end, { isHalfDay });
     if (leaveData.totalDays && !isNaN(Number(leaveData.totalDays)) && Number(leaveData.totalDays) >= 0.5) {
         totalDays = Number(leaveData.totalDays);

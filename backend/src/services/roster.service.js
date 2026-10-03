@@ -552,6 +552,17 @@ const addAssignment = async ({
         throw err;
     }
 
+    const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+    const Hospital = require("../models/hospital.model");
+    const hospitalObj = await Hospital.findById(hospitalId).select("timezone").lean();
+    const tz = hospitalObj?.timezone || "Asia/Kolkata";
+
+    if (!isEmployeeEmployedOnDate(employee, assignmentDate, tz)) {
+        const err = new Error("Employee is no longer employed on the selected duty date.");
+        err.code = "EMPLOYMENT_ENDED";
+        throw err;
+    }
+
     if (Array.isArray(roster.columns) && roster.columns.length > 0) {
         const matchingShift = roster.columns.find(
             (c) => c.title?.toLowerCase() === shiftTitle?.toLowerCase() || c.id === columnId
@@ -862,6 +873,21 @@ const addBulkRangeAssignments = async ({
         const dateKey = d.toISOString().split("T")[0];
         const { start: dateStart, end: dateEnd } = getCalendarBounds(d);
 
+        const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+        const Hospital = require("../models/hospital.model");
+        const hospitalObj = await Hospital.findById(hospitalId).select("timezone").lean();
+        const tz = hospitalObj?.timezone || "Asia/Kolkata";
+
+        if (!isEmployeeEmployedOnDate(employee, d, tz)) {
+            approvedLeaveConflicts.push({
+                date: dateKey,
+                leaveType: "EMPLOYMENT_ENDED",
+                reason: "EMPLOYMENT_ENDED",
+                message: `Employee is no longer employed on ${dateKey}.`,
+            });
+            continue;
+        }
+
         // 1. APPROVED Leave Check -> BLOCKS assignment for date d
         const approvedOnDate = approvedLeaves.find(
             (l) => new Date(l.startDate) <= dateEnd && new Date(l.endDate) >= dateStart
@@ -925,14 +951,17 @@ const addBulkRangeAssignments = async ({
         createdAssignments.push(newAss);
     }
 
-    // If ALL requested dates were blocked due to approved leave, throw LEAVE_CONFLICT (409)
+    // If ALL requested dates were blocked due to approved leave or employment ended, throw 409
     if (createdAssignments.length === 0 && approvedLeaveConflicts.length > 0) {
         const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
         const blockedDatesStr = approvedLeaveConflicts.map((c) => c.date).join(", ");
+        const hasEmploymentEnded = approvedLeaveConflicts.some(c => c.reason === "EMPLOYMENT_ENDED");
         const err = new Error(
-            `${empName} has an approved leave covering dates (${blockedDatesStr}) and cannot be assigned to roster.`
+            hasEmploymentEnded
+                ? `${empName} is no longer employed on the selected duty dates (${blockedDatesStr}).`
+                : `${empName} has an approved leave covering dates (${blockedDatesStr}) and cannot be assigned to roster.`
         );
-        err.code = "LEAVE_CONFLICT";
+        err.code = hasEmploymentEnded ? "EMPLOYMENT_ENDED" : "LEAVE_CONFLICT";
         err.details = {
             employeeId: employee._id,
             employeeName: empName,
@@ -998,6 +1027,17 @@ const updateAssignment = async ({
     if (targetEmp.employmentStatus === "INACTIVE") {
         const err = new Error("Cannot assign inactive employees to roster.");
         err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+    const Hospital = require("../models/hospital.model");
+    const hospitalObj = await Hospital.findById(hospitalId).select("timezone").lean();
+    const tz = hospitalObj?.timezone || "Asia/Kolkata";
+
+    if (!isEmployeeEmployedOnDate(targetEmp, targetDate, tz)) {
+        const err = new Error("Employee is no longer employed on the selected duty date.");
+        err.code = "EMPLOYMENT_ENDED";
         throw err;
     }
 

@@ -51,6 +51,10 @@ const employeeSchema = new mongoose.Schema(
             default: null,
         },
 
+        lastWorkingDay: {
+            type: Date,
+            default: null,
+        },
 
         employmentStatus: {
             type: String,

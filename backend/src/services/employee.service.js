@@ -544,6 +544,7 @@ const updateEmployee = async ({
         "email",
         "phone",
         "dateOfJoining",
+        "lastWorkingDay",
         "positionId",
     ];
 
@@ -555,6 +556,31 @@ const updateEmployee = async ({
                 employee.dateOfJoining = updates.dateOfJoining
                     ? new Date(updates.dateOfJoining)
                     : null;
+            } else if (field === "lastWorkingDay") {
+                if (updates.lastWorkingDay === null || updates.lastWorkingDay === "" || updates.lastWorkingDay === "null") {
+                    employee.lastWorkingDay = null;
+                } else {
+                    const lwd = new Date(updates.lastWorkingDay);
+                    if (isNaN(lwd.getTime())) {
+                        const err = new Error("Invalid last working day date format.");
+                        err.code = "VALIDATION_ERROR";
+                        throw err;
+                    }
+                    const effectiveDoj = updates.dateOfJoining !== undefined
+                        ? (updates.dateOfJoining ? new Date(updates.dateOfJoining) : null)
+                        : employee.dateOfJoining;
+                    if (effectiveDoj) {
+                        const dojDate = new Date(effectiveDoj);
+                        const dojMid = new Date(dojDate.getFullYear(), dojDate.getMonth(), dojDate.getDate()).getTime();
+                        const lwdMid = new Date(lwd.getFullYear(), lwd.getMonth(), lwd.getDate()).getTime();
+                        if (lwdMid < dojMid) {
+                            const err = new Error("Last Working Day cannot be earlier than Date of Joining.");
+                            err.code = "VALIDATION_ERROR";
+                            throw err;
+                        }
+                    }
+                    employee.lastWorkingDay = lwd;
+                }
             } else if (field === "positionId") {
                 const { hasPermission } = require("../config/rolePermissions");
                 const { PERMISSIONS } = require("../config/permissions");

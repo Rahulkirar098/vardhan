@@ -245,7 +245,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
 
 // ─── Edit Employee Modal ──────────────────────────────────────────────────────
 const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) => {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', positionId: '', dateOfJoining: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', positionId: '', dateOfJoining: '', lastWorkingDay: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   
@@ -260,6 +260,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
         phone: employee.phone || '',
         positionId: employee.positionId?._id || employee.positionId || '',
         dateOfJoining: employee.dateOfJoining ? getTodayDateStr(employee.dateOfJoining) : '',
+        lastWorkingDay: employee.lastWorkingDay ? getTodayDateStr(employee.lastWorkingDay) : '',
       });
       setError('');
       setSubmitting(false);
@@ -276,6 +277,10 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
     if (!form.firstName.trim()) { setError('First name is required.'); return; }
     if (!form.lastName.trim()) { setError('Last name is required.'); return; }
     if (!form.email.trim()) { setError('Email is required.'); return; }
+    if (form.dateOfJoining && form.lastWorkingDay && form.lastWorkingDay < form.dateOfJoining) {
+      setError('Last Working Day cannot be earlier than Date of Joining.');
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -286,6 +291,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
         dateOfJoining: form.dateOfJoining || undefined,
+        lastWorkingDay: form.lastWorkingDay ? form.lastWorkingDay : null,
       };
 
       if (hasPositionUpdate && form.positionId) {
@@ -388,15 +394,40 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
             />
           )}
         </Stack>
-        <TextField
-          label="Date of Joining"
-          name="dateOfJoining"
-          type="date"
-          value={form.dateOfJoining}
-          onChange={handleChange}
-          fullWidth
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <TextField
+            label="Date of Joining"
+            name="dateOfJoining"
+            type="date"
+            value={form.dateOfJoining}
+            onChange={handleChange}
+            fullWidth
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
+            <TextField
+              label="Last Working Day (LWD)"
+              name="lastWorkingDay"
+              type="date"
+              value={form.lastWorkingDay}
+              onChange={handleChange}
+              fullWidth
+              slotProps={{ inputLabel: { shrink: true } }}
+              helperText={form.lastWorkingDay ? 'Inclusive employment end date' : 'Not Set'}
+            />
+            {form.lastWorkingDay && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="small"
+                onClick={() => setForm((prev) => ({ ...prev, lastWorkingDay: '' }))}
+                sx={{ textTransform: 'none', minWidth: 70, height: 40, mt: -2.5 }}
+              >
+                Clear
+              </Button>
+            )}
+          </Stack>
+        </Stack>
       </Stack>
     </Modal>
   );
@@ -431,6 +462,7 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
           { label: 'Phone', value: employee.phone || '—' },
           { label: 'Position', value: employee.positionId?.name || '—' },
           { label: 'Date of Joining', value: formatDate(employee.dateOfJoining) },
+          { label: 'Last Working Day', value: employee.lastWorkingDay ? formatDate(employee.lastWorkingDay) : 'Not Set' },
           { label: 'Employment Status', value: employee.employmentStatus },
           ...(employee.employmentStatus === 'INACTIVE' ? [{ label: 'Leaving Date', value: formatDate(employee.leavingDate) }] : []),
           { label: 'Vardhan Account', value: employee.userId ? (employee.employmentStatus === 'INACTIVE' ? 'Disabled' : 'Active') : 'No Login' },
@@ -557,6 +589,7 @@ const EmployeesPage = () => {
     { key: 'position', label: 'POSITION' },
     { key: 'role', label: 'ROLE' },
     { key: 'joined', label: 'JOINED' },
+    { key: 'lwd', label: 'LAST WORKING DAY' },
     { key: 'status', label: 'STATUS' }
   ];
   
@@ -602,6 +635,12 @@ const EmployeesPage = () => {
         );
       case 'joined':
         return <Typography variant="body2">{formatDate(emp.dateOfJoining)}</Typography>;
+      case 'lwd':
+        return (
+          <Typography variant="body2" color={emp.lastWorkingDay ? 'text.primary' : 'text.secondary'}>
+            {emp.lastWorkingDay ? formatDate(emp.lastWorkingDay) : 'Not Set'}
+          </Typography>
+        );
       case 'status':
         return <StatusBadge status={isActive ? 'active' : 'inactive'} />;
       default:

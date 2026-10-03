@@ -276,7 +276,7 @@ const updateEmployee = async (req, res) => {
             return res.status(403).json({ success: false, message: "You cannot edit your own employee record." });
         }
 
-        const { firstName, lastName, email, phone, dateOfJoining, positionId } = req.body;
+        const { firstName, lastName, email, phone, dateOfJoining, lastWorkingDay, positionId } = req.body;
 
         if (email && !employeeService.EMAIL_REGEX.test(String(email).trim())) {
             return res.status(400).json({
@@ -291,7 +291,7 @@ const updateEmployee = async (req, res) => {
             updatedBy: req.user.id,
             currentUser: req.user,
             user: req.user,
-            updates: { firstName, lastName, email, phone, dateOfJoining, positionId },
+            updates: { firstName, lastName, email, phone, dateOfJoining, lastWorkingDay, positionId },
         });
 
         if (!employee) {
@@ -310,7 +310,7 @@ const updateEmployee = async (req, res) => {
         if (error.code === "UNAUTHORIZED_POSITION_UPDATE") {
             return res.status(403).json({ success: false, message: error.message });
         }
-        if (error.code === "INVALID_POSITION") {
+        if (error.code === "INVALID_POSITION" || error.code === "VALIDATION_ERROR") {
             return res.status(400).json({ success: false, message: error.message });
         }
         console.error("Update Employee Error:", error);

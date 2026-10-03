@@ -60,12 +60,28 @@ const authMiddleware = async (req, res, next) => {
 
         if (user.role === "employee") {
             const Employee = require("../models/employee.model");
+            const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
             const employee = employeeId
-                ? await Employee.findById(employeeId).select("hospitalId").lean()
-                : await Employee.findOne({ userId: user._id }).select("hospitalId").lean();
+                ? await Employee.findById(employeeId).select("hospitalId dateOfJoining lastWorkingDay employmentStatus").lean()
+                : await Employee.findOne({ userId: user._id }).select("hospitalId dateOfJoining lastWorkingDay employmentStatus").lean();
             if (employee) {
                 if (!hospitalId) hospitalId = employee.hospitalId;
                 if (!employeeId) employeeId = employee._id;
+
+                let timezone = 'Asia/Kolkata';
+                if (hospitalId) {
+                    const Hospital = require("../models/hospital.model");
+                    const hospTz = await Hospital.findById(hospitalId).select("timezone").lean();
+                    if (hospTz?.timezone) timezone = hospTz.timezone;
+                }
+
+                if (!isEmployeeEmployedOnDate(employee, new Date(), timezone)) {
+                    return res.status(403).json({
+                        success: false,
+                        code: "EMPLOYMENT_ENDED",
+                        message: "Your employment with this hospital has ended. Please contact the hospital administrator.",
+                    });
+                }
             }
         }
 

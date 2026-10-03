@@ -199,14 +199,18 @@ const processAutomaticAbsence = async (param1, param2, param3) => {
 
       const empId = emp._id;
       const hospId = assignment.hospitalId;
+      const hospTz = hospTzMap[hospId ? hospId.toString() : ""] || "Asia/Kolkata";
+
+      const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+      if (!isEmployeeEmployedOnDate(emp, targetDateStr, hospTz)) {
+        continue;
+      }
 
       const empKey = `${hospId.toString()}_${empId.toString()}`;
       if (evaluatedEmployees.has(empKey)) {
         continue;
       }
       evaluatedEmployees.add(empKey);
-
-      const hospTz = hospTzMap[hospId ? hospId.toString() : ""] || "Asia/Kolkata";
 
       // 1. Calculate shift end timestamp
       let shiftEndObj = null;
@@ -293,6 +297,11 @@ const processAutomaticAbsence = async (param1, param2, param3) => {
     const hospId = emp.hospitalId;
     const hospTz = hospTzMap[hospId ? hospId.toString() : ""] || "Asia/Kolkata";
     const dayOfWeek = getHospitalDayOfWeek(targetDateStr, hospTz);
+
+    const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+    if (!isEmployeeEmployedOnDate(emp, targetDateStr, hospTz)) {
+      continue;
+    }
 
     const empKey = `${hospId.toString()}_${empId.toString()}`;
     if (evaluatedEmployees.has(empKey)) continue;
