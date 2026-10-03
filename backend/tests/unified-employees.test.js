@@ -314,7 +314,8 @@ const runTests = async () => {
             },
         });
         assert.strictEqual(a5.status, 200, "Admin can change Position");
-        assert.strictEqual(a5.body.data.positionId.toString(), posDoctorA._id.toString());
+        const a5PosId = a5.body.data.positionId?._id || a5.body.data.positionId;
+        assert.strictEqual(a5PosId.toString(), posDoctorA._id.toString());
         console.log("  ✓ 5. Admin can change Position");
 
         // 6. Admin cannot manipulate hospitalId through request body
