@@ -5,9 +5,10 @@ const Hospital = require("../models/hospital.model");
 const Position = require("../models/position.model");
 const User = require("../models/user.model");
 const { sendEmail } = require("../utils/mail");
+const { sendInvitationEmail } = require("./email.service");
 const { hashPassword } = require("../utils/password");
 const { getFrontendUrl } = require("../utils/url.utils");
-const { hashTokenValue, generateInvitationToken, getStandardExpiry, buildInvitationEmailTemplate } = require("./invitation.service");
+const { hashTokenValue, generateInvitationToken, getStandardExpiry } = require("./invitation.service");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -327,18 +328,12 @@ const inviteEmployee = async ({
     const invitationUrl = `${frontendUrl}/invite/${rawToken}`;
     const fullName = `${invitation.firstName} ${invitation.lastName}`;
 
-    const { text, html } = buildInvitationEmailTemplate({
-        hospitalName: hospital.name,
-        recipientName: fullName,
-        inviterName: "",
-        invitationUrl,
-    });
-
-    await sendEmail({
+    await sendInvitationEmail({
         to: normalizedEmail,
-        subject: `You've been invited to join ${hospital.name}`,
-        text,
-        html,
+        recipientName: fullName,
+        hospitalName: hospital.name,
+        invitationUrl,
+        expiresAt,
     });
 
     return { invitation, rawToken };
@@ -786,18 +781,12 @@ const resendInvitation = async ({ invitationId, hospitalId }) => {
     const invitationUrl = `${frontendUrl}/invite/${rawToken}`;
     const fullName = `${invitation.firstName} ${invitation.lastName || ""}`.trim();
 
-    const { text, html } = buildInvitationEmailTemplate({
-        hospitalName: invitation.hospitalId.name,
-        recipientName: fullName,
-        inviterName: "",
-        invitationUrl,
-    });
-
-    await sendEmail({
+    await sendInvitationEmail({
         to: invitation.email,
-        subject: `You've been invited to join ${invitation.hospitalId.name}`,
-        text,
-        html,
+        recipientName: fullName,
+        hospitalName: invitation.hospitalId.name,
+        invitationUrl,
+        expiresAt: invitation.expiresAt,
     });
 
     return invitation;

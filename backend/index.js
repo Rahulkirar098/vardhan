@@ -57,10 +57,13 @@ app.use(async (req, res, next) => {
 
 app.get("/", (req, res) => {
     const Employee = require("./src/models/employee.model");
+
     res.json({
-        message: "Welcome to the API!",
-        version: "1.0.0-LWD-VERIFIED",
-        runtimeMarker: "NUVINCE-LWD-V1",
+        message: "Welcome to Nuvince API!",
+        name: "Nuvince",
+        description: "Hospital Workforce Management Platform",
+        version: "1.0.0",
+        runtimeMarker: "NUVINCE-V1",
         employeeModelSchemaPaths: Object.keys(Employee.schema.paths),
     });
 });

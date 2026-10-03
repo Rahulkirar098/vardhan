@@ -3,6 +3,7 @@ const User = require("../models/user.model");
 const { hashPassword, comparePassword } = require("../utils/password");
 const { generateToken, revokeToken } = require("../utils/jwt");
 const { sendEmail } = require("../utils/mail");
+const { sendPasswordResetEmail } = require("./email.service");
 const { getFrontendUrl } = require("../utils/url.utils");
 
 const getCurrentUser = async (userId) => {
@@ -104,23 +105,11 @@ const forgotPassword = async (email) => {
     const resetUrl = `${frontendUrl}/reset-password/${rawToken}`;
 
     try {
-        await sendEmail({
+        await sendPasswordResetEmail({
             to: normalizedEmail,
-            subject: "Reset your Nuvince password",
-            text: `Hello ${user.name},\n\nYou requested a password reset for your Nuvince account.\n\nClick the link below to reset your password (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, you can safely ignore this email.`,
-            html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-                    <h2>Reset your password</h2>
-                    <p>Hello ${user.name},</p>
-                    <p>You requested a password reset for your Nuvince account.</p>
-                    <p>
-                        <a href="${resetUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: bold;">Reset Password</a>
-                    </p>
-                    <p>This link is valid for 1 hour.</p>
-                    <p>If you did not request this, you can safely ignore this email.</p>
-                    <p>Regards,<br />Nuvince</p>
-                </div>
-            `,
+            recipientName: user.name,
+            resetUrl,
+            expiresAt,
         });
     } catch (emailError) {
         user.resetPasswordToken = null;
