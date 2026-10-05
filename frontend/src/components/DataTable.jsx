@@ -55,10 +55,8 @@ const DataTable = ({
   emptyIcon,
   loading = false,
   onRowClick,
+  minWidth,
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
   if (loading) {
     return (
       <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
@@ -75,77 +73,61 @@ const DataTable = ({
     );
   }
 
-  if (isMobile) {
-    return (
-      <Stack spacing={1.5}>
-        {rows.map((row, index) => {
-          const rowKey = getRowKey ? getRowKey(row, index) : index;
-
-          return (
-            <Box
-              key={rowKey}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              sx={{
-                border: '1px solid #E5E5E5',
-                borderRadius: '12px',
-                backgroundColor: '#FFFFFF',
-                p: 2,
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
-                cursor: onRowClick ? 'pointer' : 'default',
-              }}
-            >
-              <Stack spacing={1.25}>
-                {columns.map((column) => (
-                  <Stack
-                    key={column.key}
-                    direction="row"
-                    spacing={2}
-                    sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}
-                  >
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, pt: 0.25 }}>
-                      {column.label}
-                    </Typography>
-                    <Box sx={{ textAlign: 'right', minWidth: 0 }}>
-                      <CellValue row={row} column={column} renderCell={renderCell} />
-                    </Box>
-                  </Stack>
-                ))}
-
-                {renderActions && (
-                  <Box sx={{ pt: 1.25, borderTop: '1px solid #F0F0F0' }}>{renderActions(row)}</Box>
-                )}
-              </Stack>
-            </Box>
-          );
-        })}
-      </Stack>
-    );
-  }
+  const calculatedMinWidth = Math.max(700, (columns.length + (renderActions ? 1 : 0)) * 130);
+  const effectiveMinWidth = minWidth || calculatedMinWidth;
 
   return (
     <TableContainer
       sx={{
+        width: '100%',
+        maxWidth: '100%',
         border: '1px solid #E5E5E5',
         borderRadius: '12px',
         backgroundColor: '#FFFFFF',
-        overflow: 'hidden',
+        overflowX: 'auto',
+        overflowY: 'hidden',
         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+        WebkitOverflowScrolling: 'touch',
       }}
     >
-      <Table>
+      <Table sx={{ minWidth: effectiveMinWidth, width: '100%', tableLayout: 'auto' }}>
         <TableHead>
           <TableRow>
             {columns.map((column) => (
               <TableCell
                 key={column.key}
                 align={column.align || 'left'}
-                sx={{ width: column.width, whiteSpace: 'nowrap' }}
+                sx={{
+                  width: column.width,
+                  minWidth: column.minWidth || (column.key === 'employee' || column.key === 'name' ? 180 : undefined),
+                  maxWidth: column.maxWidth,
+                  whiteSpace: 'nowrap',
+                  fontWeight: 700,
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.05em',
+                  py: 1.5,
+                  px: 2,
+                }}
               >
                 {column.label}
               </TableCell>
             ))}
             {renderActions && (
-              <TableCell align="right" sx={{ width: 120 }}>
+              <TableCell
+                align="right"
+                sx={{
+                  width: 120,
+                  minWidth: 100,
+                  whiteSpace: 'nowrap',
+                  fontWeight: 700,
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.05em',
+                  py: 1.5,
+                  px: 2,
+                }}
+              >
                 Actions
               </TableCell>
             )}
@@ -163,12 +145,31 @@ const DataTable = ({
                 sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
               >
                 {columns.map((column) => (
-                  <TableCell key={column.key} align={column.align || 'left'}>
+                  <TableCell
+                    key={column.key}
+                    align={column.align || 'left'}
+                    sx={{
+                      width: column.width,
+                      minWidth: column.minWidth || (column.key === 'employee' || column.key === 'name' ? 180 : undefined),
+                      maxWidth: column.maxWidth,
+                      whiteSpace: column.whiteSpace || (column.key === 'employee' ? 'normal' : 'nowrap'),
+                      py: 1.5,
+                      px: 2,
+                    }}
+                  >
                     <CellValue row={row} column={column} renderCell={renderCell} />
                   </TableCell>
                 ))}
                 {renderActions && (
-                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                  <TableCell
+                    align="right"
+                    sx={{
+                      whiteSpace: 'nowrap',
+                      minWidth: 100,
+                      py: 1.5,
+                      px: 2,
+                    }}
+                  >
                     {renderActions(row)}
                   </TableCell>
                 )}

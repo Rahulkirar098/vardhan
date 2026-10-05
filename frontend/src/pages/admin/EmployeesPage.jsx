@@ -639,13 +639,13 @@ const EmployeesPage = () => {
   };
 
   const employeeColumns = [
-    { key: 'employee', label: 'EMPLOYEE' },
-    { key: 'employeeId', label: 'EMPLOYEE ID' },
-    { key: 'position', label: 'POSITION' },
-    { key: 'role', label: 'ROLE' },
-    { key: 'joined', label: 'JOINED' },
-    { key: 'lwd', label: 'LAST WORKING DAY' },
-    { key: 'status', label: 'STATUS' }
+    { key: 'employee', label: 'EMPLOYEE', minWidth: 220 },
+    { key: 'employeeId', label: 'EMPLOYEE ID', minWidth: 120 },
+    { key: 'position', label: 'POSITION', minWidth: 140 },
+    { key: 'role', label: 'ROLE', minWidth: 110 },
+    { key: 'joined', label: 'JOINED', minWidth: 120 },
+    { key: 'lwd', label: 'LAST WORKING DAY', minWidth: 140 },
+    { key: 'status', label: 'STATUS', minWidth: 110 }
   ];
   
   const renderEmployeeCell = (emp, column) => {
@@ -656,22 +656,22 @@ const EmployeesPage = () => {
     switch (column.key) {
       case 'employee':
         return (
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 200 }}>
             <InitialsAvatar name={fullName} size={32} />
-            <Box>
-              <Typography variant="body2" fontWeight={600}>{fullName}</Typography>
-              <Typography variant="caption" color="text.secondary">{emp.email}</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" fontWeight={600} sx={{ whiteSpace: 'nowrap' }}>{fullName}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', whiteSpace: 'nowrap' }}>{emp.email}</Typography>
             </Box>
           </Stack>
         );
       case 'employeeId':
         return (
-          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600, whiteSpace: 'nowrap' }}>
             {emp.employeeId || '—'}
           </Typography>
         );
       case 'position':
-        return <Typography variant="body2">{emp.positionId?.name || '—'}</Typography>;
+        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{emp.positionId?.name || '—'}</Typography>;
       case 'role':
         return (
           <Chip
@@ -689,10 +689,10 @@ const EmployeesPage = () => {
           />
         );
       case 'joined':
-        return <Typography variant="body2">{formatDate(emp.dateOfJoining)}</Typography>;
+        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{formatDate(emp.dateOfJoining)}</Typography>;
       case 'lwd':
         return (
-          <Typography variant="body2" color={emp.lastWorkingDay ? 'text.primary' : 'text.secondary'}>
+          <Typography variant="body2" color={emp.lastWorkingDay ? 'text.primary' : 'text.secondary'} sx={{ whiteSpace: 'nowrap' }}>
             {emp.lastWorkingDay ? formatDate(emp.lastWorkingDay) : 'Not Set'}
           </Typography>
         );
@@ -712,7 +712,7 @@ const EmployeesPage = () => {
     );
 
     return (
-      <Box display="flex" justifyContent="flex-end" gap={0.5}>
+      <Box display="flex" justifyContent="flex-end" gap={0.5} sx={{ whiteSpace: 'nowrap' }}>
         <Tooltip title="View Details">
           <IconButton size="small" onClick={(e) => { e.stopPropagation(); setDetailsEmployee(emp); }}>
             <PersonRounded fontSize="small" />
@@ -741,12 +741,12 @@ const EmployeesPage = () => {
   };
 
   const invitationColumns = [
-    { key: 'name', label: 'NAME' },
-    { key: 'email', label: 'EMAIL' },
-    { key: 'position', label: 'POSITION' },
-    { key: 'invitedDate', label: 'INVITED DATE' },
-    { key: 'expires', label: 'EXPIRES' },
-    { key: 'status', label: 'STATUS' }
+    { key: 'name', label: 'NAME', minWidth: 160 },
+    { key: 'email', label: 'EMAIL', minWidth: 200 },
+    { key: 'position', label: 'POSITION', minWidth: 140 },
+    { key: 'invitedDate', label: 'INVITED DATE', minWidth: 120 },
+    { key: 'expires', label: 'EXPIRES', minWidth: 120 },
+    { key: 'status', label: 'STATUS', minWidth: 110 }
   ];
   
   const renderInvitationCell = (inv, column) => {
@@ -755,15 +755,15 @@ const EmployeesPage = () => {
   
     switch (column.key) {
       case 'name':
-        return <Typography variant="body2" fontWeight={600}>{fullName}</Typography>;
+        return <Typography variant="body2" fontWeight={600} sx={{ whiteSpace: 'nowrap' }}>{fullName}</Typography>;
       case 'email':
-        return <Typography variant="body2">{inv.email}</Typography>;
+        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{inv.email}</Typography>;
       case 'position':
-        return <Typography variant="body2">{inv.positionId?.name || '—'}</Typography>;
+        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{inv.positionId?.name || '—'}</Typography>;
       case 'invitedDate':
-        return <Typography variant="body2">{inv.createdAt ? formatDate(inv.createdAt) : '—'}</Typography>;
+        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{inv.createdAt ? formatDate(inv.createdAt) : '—'}</Typography>;
       case 'expires':
-        return <Typography variant="body2">{inv.expiresAt ? formatDate(inv.expiresAt) : '—'}</Typography>;
+        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{inv.expiresAt ? formatDate(inv.expiresAt) : '—'}</Typography>;
       case 'status':
         return <StatusBadge status={effectiveStatus} />;
       default:

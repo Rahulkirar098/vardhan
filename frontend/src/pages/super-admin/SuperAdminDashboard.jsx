@@ -164,15 +164,15 @@ const SuperAdminDashboard = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  <TableContainer>
-                    <Table size="small">
+                  <TableContainer sx={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <Table size="small" sx={{ minWidth: 600 }}>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 700 }}>Hospital Name</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Code</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Created Date</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 700 }}>Action</TableCell>
+                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Hospital Name</TableCell>
+                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Code</TableCell>
+                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Status</TableCell>
+                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Created Date</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Action</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>

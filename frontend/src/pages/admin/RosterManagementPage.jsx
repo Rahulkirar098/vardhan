@@ -1157,7 +1157,7 @@ export default function RosterManagementPage() {
                       width: '100%',
                     }}
                   >
-                    <Table sx={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
+                    <Table sx={{ borderCollapse: 'collapse', width: '100%', minWidth: Math.max(850, (activeRoster.columns.length || 4) * 160) }}>
                       <TableHead>
                         <TableRow sx={{ bgcolor: '#F1F5F9' }}>
                           {activeRoster.columns.map((col) => (
@@ -1171,7 +1171,8 @@ export default function RosterManagementPage() {
                                 borderBottom: '2px solid #000000',
                                 py: 1.75,
                                 px: 2,
-                                width: `${100 / (activeRoster.columns.length || 1)}%`,
+                                minWidth: 160,
+                                whiteSpace: 'nowrap',
                               }}
                             >
                               <Typography variant="subtitle1" fontWeight="800" sx={{ color: '#111827', letterSpacing: 1, textTransform: 'uppercase' }}>
