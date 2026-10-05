@@ -9,8 +9,50 @@ const { sendInvitationEmail } = require("./email.service");
 const { hashPassword } = require("../utils/password");
 const { getFrontendUrl } = require("../utils/url.utils");
 const { hashTokenValue, generateInvitationToken, getStandardExpiry } = require("./invitation.service");
+const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Ensures an email address is not associated with an ACTIVE employee or ACTIVE pending invitation across ANY hospital.
+ */
+const validateNoActiveEmploymentOrInvitation = async (email, options = {}) => {
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const { excludeEmployeeId } = options;
+
+    // 1. Check active employee across ALL hospitals
+    const employeeQuery = {
+        email: normalizedEmail,
+        employmentStatus: "ACTIVE",
+    };
+    if (excludeEmployeeId) {
+        employeeQuery._id = { $ne: excludeEmployeeId };
+    }
+
+    const existingActiveEmployees = await Employee.find(employeeQuery).lean();
+    const activeEmp = existingActiveEmployees.find((emp) =>
+        isEmployeeEmployedOnDate(emp, new Date())
+    );
+
+    if (activeEmp) {
+        const err = new Error("This email is currently associated with an active employee account.");
+        err.code = "ACTIVE_EMPLOYMENT_EXISTS";
+        throw err;
+    }
+
+    // 2. Check pending non-expired invitation across ALL hospitals
+    const existingInvitation = await Invitation.findOne({
+        email: normalizedEmail,
+        status: "pending",
+        expiresAt: { $gt: new Date() },
+    }).lean();
+
+    if (existingInvitation) {
+        const err = new Error("An active invitation already exists for this email address.");
+        err.code = "ACTIVE_INVITATION_EXISTS";
+        throw err;
+    }
+};
 
 /**
  * Generate a sequential employee ID for the hospital.
@@ -163,17 +205,7 @@ const createEmployee = async ({
 }) => {
     const normalizedEmail = String(email).trim().toLowerCase();
 
-    const existingActive = await Employee.findOne({
-        hospitalId,
-        email: normalizedEmail,
-        employmentStatus: "ACTIVE",
-    });
-
-    if (existingActive) {
-        const err = new Error("An active employee with this email already exists in this hospital.");
-        err.code = "DUPLICATE_EMAIL";
-        throw err;
-    }
+    await validateNoActiveEmploymentOrInvitation(normalizedEmail);
 
     const resolvedEmployeeId = providedEmployeeId
         ? String(providedEmployeeId).trim().toUpperCase()
@@ -265,31 +297,7 @@ const inviteEmployee = async ({
         throw err;
     }
 
-    // No duplicate active employee
-    const existingEmployee = await Employee.findOne({
-        hospitalId: hospital._id,
-        email: normalizedEmail,
-        employmentStatus: "ACTIVE",
-    });
-
-    if (existingEmployee) {
-        const err = new Error("An active employee with this email already exists in this hospital.");
-        err.code = "DUPLICATE_EMPLOYEE";
-        throw err;
-    }
-
-    // No duplicate pending invitation
-    const existingInvitation = await Invitation.findOne({
-        hospitalId: hospital._id,
-        email: normalizedEmail,
-        status: "pending",
-    });
-
-    if (existingInvitation) {
-        const err = new Error("A pending employee invitation already exists for this email.");
-        err.code = "DUPLICATE_INVITATION";
-        throw err;
-    }
+    await validateNoActiveEmploymentOrInvitation(normalizedEmail);
 
     const rawToken = generateInvitationToken();
     const tokenHash = hashTokenValue(rawToken);
@@ -397,6 +405,22 @@ const acceptInvitation = async (rawToken, password) => {
 
     const email = String(invitation.email).trim().toLowerCase();
     const emailRegex = new RegExp(`^\\s*${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, "i");
+
+    // Ensure email is not currently active in another hospital
+    const otherActiveEmps = await Employee.find({
+        email,
+        employmentStatus: "ACTIVE",
+        hospitalId: { $ne: invitation.hospitalId._id },
+    }).lean();
+    const activeInOther = otherActiveEmps.find((emp) =>
+        isEmployeeEmployedOnDate(emp, new Date())
+    );
+    if (activeInOther) {
+        const err = new Error("This email is currently associated with an active employee account.");
+        err.code = "ACTIVE_EMPLOYMENT_EXISTS";
+        throw err;
+    }
+
     const hashedPassword = await hashPassword(password);
 
     // Derive modules from Position defaults
@@ -576,17 +600,7 @@ const updateEmployee = async ({
                     throw err;
                 }
                 if (newEmail !== employee.email) {
-                    const existingActiveEmp = await Employee.findOne({
-                        hospitalId,
-                        email: newEmail,
-                        employmentStatus: "ACTIVE",
-                        _id: { $ne: employee._id },
-                    });
-                    if (existingActiveEmp) {
-                        const err = new Error("An active employee with this email already exists in this hospital.");
-                        err.code = "DUPLICATE_EMAIL";
-                        throw err;
-                    }
+                    await validateNoActiveEmploymentOrInvitation(newEmail, { excludeEmployeeId: employee._id });
                     if (employee.userId) {
                         const emailRegex = new RegExp(`^\\s*${newEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, "i");
                         const existingUser = await User.findOne({

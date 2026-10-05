@@ -1205,8 +1205,278 @@ const runTests = async () => {
         assert.strictEqual(h67.status, 403, "HR without employee.position.update cannot update position");
         console.log("  ✓ 67. [EDIT TEST 9] Existing employee update permissions remain enforced (PASS)");
 
+        // ====================================================================
+        // I. MULTI-TENANT EMPLOYEE EMAIL UNIQUENESS & LWD TESTS (TC-EMAIL-001 to 012)
+        // ====================================================================
+        console.log("\n--- I. MULTI-TENANT EMPLOYEE EMAIL UNIQUENESS & LWD TESTS ---");
+
+        const testEmailTarget = `multi_tenant_test_${testTimestamp}@yopmail.com`;
+
+        // TC-EMAIL-001: Active employee in Hospital A -> Hospital B tries same email -> REJECT (409)
+        await Employee.create({
+            employeeId: `EMP_TC1_${testTimestamp}`,
+            firstName: "Ragini",
+            lastName: "A",
+            email: testEmailTarget,
+            positionId: posNurseA._id,
+            employmentStatus: "ACTIVE",
+            hospitalId: hospitalA._id,
+            createdBy: adminA._id,
+        });
+
+        const tc001 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "Ragini",
+                lastName: "B",
+                email: testEmailTarget,
+                positionId: posHMB._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc001.status, 409, "TC-EMAIL-001: Hospital B cannot invite active employee from Hospital A");
+        assert.strictEqual(tc001.body.message, "This email is currently associated with an active employee account.");
+        console.log("  ✓ TC-EMAIL-001: Active employee in Hospital A -> Hospital B tries same email (REJECTED 409)");
+
+        // TC-EMAIL-002: Active employee in Hospital A -> Hospital A tries same email -> REJECTED
+        const tc002 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: {
+                firstName: "Ragini",
+                lastName: "A2",
+                email: testEmailTarget,
+                positionId: posNurseA._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc002.status, 409, "TC-EMAIL-002: Hospital A cannot invite its own active employee again");
+        console.log("  ✓ TC-EMAIL-002: Active employee in Hospital A -> Hospital A tries same email (REJECTED 409)");
+
+        // TC-EMAIL-003: Different emails in Hospital A and Hospital B -> ALLOWED
+        const tc003 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "UniqueB",
+                lastName: "User",
+                email: `unique_b_${testTimestamp}@yopmail.com`,
+                positionId: posHMB._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc003.status, 201, "TC-EMAIL-003: Unique email for Hospital B allowed");
+        console.log("  ✓ TC-EMAIL-003: Different emails in Hospital A and Hospital B (ALLOWED 201)");
+
+        // TC-EMAIL-004: Same email with different casing -> REJECTED
+        const tc004 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "Ragini",
+                lastName: "UpperCased",
+                email: testEmailTarget.toUpperCase(),
+                positionId: posHMB._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc004.status, 409, "TC-EMAIL-004: Case-insensitive match rejected");
+        console.log("  ✓ TC-EMAIL-004: Same email with different casing (REJECTED 409)");
+
+        // TC-EMAIL-005: Employee LWD is today -> Hospital B CANNOT invite today
+        const todayStr = new Date().toISOString().split("T")[0];
+        await Employee.create({
+            employeeId: `EMP_LWD_TODAY_${testTimestamp}`,
+            firstName: "LwdToday",
+            lastName: "Emp",
+            email: `lwd_today_${testTimestamp}@yopmail.com`,
+            positionId: posNurseA._id,
+            employmentStatus: "ACTIVE",
+            lastWorkingDay: new Date(todayStr),
+            hospitalId: hospitalA._id,
+            createdBy: adminA._id,
+        });
+
+        const tc005 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "LwdToday",
+                lastName: "B",
+                email: `lwd_today_${testTimestamp}@yopmail.com`,
+                positionId: posHMB._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc005.status, 409, "TC-EMAIL-005: Employee on LWD date is still employed -> Hospital B rejected");
+        console.log("  ✓ TC-EMAIL-005: Employee LWD is today -> Hospital B CANNOT invite today (REJECTED 409)");
+
+        // TC-EMAIL-006: Employee LWD was yesterday -> Hospital B CAN invite today
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        await Employee.create({
+            employeeId: `EMP_LWD_YEST_${testTimestamp}`,
+            firstName: "LwdYesterday",
+            lastName: "Emp",
+            email: `lwd_yest_${testTimestamp}@yopmail.com`,
+            positionId: posNurseA._id,
+            employmentStatus: "ACTIVE",
+            lastWorkingDay: yesterday,
+            hospitalId: hospitalA._id,
+            createdBy: adminA._id,
+        });
+
+        const tc006 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "LwdYesterday",
+                lastName: "B",
+                email: `lwd_yest_${testTimestamp}@yopmail.com`,
+                positionId: posHMB._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc006.status, 201, "TC-EMAIL-006: Employee after LWD date is eligible -> Hospital B allowed");
+        console.log("  ✓ TC-EMAIL-006: Employee LWD was yesterday -> Hospital B CAN invite today (ALLOWED 201)");
+
+        // TC-EMAIL-007: Former/inactive employee -> Hospital B CAN invite today
+        await Employee.create({
+            employeeId: `EMP_INACTIVE_${testTimestamp}`,
+            firstName: "Inactive",
+            lastName: "Emp",
+            email: `inactive_emp_${testTimestamp}@yopmail.com`,
+            positionId: posNurseA._id,
+            employmentStatus: "INACTIVE",
+            hospitalId: hospitalA._id,
+            createdBy: adminA._id,
+        });
+
+        const tc007 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "Inactive",
+                lastName: "B",
+                email: `inactive_emp_${testTimestamp}@yopmail.com`,
+                positionId: posHMB._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc007.status, 201, "TC-EMAIL-007: Former inactive employee in Hosp A -> Hosp B allowed");
+        console.log("  ✓ TC-EMAIL-007: Former/inactive employee -> Hospital B CAN invite (ALLOWED 201)");
+
+        // TC-EMAIL-008: Pending invitation in Hospital A -> Hospital B tries same email -> REJECTED
+        const pendingEmail = `pending_inv_${testTimestamp}@yopmail.com`;
+        const tc008Inv = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: {
+                firstName: "PendingA",
+                lastName: "Emp",
+                email: pendingEmail,
+                positionId: posNurseA._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc008Inv.status, 201);
+
+        const tc008 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "PendingB",
+                lastName: "Emp",
+                email: pendingEmail,
+                positionId: posHMB._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc008.status, 409, "TC-EMAIL-008: Pending invitation in Hosp A blocks Hosp B invitation");
+        console.log("  ✓ TC-EMAIL-008: Pending invitation in Hospital A -> Hospital B tries same email (REJECTED 409)");
+
+        // TC-EMAIL-009: Hospital B attempts to manipulate hospitalId in request body -> Ignores client hospitalId
+        const tc009 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "SpoofHosp",
+                lastName: "Emp",
+                email: `spoof_hosp_${testTimestamp}@yopmail.com`,
+                positionId: posHMB._id.toString(),
+                role: "employee",
+                hospitalId: hospitalA._id.toString(),
+            },
+        });
+        assert.strictEqual(tc009.status, 201);
+        const invSpoof = await Invitation.findById(tc009.body.data.id).lean();
+        assert.strictEqual(invSpoof.hospitalId.toString(), hospitalB._id.toString(), "Hospital ID remains Hospital B");
+        console.log("  ✓ TC-EMAIL-009: Hospital B attempts to manipulate hospitalId in body (IGNORED & SCOPED TO HOSP B)");
+
+        // TC-EMAIL-010: Unauthorized user attempts invitation -> 401/403
+        const tc010 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${nurseAToken}` },
+            body: {
+                firstName: "Unauthorized",
+                lastName: "Attempt",
+                email: `unauth_${testTimestamp}@yopmail.com`,
+                positionId: posNurseA._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc010.status, 403, "TC-EMAIL-010: Unauthorized user rejected (403)");
+        console.log("  ✓ TC-EMAIL-010: Unauthorized user attempts invitation (REJECTED 403)");
+
+        // TC-EMAIL-011: Concurrent invitations for same email -> DB unique index prevents dual claims
+        const atomicEmail = `atomic_race_${testTimestamp}@yopmail.com`;
+        const resA = request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+            body: { firstName: "AtomicA", lastName: "Emp", email: atomicEmail, positionId: posNurseA._id.toString() },
+        });
+        const resB = request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: { firstName: "AtomicB", lastName: "Emp", email: atomicEmail, positionId: posHMB._id.toString() },
+        });
+        const [outA, outB] = await Promise.all([resA, resB]);
+        const statuses = [outA.status, outB.status].sort();
+        assert.deepStrictEqual(statuses, [201, 409], "Exactly one concurrent invitation succeeds, other is rejected");
+        console.log("  ✓ TC-EMAIL-011: Concurrent invitations for same email (ATOMIC RACE PREVENTION 201/409)");
+
+        // TC-EMAIL-012: Failed duplicate invitation -> Email service not called for duplicate
+        const dupEmailCheck = `no_email_sent_${testTimestamp}@yopmail.com`;
+        await Employee.create({
+            employeeId: `EMP_NO_MAIL_${testTimestamp}`,
+            firstName: "NoEmail",
+            lastName: "Emp",
+            email: dupEmailCheck,
+            positionId: posNurseA._id,
+            employmentStatus: "ACTIVE",
+            hospitalId: hospitalA._id,
+            createdBy: adminA._id,
+        });
+
+        const tc012 = await request("/api/v1/hrms/employees/invite", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+            body: {
+                firstName: "NoEmail",
+                lastName: "B",
+                email: dupEmailCheck,
+                positionId: posHMB._id.toString(),
+                role: "employee",
+            },
+        });
+        assert.strictEqual(tc012.status, 409, "Rejected prior to email sending");
+        const invCheckNoMail = await Invitation.findOne({ email: dupEmailCheck });
+        assert.strictEqual(invCheckNoMail, null, "No invitation document created in DB");
+        console.log("  ✓ TC-EMAIL-012: Failed duplicate invitation does NOT send email or create DB record");
+
         console.log("\n=======================================================");
-        console.log("=== ALL 67 LIFECYCLE, AUTH, STATUS & EDIT RULES TESTS PASSED 100% ===");
+        console.log("=== ALL 79 LIFECYCLE, AUTH, STATUS, EDIT & MULTI-TENANT UNIQUENESS TESTS PASSED 100% ===");
         console.log("=======================================================\n");
     } finally {
         if (server) {

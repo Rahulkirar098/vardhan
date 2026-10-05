@@ -97,6 +97,13 @@ const invitationSchema = new mongoose.Schema(
 );
 
 invitationSchema.index({ hospitalId: 1, email: 1, status: 1 });
+invitationSchema.index(
+    { email: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { status: "pending" },
+    }
+);
 invitationSchema.index({ tokenHash: 1, status: 1 });
 
 const Invitation = mongoose.model("Invitation", invitationSchema);

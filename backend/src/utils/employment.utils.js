@@ -11,6 +11,10 @@ const { getHospitalTodayDateStr } = require('./timezone.utils');
 const isEmployeeEmployedOnDate = (employee, dateInput, timezone = 'Asia/Kolkata') => {
   if (!employee) return false;
 
+  if (employee.employmentStatus && String(employee.employmentStatus).toUpperCase() === 'INACTIVE') {
+    return false;
+  }
+
   let targetDateStr;
   if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
     targetDateStr = dateInput.trim();

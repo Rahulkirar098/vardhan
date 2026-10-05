@@ -129,16 +129,19 @@ const inviteEmployee = async (req, res) => {
                 },
             });
         } catch (serviceError) {
-            if (serviceError.code === "DUPLICATE_EMPLOYEE") {
+            if (
+                serviceError.code === 11000 ||
+                serviceError.code === "ACTIVE_EMPLOYMENT_EXISTS" ||
+                serviceError.code === "ACTIVE_INVITATION_EXISTS" ||
+                serviceError.code === "DUPLICATE_EMPLOYEE" ||
+                serviceError.code === "DUPLICATE_INVITATION" ||
+                serviceError.code === "DUPLICATE_EMAIL"
+            ) {
                 return res.status(409).json({
                     success: false,
-                    message: serviceError.message,
-                });
-            }
-            if (serviceError.code === "DUPLICATE_INVITATION") {
-                return res.status(409).json({
-                    success: false,
-                    message: serviceError.message,
+                    message: serviceError.code === 11000 
+                        ? "This email is currently associated with an active employee account."
+                        : serviceError.message,
                 });
             }
             if (serviceError.code === "INVALID_POSITION" || serviceError.code === "VALIDATION_ERROR") {
