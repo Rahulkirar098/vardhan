@@ -141,31 +141,33 @@ const Modal = forwardRef(
             </Box>
           </DialogContent>
 
-          <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-            {actions ? (
-              actions
-            ) : hideSubmit ? (
-              <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
-                {closeLabel || 'Close'}
-              </Button>
-            ) : (
-              <>
-                {!hideCancel && (
-                  <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
-                    {cancelLabel}
-                  </Button>
-                )}
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={submitting || disableSubmit}
-                  startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : SubmitIcon ? <SubmitIcon /> : null}
-                >
-                  {submitting ? submittingLabel : submitLabel}
+          {actions !== null && actions !== false && (
+            <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+              {actions !== undefined ? (
+                actions
+              ) : hideSubmit ? (
+                <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
+                  {closeLabel || 'Close'}
                 </Button>
-              </>
-            )}
-          </DialogActions>
+              ) : (
+                <>
+                  {!hideCancel && (
+                    <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
+                      {cancelLabel}
+                    </Button>
+                  )}
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={submitting || disableSubmit}
+                    startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : SubmitIcon ? <SubmitIcon /> : null}
+                  >
+                    {submitting ? submittingLabel : submitLabel}
+                  </Button>
+                </>
+              )}
+            </DialogActions>
+          )}
         </Box>
       </Dialog>
     );
