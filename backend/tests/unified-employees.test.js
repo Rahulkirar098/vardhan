@@ -622,7 +622,69 @@ const runTests = async () => {
         assert(empC26b && empC26b._id, "Employee linked successfully");
         const userC26b = await User.findById(empC26b.userId).lean();
         assert.strictEqual(userC26b.email, existingEmail);
-        console.log("  ✓ 26b. Invitation acceptance handles pre-existing User account without duplicate key error\n");
+        console.log("  ✓ 26b. Invitation acceptance handles pre-existing User account without duplicate key error");
+
+        // 26c. Admin can list pending invitations for own hospital
+        const c26cList = await request("/api/v1/hrms/employees/invitations", {
+            headers: { Authorization: `Bearer ${adminAToken}` },
+        });
+        assert.strictEqual(c26cList.status, 200, "List invitations succeeds");
+        assert(Array.isArray(c26cList.body.data), "Returns array of invitations");
+        console.log("  ✓ 26c. Admin can list pending invitations for own hospital");
+
+        // 26d. Admin can resend pending invitation
+        const c26dResend = await request(`/api/v1/hrms/employees/invitations/${invC20._id}/resend`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+        });
+        assert.strictEqual(c26dResend.status, 200, "Resend invitation succeeds (200)");
+        assert.strictEqual(c26dResend.body.message, "Invitation resent successfully");
+
+        const invAfterResend = await Invitation.findById(invC20._id).lean();
+        assert.notStrictEqual(invAfterResend.tokenHash, invC20.tokenHash, "New token hash generated");
+        console.log("  ✓ 26d. Admin can resend pending invitation and token hash is updated");
+
+        // 26e. Cross-hospital resend invitation rejected (404)
+        const c26eCrossResend = await request(`/api/v1/hrms/employees/invitations/${invC20._id}/resend`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+        });
+        assert.strictEqual(c26eCrossResend.status, 404, "Hospital B cannot resend Hospital A invitation (404)");
+        console.log("  ✓ 26e. Cross-hospital resend invitation rejected (404)");
+
+        // 26f. Admin can cancel pending invitation
+        const c26fCancel = await request(`/api/v1/hrms/employees/invitations/${invC21._id}/cancel`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+        });
+        assert.strictEqual(c26fCancel.status, 200, "Cancel invitation succeeds (200)");
+        assert.strictEqual(c26fCancel.body.message, "Invitation cancelled successfully");
+
+        const invAfterCancel = await Invitation.findById(invC21._id).lean();
+        assert.strictEqual(invAfterCancel.status, "cancelled", "Status updated to cancelled");
+        console.log("  ✓ 26f. Admin can cancel pending invitation");
+
+        // 26g. Cancelled invitation cannot be accepted or cancelled again
+        const c26gRepeatCancel = await request(`/api/v1/hrms/employees/invitations/${invC21._id}/cancel`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+        });
+        assert.strictEqual(c26gRepeatCancel.status, 400, "Only pending invitations can be cancelled (400)");
+
+        const c26gResendCancelled = await request(`/api/v1/hrms/employees/invitations/${invC21._id}/resend`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+        });
+        assert.strictEqual(c26gResendCancelled.status, 400, "Only pending invitations can be resent (400)");
+        console.log("  ✓ 26g. Cancelled invitation cannot be resent or cancelled again (400)");
+
+        // 26h. Cross-hospital cancel invitation rejected (404)
+        const c26hCrossCancel = await request(`/api/v1/hrms/employees/invitations/${invC20._id}/cancel`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${adminBToken}` },
+        });
+        assert.strictEqual(c26hCrossCancel.status, 404, "Hospital B cannot cancel Hospital A invitation (404)");
+        console.log("  ✓ 26h. Cross-hospital cancel invitation rejected (404)\n");
 
         // ====================================================================
         // D. POSITION SCENARIOS (27 - 31)

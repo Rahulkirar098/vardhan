@@ -766,7 +766,11 @@ const resendInvitation = async ({ invitationId, hospitalId }) => {
         hospitalId,
     }).populate("hospitalId", "name");
 
-    if (!invitation) throw new Error("Invitation not found");
+    if (!invitation) {
+        const err = new Error("Invitation not found");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
 
     if (invitation.status !== "pending") {
         throw new Error("Only pending invitations can be resent.");

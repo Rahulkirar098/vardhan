@@ -32,6 +32,7 @@ import {
   PersonOffRounded,
   PersonRounded,
   PowerSettingsNewRounded,
+  ReplayRounded,
   SearchRounded,
 } from '@mui/icons-material';
 import employeeService from '../../services/employee.service';
@@ -493,7 +494,8 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
 // ─── Main EmployeesPage ───────────────────────────────────────────────────────
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
-  const [invitations, setInvitations] = useState([]);
+  const [rawInvitations, setRawInvitations] = useState([]);
+  const [invitationStatusFilter, setInvitationStatusFilter] = useState('pending');
   const [positions, setPositions] = useState([]);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, pendingInvitations: 0 });
   const [loading, setLoading] = useState(true);
@@ -505,12 +507,18 @@ const EmployeesPage = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
-  // Modals
+  // Modals & Actions
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
   const [detailsEmployee, setDetailsEmployee] = useState(null);
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
+
+  // Invitation Action Targets & Loading
+  const [resendTarget, setResendTarget] = useState(null);
+  const [resending, setResending] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -550,7 +558,7 @@ const EmployeesPage = () => {
       ]);
       setEmployees(empRes?.data?.data?.employees || []);
       const allInvs = invRes?.data?.data || [];
-      setInvitations(allInvs.filter(i => i.status === 'pending'));
+      setRawInvitations(allInvs);
       setStats(statRes?.data?.data || { total: 0, active: 0, inactive: 0, pendingInvitations: 0 });
       setPositions(posRes?.data || []);
     } catch (err) {
@@ -579,6 +587,54 @@ const EmployeesPage = () => {
       showSnack(err?.response?.data?.message || 'Failed to update employee status.', 'error');
     } finally {
       setDeactivating(false);
+    }
+  };
+
+  const getEffectiveStatus = (inv) => {
+    if (!inv) return 'pending';
+    const isExpiredByDate = inv.status === 'pending' && inv.expiresAt && new Date(inv.expiresAt) < new Date();
+    return isExpiredByDate ? 'expired' : inv.status;
+  };
+
+  const filteredInvitations = rawInvitations.filter((inv) => {
+    const effStatus = getEffectiveStatus(inv);
+    if (invitationStatusFilter === 'pending') return effStatus === 'pending';
+    if (invitationStatusFilter === 'expired') return effStatus === 'expired';
+    if (invitationStatusFilter === 'cancelled') return effStatus === 'cancelled';
+    return true; // 'all'
+  });
+
+  const pendingInvitationsCount = rawInvitations.filter(
+    (inv) => getEffectiveStatus(inv) === 'pending'
+  ).length;
+
+  const handleResendConfirm = async () => {
+    if (!resendTarget) return;
+    try {
+      setResending(true);
+      await employeeService.resendInvitation(resendTarget._id);
+      showSnack('Invitation resent successfully.');
+      setResendTarget(null);
+      loadEmployees();
+    } catch (err) {
+      showSnack(err?.response?.data?.message || 'Failed to resend invitation.', 'error');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!cancelTarget) return;
+    try {
+      setCancelling(true);
+      await employeeService.cancelInvitation(cancelTarget._id);
+      showSnack('Invitation cancelled successfully.');
+      setCancelTarget(null);
+      loadEmployees();
+    } catch (err) {
+      showSnack(err?.response?.data?.message || 'Failed to cancel invitation.', 'error');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -688,57 +744,74 @@ const EmployeesPage = () => {
     { key: 'name', label: 'NAME' },
     { key: 'email', label: 'EMAIL' },
     { key: 'position', label: 'POSITION' },
-    { key: 'status', label: 'STATUS' },
-    { key: 'expires', label: 'EXPIRES' }
+    { key: 'invitedDate', label: 'INVITED DATE' },
+    { key: 'expires', label: 'EXPIRES' },
+    { key: 'status', label: 'STATUS' }
   ];
   
   const renderInvitationCell = (inv, column) => {
-    const isExpiredByDate = inv.status === 'pending' && new Date(inv.expiresAt) < new Date();
-    const effectiveStatus = isExpiredByDate ? 'expired' : inv.status;
+    const effectiveStatus = getEffectiveStatus(inv);
+    const fullName = `${inv.firstName} ${inv.lastName || ''}`.trim();
   
     switch (column.key) {
       case 'name':
-        return <Typography variant="body2" fontWeight={600}>{inv.firstName} {inv.lastName}</Typography>;
+        return <Typography variant="body2" fontWeight={600}>{fullName}</Typography>;
       case 'email':
         return <Typography variant="body2">{inv.email}</Typography>;
       case 'position':
         return <Typography variant="body2">{inv.positionId?.name || '—'}</Typography>;
-      case 'status':
-        return <StatusBadge status={effectiveStatus} />;
+      case 'invitedDate':
+        return <Typography variant="body2">{inv.createdAt ? formatDate(inv.createdAt) : '—'}</Typography>;
       case 'expires':
         return <Typography variant="body2">{inv.expiresAt ? formatDate(inv.expiresAt) : '—'}</Typography>;
+      case 'status':
+        return <StatusBadge status={effectiveStatus} />;
       default:
         return null;
     }
   };
   
   const renderInvitationActions = (inv) => {
-    const isExpiredByDate = inv.status === 'pending' && new Date(inv.expiresAt) < new Date();
-    if (inv.status === 'pending' && !isExpiredByDate && hasCreate) {
-      return (
-        <Box display="flex" justifyContent="flex-end">
-          <Tooltip title="Cancel Invitation">
+    const effectiveStatus = getEffectiveStatus(inv);
+    const isPending = effectiveStatus === 'pending';
+    if (!hasCreate) return null;
+
+    const isBusy = (resendTarget?._id === inv._id && resending) || (cancelTarget?._id === inv._id && cancelling);
+
+    return (
+      <Box display="flex" justifyContent="flex-end" gap={0.5}>
+        <Tooltip title={isPending ? "Resend Invitation" : "Only pending invitations can be resent"}>
+          <span>
+            <IconButton
+              size="small"
+              color="primary"
+              disabled={!isPending || isBusy || resending || cancelling}
+              onClick={(e) => {
+                e.stopPropagation();
+                setResendTarget(inv);
+              }}
+            >
+              <ReplayRounded fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title={isPending ? "Cancel Invitation" : "Only pending invitations can be cancelled"}>
+          <span>
             <IconButton
               size="small"
               color="error"
-              onClick={async (e) => {
+              disabled={!isPending || isBusy || resending || cancelling}
+              onClick={(e) => {
                 e.stopPropagation();
-                try {
-                  await employeeService.cancelInvitation(inv._id);
-                  showSnack('Invitation cancelled.');
-                  loadEmployees();
-                } catch (err) {
-                  showSnack(err?.response?.data?.message || 'Failed to cancel.', 'error');
-                }
+                setCancelTarget(inv);
               }}
             >
               <CloseRounded fontSize="small" />
             </IconButton>
-          </Tooltip>
-        </Box>
-      );
-    }
-    return null;
+          </span>
+        </Tooltip>
+      </Box>
+    );
   };
 
   if (error) {
@@ -796,7 +869,7 @@ const EmployeesPage = () => {
         />
         <StatCard
           label="Pending Invitations"
-          value={loading ? '-' : (stats.pendingInvitations ?? invitations.length)}
+          value={loading ? '-' : (stats.pendingInvitations ?? pendingInvitationsCount)}
           icon={MarkEmailReadRounded}
         />
       </Box>
@@ -827,7 +900,7 @@ const EmployeesPage = () => {
               iconPosition="start"
             />
             <Tab
-              label={`Invitations (${invitations.length})`}
+              label={`Pending Invitations (${pendingInvitationsCount})`}
               icon={<EmailRounded fontSize="small" />}
               iconPosition="start"
             />
@@ -922,14 +995,47 @@ const EmployeesPage = () => {
         {/* Invitations Tab Content */}
         {tabIndex === 1 && (
           <>
-            {loading && invitations.length === 0 ? (
+            {/* Status Filter Header for Invitations */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              justifyContent="space-between"
+              sx={{ mb: 3 }}
+            >
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                {invitationStatusFilter === 'pending'
+                  ? `Showing ${filteredInvitations.length} pending employee invitation${filteredInvitations.length !== 1 ? 's' : ''}`
+                  : `Showing ${filteredInvitations.length} invitation${filteredInvitations.length !== 1 ? 's' : ''}`}
+              </Typography>
+
+              <TextField
+                select
+                size="small"
+                label="Invitation Filter"
+                value={invitationStatusFilter}
+                onChange={(e) => setInvitationStatusFilter(e.target.value)}
+                sx={{ minWidth: 170 }}
+              >
+                <MenuItem value="pending">Pending Only</MenuItem>
+                <MenuItem value="expired">Expired Only</MenuItem>
+                <MenuItem value="cancelled">Cancelled Only</MenuItem>
+                <MenuItem value="all">All Invitations</MenuItem>
+              </TextField>
+            </Stack>
+
+            {loading && rawInvitations.length === 0 ? (
               <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
                 <Typography color="text.secondary">Loading invitations...</Typography>
               </Box>
-            ) : invitations.length === 0 ? (
+            ) : filteredInvitations.length === 0 ? (
               <EmptyState
                 title="No invitations found"
-                description="There are currently no pending employee invitations."
+                description={
+                  invitationStatusFilter === 'pending'
+                    ? 'There are currently no pending employee invitations.'
+                    : `No invitations found for status "${invitationStatusFilter}".`
+                }
                 icon={EmailRounded}
                 actionLabel={hasCreate ? 'Invite Employee' : undefined}
                 onAction={hasCreate ? () => setInviteOpen(true) : undefined}
@@ -937,7 +1043,7 @@ const EmployeesPage = () => {
             ) : (
               <DataTable
                 columns={invitationColumns}
-                rows={invitations}
+                rows={filteredInvitations}
                 getRowKey={(inv) => inv._id}
                 renderCell={renderInvitationCell}
                 renderActions={renderInvitationActions}
@@ -983,6 +1089,29 @@ const EmployeesPage = () => {
         destructive={deactivateTarget?.employmentStatus === 'ACTIVE'}
         onConfirm={handleDeactivateConfirm}
         onCancel={() => setDeactivateTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(resendTarget)}
+        title="Resend Invitation?"
+        message={resendTarget ? `Resend invitation to ${resendTarget.email}?` : ''}
+        confirmText="Resend Invitation"
+        cancelText="Cancel"
+        loading={resending}
+        onConfirm={handleResendConfirm}
+        onCancel={() => !resending && setResendTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(cancelTarget)}
+        title="Cancel Invitation?"
+        message={cancelTarget ? `Cancel this invitation? The employee will no longer be able to use the current invitation link.` : ''}
+        confirmText="Cancel Invitation"
+        cancelText="Cancel"
+        loading={cancelling}
+        destructive
+        onConfirm={handleCancelConfirm}
+        onCancel={() => !cancelling && setCancelTarget(null)}
       />
 
       <Snackbar

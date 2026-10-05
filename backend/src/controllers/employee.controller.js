@@ -456,6 +456,21 @@ const resendInvitation = async (req, res) => {
                 message: "Invitation resent successfully",
             });
         } catch (serviceError) {
+            const msg = String(serviceError?.message || "");
+            if (serviceError.code === "NOT_FOUND" || msg === "Invitation not found") {
+                return res.status(404).json({ success: false, message: "Invitation not found" });
+            }
+            if (
+                msg.includes("SMTP configuration is missing") ||
+                msg.includes("SMTP configuration is invalid") ||
+                msg.includes("placeholder values") ||
+                msg.includes("ENOTFOUND")
+            ) {
+                return res.status(503).json({
+                    success: false,
+                    message: "Email service is not configured. Please update backend/.env with valid SMTP credentials.",
+                });
+            }
             return res.status(400).json({ success: false, message: serviceError.message });
         }
     } catch (error) {
