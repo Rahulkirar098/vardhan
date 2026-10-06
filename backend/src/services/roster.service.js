@@ -7,6 +7,24 @@ const Leave = require("../models/leave.model");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+const toCalendarDateStr = (dateInput) => {
+    if (!dateInput) return "";
+    if (typeof dateInput === "string") {
+        const match = dateInput.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+    }
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return "";
+    return d.toISOString().split("T")[0];
+};
+
+const isLeaveConflictOnDate = (assignmentDate, leaveStartDate, leaveEndDate) => {
+    const assStr = toCalendarDateStr(assignmentDate);
+    const startStr = toCalendarDateStr(leaveStartDate);
+    const endStr = toCalendarDateStr(leaveEndDate);
+    return assStr >= startStr && assStr <= endStr;
+};
+
 const getCalendarBounds = (dateInput) => {
     const d = new Date(dateInput);
     if (isNaN(d.getTime())) {
@@ -210,6 +228,75 @@ const updateRosterDraft = async ({ rosterId, hospitalId, userId, title, startDat
         const err = new Error("Start date must be less than or equal to end date.");
         err.code = "VALIDATION_ERROR";
         throw err;
+    }
+
+    // Protect published/existing assignment integrity (R2-05 & R2-06)
+    const existingAssignments = await RosterAssignment.find({ rosterId: roster._id }).lean();
+    if (existingAssignments.length > 0) {
+        // CASE 1 & 4: Check if new date bounds invalidate existing assignment dates
+        if (startDate || endDate) {
+            const rangeStart = new Date(targetStart);
+            const rangeEnd = new Date(targetEnd);
+            rangeStart.setHours(0, 0, 0, 0);
+            rangeEnd.setHours(23, 59, 59, 999);
+
+            const invalidDateAssignments = existingAssignments.filter((a) => {
+                const assDate = new Date(a.date);
+                return assDate < rangeStart || assDate > rangeEnd;
+            });
+
+            if (invalidDateAssignments.length > 0) {
+                const err = new Error(
+                    `Cannot modify roster date range because ${invalidDateAssignments.length} existing assignment(s) would fall outside the new period.`
+                );
+                err.code = "BUSINESS_CONFLICT";
+                throw err;
+            }
+        }
+
+        // CASE 2: Check if shift/column removal invalidates existing shift assignments
+        if (Array.isArray(columns)) {
+            const targetCols = columns;
+            const invalidShiftAssignments = existingAssignments.filter((a) => {
+                if (!a.columnId && !a.shiftTitle) return false;
+                const match = targetCols.some(
+                    (c) =>
+                        (a.columnId && String(c.id) === String(a.columnId)) ||
+                        (a.shiftTitle && c.title?.toLowerCase() === a.shiftTitle?.toLowerCase())
+                );
+                return !match;
+            });
+
+            if (invalidShiftAssignments.length > 0) {
+                const err = new Error(
+                    `Cannot remove shift configuration because ${invalidShiftAssignments.length} existing assignment(s) reference it.`
+                );
+                err.code = "BUSINESS_CONFLICT";
+                throw err;
+            }
+        }
+
+        // CASE 3: Check if duty area removal invalidates existing duty area assignments
+        if (Array.isArray(dutyAreas)) {
+            const targetDAs = dutyAreas;
+            const invalidDutyAssignments = existingAssignments.filter((a) => {
+                if (!a.dutyArea) return false;
+                const match = targetDAs.some(
+                    (da) =>
+                        (da.id && String(da.id) === String(a.dutyArea)) ||
+                        (da.name && da.name?.toLowerCase() === a.dutyArea?.toLowerCase())
+                );
+                return !match;
+            });
+
+            if (invalidDutyAssignments.length > 0) {
+                const err = new Error(
+                    `Cannot remove duty area because ${invalidDutyAssignments.length} existing assignment(s) reference it.`
+                );
+                err.code = "BUSINESS_CONFLICT";
+                throw err;
+            }
+        }
     }
 
     if (title !== undefined) roster.title = String(title).trim();
@@ -585,7 +672,39 @@ const addAssignment = async ({
         }
     }
 
-    // Check if employee already has an assignment for the same roster date
+    // 1. APPROVED Leave Check -> BLOCKS assignment completely (Priority over duplicate shift conflict)
+    const approvedLeaves = await Leave.find({
+        hospitalId,
+        employeeId: employee._id,
+        status: { $in: ["APPROVED", "approved"] },
+    }).lean();
+
+    const approvedLeave = approvedLeaves.find((l) =>
+        isLeaveConflictOnDate(assignmentDate, l.startDate, l.endDate)
+    );
+
+    if (approvedLeave) {
+        const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
+        const fromFmt = approvedLeave.startDate.toISOString().split("T")[0];
+        const toFmt = approvedLeave.endDate.toISOString().split("T")[0];
+        const dateFmt = assignmentDate.toISOString().split("T")[0];
+        const err = new Error(
+            `${empName} has an approved leave from ${fromFmt} to ${toFmt} (${approvedLeave.leaveType}) and cannot be assigned on ${dateFmt}.`
+        );
+        err.code = "LEAVE_CONFLICT";
+        err.details = {
+            employeeId: employee._id,
+            employeeName: empName,
+            leaveId: approvedLeave._id,
+            leaveType: approvedLeave.leaveType,
+            startDate: approvedLeave.startDate,
+            endDate: approvedLeave.endDate,
+            blockedDate: assignmentDate,
+        };
+        throw err;
+    }
+
+    // 2. Check if employee already has an assignment for the same roster date
     const existingAssignment = await RosterAssignment.findOne({
         hospitalId,
         employeeId: employee._id,
@@ -608,36 +727,6 @@ const addAssignment = async ({
             date: existingAssignment.date,
             existingShift: existingAssignment.shiftTitle,
             existingDutyArea: existingAssignment.dutyArea,
-        };
-        throw err;
-    }
-
-    // 1. APPROVED Leave Check -> BLOCKS assignment completely
-    const approvedLeave = await Leave.findOne({
-        hospitalId,
-        employeeId: employee._id,
-        status: { $in: ["APPROVED", "approved"] },
-        startDate: { $lte: dateEnd },
-        endDate: { $gte: dateStart },
-    }).lean();
-
-    if (approvedLeave) {
-        const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
-        const fromFmt = approvedLeave.startDate.toISOString().split("T")[0];
-        const toFmt = approvedLeave.endDate.toISOString().split("T")[0];
-        const dateFmt = assignmentDate.toISOString().split("T")[0];
-        const err = new Error(
-            `${empName} has an approved leave from ${fromFmt} to ${toFmt} (${approvedLeave.leaveType}) and cannot be assigned on ${dateFmt}.`
-        );
-        err.code = "LEAVE_CONFLICT";
-        err.details = {
-            employeeId: employee._id,
-            employeeName: empName,
-            leaveId: approvedLeave._id,
-            leaveType: approvedLeave.leaveType,
-            startDate: approvedLeave.startDate,
-            endDate: approvedLeave.endDate,
-            blockedDate: assignmentDate,
         };
         throw err;
     }
@@ -889,8 +978,8 @@ const addBulkRangeAssignments = async ({
         }
 
         // 1. APPROVED Leave Check -> BLOCKS assignment for date d
-        const approvedOnDate = approvedLeaves.find(
-            (l) => new Date(l.startDate) <= dateEnd && new Date(l.endDate) >= dateStart
+        const approvedOnDate = approvedLeaves.find((l) =>
+            isLeaveConflictOnDate(d, l.startDate, l.endDate)
         );
         if (approvedOnDate) {
             approvedLeaveConflicts.push({
@@ -903,8 +992,8 @@ const addBulkRangeAssignments = async ({
         }
 
         // 2. PENDING Leave Check -> Non-blocking warning
-        const pendingOnDate = pendingLeaves.find(
-            (l) => new Date(l.startDate) <= dateEnd && new Date(l.endDate) >= dateStart
+        const pendingOnDate = pendingLeaves.find((l) =>
+            isLeaveConflictOnDate(d, l.startDate, l.endDate)
         );
         if (pendingOnDate) {
             leaveWarnings.push({
@@ -951,23 +1040,21 @@ const addBulkRangeAssignments = async ({
         createdAssignments.push(newAss);
     }
 
-    // If ALL requested dates were blocked due to approved leave or employment ended, throw 409
+    // If ALL requested dates were blocked due to employment ended, throw 409
     if (createdAssignments.length === 0 && approvedLeaveConflicts.length > 0) {
-        const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
-        const blockedDatesStr = approvedLeaveConflicts.map((c) => c.date).join(", ");
         const hasEmploymentEnded = approvedLeaveConflicts.some(c => c.reason === "EMPLOYMENT_ENDED");
-        const err = new Error(
-            hasEmploymentEnded
-                ? `${empName} is no longer employed on the selected duty dates (${blockedDatesStr}).`
-                : `${empName} has an approved leave covering dates (${blockedDatesStr}) and cannot be assigned to roster.`
-        );
-        err.code = hasEmploymentEnded ? "EMPLOYMENT_ENDED" : "LEAVE_CONFLICT";
-        err.details = {
-            employeeId: employee._id,
-            employeeName: empName,
-            approvedLeaveConflicts,
-        };
-        throw err;
+        if (hasEmploymentEnded) {
+            const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
+            const blockedDatesStr = approvedLeaveConflicts.map((c) => c.date).join(", ");
+            const err = new Error(`${empName} is no longer employed on the selected duty dates (${blockedDatesStr}).`);
+            err.code = "EMPLOYMENT_ENDED";
+            err.details = {
+                employeeId: employee._id,
+                employeeName: empName,
+                approvedLeaveConflicts,
+            };
+            throw err;
+        }
     }
 
     roster.updatedBy = userId;
@@ -1087,13 +1174,15 @@ const updateAssignment = async ({
     const { start: dateStart, end: dateEnd } = getCalendarBounds(targetDate);
 
     // APPROVED Leave Check for updateAssignment
-    const approvedLeaveUpdate = await Leave.findOne({
+    const approvedLeavesUpdate = await Leave.find({
         hospitalId,
         employeeId: targetEmp._id,
         status: { $in: ["APPROVED", "approved"] },
-        startDate: { $lte: dateEnd },
-        endDate: { $gte: dateStart },
     }).lean();
+
+    const approvedLeaveUpdate = approvedLeavesUpdate.find((l) =>
+        isLeaveConflictOnDate(targetDate, l.startDate, l.endDate)
+    );
 
     if (approvedLeaveUpdate) {
         const empName = `${targetEmp.firstName || ""} ${targetEmp.lastName || ""}`.trim() || "Employee";
@@ -1207,11 +1296,33 @@ const deleteAssignment = async ({ assignmentId, hospitalId, userId, scope = "THI
             employeeId: assignment.employeeId,
             shiftTitle: assignment.shiftTitle,
             dutyArea: assignment.dutyArea,
-            date: { $gte: assignment.date },
         };
-        if (roster.endDate) {
-            deleteQuery.date.$lte = new Date(roster.endDate);
+
+        const rosterEndUtc = new Date(roster.endDate);
+        rosterEndUtc.setUTCHours(23, 59, 59, 999);
+        const rosterEndLocal = new Date(roster.endDate);
+        rosterEndLocal.setHours(23, 59, 59, 999);
+        const maxEndBound = new Date(Math.max(rosterEndUtc.getTime(), rosterEndLocal.getTime()));
+
+        if (normalizedScope === "ALL_APPLICABLE_DATES") {
+            const rosterStartUtc = new Date(roster.startDate);
+            rosterStartUtc.setUTCHours(0, 0, 0, 0);
+            const rosterStartLocal = new Date(roster.startDate);
+            rosterStartLocal.setHours(0, 0, 0, 0);
+            const minStartBound = new Date(Math.min(rosterStartUtc.getTime(), rosterStartLocal.getTime()));
+
+            deleteQuery.date = { $gte: minStartBound, $lte: maxEndBound };
+        } else {
+            // FROM_DATE_TO_ROSTER_END
+            const assStartUtc = new Date(assignment.date);
+            assStartUtc.setUTCHours(0, 0, 0, 0);
+            const assStartLocal = new Date(assignment.date);
+            assStartLocal.setHours(0, 0, 0, 0);
+            const minStartBound = new Date(Math.min(assStartUtc.getTime(), assStartLocal.getTime()));
+
+            deleteQuery.date = { $gte: minStartBound, $lte: maxEndBound };
         }
+
         await RosterAssignment.deleteMany(deleteQuery);
     } else {
         await RosterAssignment.deleteOne({ _id: assignment._id, hospitalId });
@@ -1295,6 +1406,89 @@ const getMyRoster = async ({ userId, hospitalId, employeeId: paramEmployeeId, ta
     }));
 };
 
+const checkLeaveConflicts = async ({ hospitalId, employeeId, startDate, endDate }) => {
+    if (!isValidObjectId(employeeId)) {
+        const err = new Error("Invalid employee ID.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const employee = await Employee.findOne({ _id: employeeId, hospitalId }).lean();
+    if (!employee) {
+        const err = new Error("Employee not found.");
+        err.code = "NOT_FOUND";
+        throw err;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        const err = new Error("Invalid start or end date.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    if (start > end) {
+        const err = new Error("Start date must be less than or equal to end date.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const datesList = [];
+    const curr = new Date(start);
+    while (curr <= end) {
+        datesList.push(new Date(curr));
+        curr.setDate(curr.getDate() + 1);
+    }
+
+    const approvedLeaves = await Leave.find({
+        hospitalId,
+        employeeId: employee._id,
+        status: { $in: ["APPROVED", "approved"] },
+    }).lean();
+
+    const conflictingDates = [];
+    const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+    const Hospital = require("../models/hospital.model");
+    const hospitalObj = await Hospital.findById(hospitalId).select("timezone").lean();
+    const tz = hospitalObj?.timezone || "Asia/Kolkata";
+
+    for (const d of datesList) {
+        const dateKey = toCalendarDateStr(d);
+
+        if (!isEmployeeEmployedOnDate(employee, d, tz)) {
+            conflictingDates.push({
+                date: dateKey,
+                leaveType: "EMPLOYMENT_ENDED",
+                reason: "EMPLOYMENT_ENDED",
+                message: `Employee is no longer employed on ${dateKey}.`,
+            });
+            continue;
+        }
+
+        const approvedOnDate = approvedLeaves.find((l) =>
+            isLeaveConflictOnDate(d, l.startDate, l.endDate)
+        );
+
+        if (approvedOnDate) {
+            conflictingDates.push({
+                date: dateKey,
+                leaveType: approvedOnDate.leaveType,
+                reason: approvedOnDate.reason || "Approved Leave",
+                message: `Employee has APPROVED leave on ${dateKey} (${approvedOnDate.leaveType}).`,
+            });
+        }
+    }
+
+    return {
+        hasConflict: conflictingDates.length > 0,
+        count: conflictingDates.length,
+        totalRequestedDates: datesList.length,
+        allDatesBlocked: conflictingDates.length === datesList.length && datesList.length > 0,
+        conflictingDates,
+    };
+};
+
 module.exports = {
     // Rosters
     listRosters,
@@ -1304,6 +1498,7 @@ module.exports = {
     updateRosterDraft,
     deleteRosterDraft,
     publishRoster,
+    isHistoricalRoster,
     // Review Sharing & Feedback
     shareRosterForReview,
     addReviewComment,
@@ -1313,6 +1508,7 @@ module.exports = {
     addBulkRangeAssignments,
     updateAssignment,
     deleteAssignment,
+    checkLeaveConflicts,
     // My Roster
     getMyRoster,
 };

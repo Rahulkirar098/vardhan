@@ -1831,6 +1831,7 @@ async function runTests() {
         console.log("  ✓ C4. Bulk range assignment skips approved leave date (2026-10-05) and returns conflict info");
 
         console.log("\n--- 9B. DEDICATED LEAVE ↔ ROSTER INTEGRATION TESTS ---");
+        await RosterAssignment.deleteMany({ employeeId: nurse1Employee._id });
         // Create an approved leave for nurse1 on 2026-10-07 to 2026-10-08
         await Leave.create({
             hospitalId: hospitalA._id,
@@ -2162,6 +2163,248 @@ async function runTests() {
         });
         assert.strictEqual(dupDelRes.status, 404);
         console.log("  ✓ REM 7. Repeated delete returns 404 Not Found without corrupting data");
+
+        console.log("\n--- 12. TC-R2.1: LEAVE CONFLICT & INCLUSIVE DATE BOUNDARY SUITE ---");
+
+        // Setup Nurse 5 employee
+        const nurse5User = await User.create({
+            name: "Nurse 5",
+            email: `nurse5_${testSuffix}@metroA.com`,
+            password: "password123",
+            role: "employee",
+            hospitalId: hospitalA._id,
+            status: "active",
+            permissions: [PERMISSIONS.ROSTER_VIEW],
+            modules: ["core", "hrms"],
+        });
+
+        const nurse5Employee = await Employee.create({
+            employeeId: `EMP-N5-${testSuffix}`,
+            firstName: "Nurse",
+            lastName: "5",
+            positionId: nursingPosition._id,
+            email: nurse5User.email,
+            hospitalId: hospitalA._id,
+            userId: nurse5User._id,
+            employmentStatus: "ACTIVE",
+            createdBy: tempAdminIdA,
+        });
+
+        // Approved leave for Nurse 5: 2026-10-12 to 2026-10-13
+        const nurse5Leave = await Leave.create({
+            hospitalId: hospitalA._id,
+            employeeId: nurse5Employee._id,
+            leaveType: "CASUAL",
+            startDate: new Date("2026-10-12"),
+            endDate: new Date("2026-10-13"),
+            totalDays: 2,
+            appliedBy: tempAdminIdA,
+            reason: "Vacation",
+            status: "approved",
+            createdBy: tempAdminIdA,
+        });
+
+        // Roster Oct 11 to Oct 20
+        const tcRosterRes = await makeRequest("/api/v1/rosters", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                title: "Nurse 5 Roster Oct 11-20",
+                startDate: "2026-10-11",
+                endDate: "2026-10-20",
+                columns: [{ id: "col-m", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
+                dutyAreas: [{ id: "da-gw", name: "General Ward", order: 1 }],
+            },
+        });
+        assert.strictEqual(tcRosterRes.status, 201);
+        const tcRosterId = tcRosterRes.body.data._id;
+
+        // TC-R2.1-001: Approved leave Oct 12-13 is detected for roster Oct 11-20
+        const checkConflictRes = await makeRequest(`/api/v1/rosters/${tcRosterId}/check-leave-conflicts`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse5Employee._id,
+                startDate: "2026-10-11",
+                endDate: "2026-10-20",
+            },
+        });
+        assert.strictEqual(checkConflictRes.status, 200);
+        assert.strictEqual(checkConflictRes.body.hasConflict, true);
+        assert.strictEqual(checkConflictRes.body.count, 2);
+        console.log("  ✓ TC-R2.1-001. Approved leave Oct 12-13 is detected for roster Oct 11-20");
+
+        const conflictDates = checkConflictRes.body.conflictingDates.map((c) => c.date);
+
+        // TC-R2.1-002: Oct 11 does not conflict
+        assert.strictEqual(conflictDates.includes("2026-10-11"), false);
+        console.log("  ✓ TC-R2.1-002. Oct 11 does not conflict");
+
+        // TC-R2.1-003: Oct 12 conflicts
+        assert.strictEqual(conflictDates.includes("2026-10-12"), true);
+        console.log("  ✓ TC-R2.1-003. Oct 12 conflicts");
+
+        // TC-R2.1-004: Oct 13 conflicts
+        assert.strictEqual(conflictDates.includes("2026-10-13"), true);
+        console.log("  ✓ TC-R2.1-004. Oct 13 conflicts");
+
+        // TC-R2.1-005: Oct 14 does not conflict
+        assert.strictEqual(conflictDates.includes("2026-10-14"), false);
+        console.log("  ✓ TC-R2.1-005. Oct 14 does not conflict");
+
+        // TC-R2.1-013: Approved leave boundary is inclusive
+        assert.strictEqual(conflictDates.length, 2);
+        console.log("  ✓ TC-R2.1-013. Approved leave boundary is inclusive (exactly Oct 12 and Oct 13)");
+
+        // TC-R2.1-014: A leave ending Oct 13 does NOT block Oct 14
+        assert.strictEqual(conflictDates.includes("2026-10-14"), false);
+        console.log("  ✓ TC-R2.1-014. A leave ending Oct 13 does NOT block Oct 14");
+
+        // TC-R2.1-007: Cancel after leave confirmation creates zero assignments
+        const fetchZeroAssRes = await makeRequest(`/api/v1/rosters/${tcRosterId}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(fetchZeroAssRes.body.data.assignments.length, 0);
+        console.log("  ✓ TC-R2.1-007. Cancel after leave confirmation creates zero assignments");
+
+        // TC-R2.1-006: Continue assignment creates assignments for Oct 11 and Oct 14-20 but not Oct 12-13
+        const bulkAssignRes = await makeRequest(`/api/v1/rosters/${tcRosterId}/assignments/bulk-range`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse5Employee._id,
+                startDate: "2026-10-11",
+                endDate: "2026-10-20",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "16:00",
+                dutyArea: "General Ward",
+                overwriteConflicts: false,
+            },
+        });
+        assert.strictEqual(bulkAssignRes.status, 201);
+        assert.strictEqual(bulkAssignRes.body.data.length, 8); // 10 days - 2 leave days = 8 assignments
+
+        const assignedDates = bulkAssignRes.body.data.map((a) => new Date(a.date).toISOString().split("T")[0]);
+        assert.strictEqual(assignedDates.includes("2026-10-11"), true);
+        assert.strictEqual(assignedDates.includes("2026-10-12"), false);
+        assert.strictEqual(assignedDates.includes("2026-10-13"), false);
+        assert.strictEqual(assignedDates.includes("2026-10-14"), true);
+        assert.strictEqual(assignedDates.includes("2026-10-15"), true);
+        assert.strictEqual(assignedDates.includes("2026-10-16"), true);
+        assert.strictEqual(assignedDates.includes("2026-10-17"), true);
+        assert.strictEqual(assignedDates.includes("2026-10-18"), true);
+        assert.strictEqual(assignedDates.includes("2026-10-19"), true);
+        assert.strictEqual(assignedDates.includes("2026-10-20"), true);
+        console.log("  ✓ TC-R2.1-006. Continue assignment creates assignments for Oct 11 and Oct 14-20 but not Oct 12-13");
+
+        // TC-R2.1-008: Remove "this date only" removes only the selected date
+        const oct11Ass = bulkAssignRes.body.data.find((a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-11");
+        const removeThisDateRes = await makeRequest(`/api/v1/rosters/${tcRosterId}/assignments/${oct11Ass._id}?scope=THIS_DATE`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(removeThisDateRes.status, 200);
+
+        const afterSingleDeleteRoster = await makeRequest(`/api/v1/rosters/${tcRosterId}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        const remainingAssDatesSingle = afterSingleDeleteRoster.body.data.assignments.map((a) => new Date(a.date).toISOString().split("T")[0]);
+        assert.strictEqual(remainingAssDatesSingle.includes("2026-10-11"), false);
+        assert.strictEqual(remainingAssDatesSingle.includes("2026-10-14"), true);
+        console.log("  ✓ TC-R2.1-008. Remove 'this date only' removes only the selected date");
+
+        // Re-assign Oct 11 to test full removal
+        await makeRequest(`/api/v1/rosters/${tcRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse5Employee._id,
+                date: "2026-10-11",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "16:00",
+                dutyArea: "General Ward",
+            },
+        });
+
+        // Create boundary test assignments outside roster period
+        const outsideBeforeRosterRes = await makeRequest("/api/v1/rosters", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                title: "Outside Roster Before",
+                startDate: "2026-10-01",
+                endDate: "2026-10-10",
+                columns: [{ id: "col-m", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
+                dutyAreas: [{ id: "da-gw", name: "General Ward", order: 1 }],
+            },
+        });
+        const outsideBeforeRosterId = outsideBeforeRosterRes.body.data._id;
+        const oct10OutsideAss = await RosterAssignment.create({
+            rosterId: outsideBeforeRosterId,
+            hospitalId: hospitalA._id,
+            employeeId: nurse5Employee._id,
+            date: new Date("2026-10-10"),
+            shiftTitle: "Morning",
+            startTime: "08:00",
+            endTime: "16:00",
+            dutyArea: "General Ward",
+            createdBy: tempAdminIdA,
+        });
+
+        const outsideAfterRosterRes = await makeRequest("/api/v1/rosters", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                title: "Outside Roster After",
+                startDate: "2026-10-21",
+                endDate: "2026-10-30",
+                columns: [{ id: "col-m", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
+                dutyAreas: [{ id: "da-gw", name: "General Ward", order: 1 }],
+            },
+        });
+        const outsideAfterRosterId = outsideAfterRosterRes.body.data._id;
+        const oct21OutsideAss = await RosterAssignment.create({
+            rosterId: outsideAfterRosterId,
+            hospitalId: hospitalA._id,
+            employeeId: nurse5Employee._id,
+            date: new Date("2026-10-21"),
+            shiftTitle: "Morning",
+            startTime: "08:00",
+            endTime: "16:00",
+            dutyArea: "General Ward",
+            createdBy: tempAdminIdA,
+        });
+
+        // Get an active assignment from tcRosterId to pass to deleteAssignment
+        const tcRosterAssList = await RosterAssignment.find({ rosterId: tcRosterId }).lean();
+        const targetAssToDelete = tcRosterAssList[0];
+
+        // TC-R2.1-009: Remove "all applicable dates" removes Oct 11 through Oct 20 inclusive
+        const removeAllRes = await makeRequest(`/api/v1/rosters/${tcRosterId}/assignments/${targetAssToDelete._id}?scope=ALL_APPLICABLE_DATES`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        assert.strictEqual(removeAllRes.status, 200);
+        console.log("  ✓ TC-R2.1-009. Remove 'all applicable dates' removes Oct 11 through Oct 20 inclusive");
+
+        // TC-R2.1-010: Explicitly verify Oct 20 is removed
+        const tcRosterAfterDeleteAll = await RosterAssignment.find({ rosterId: tcRosterId }).lean();
+        assert.strictEqual(tcRosterAfterDeleteAll.length, 0);
+        console.log("  ✓ TC-R2.1-010. Explicitly verify Oct 20 is removed");
+
+        // TC-R2.1-011: Explicitly verify no date after roster.endDate is touched
+        const oct21Check = await RosterAssignment.findById(oct21OutsideAss._id).lean();
+        assert.notStrictEqual(oct21Check, null);
+        console.log("  ✓ TC-R2.1-011. Explicitly verify no date after roster.endDate is touched");
+
+        // TC-R2.1-012: Explicitly verify no date before roster.startDate is touched
+        const oct10Check = await RosterAssignment.findById(oct10OutsideAss._id).lean();
+        assert.notStrictEqual(oct10Check, null);
+        console.log("  ✓ TC-R2.1-012. Explicitly verify no date before roster.startDate is touched");
 
         console.log("\n=======================================================");
         console.log("=== ALL ROSTER & EXTENSION TESTS PASSED 100% ===");

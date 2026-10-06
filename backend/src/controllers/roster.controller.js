@@ -584,6 +584,41 @@ const getMyRoster = async (req, res) => {
     }
 };
 
+const checkLeaveConflicts = async (req, res) => {
+    try {
+        const hospitalId = await getHospitalIdFromContext(req.user);
+        if (!hospitalId) {
+            return res.status(404).json({ success: false, message: "Hospital not found" });
+        }
+
+        const { employeeId, startDate, endDate, date } = req.body;
+        const sDate = startDate || date;
+        const eDate = endDate || sDate;
+
+        const result = await rosterService.checkLeaveConflicts({
+            hospitalId,
+            employeeId,
+            startDate: sDate,
+            endDate: eDate,
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: result,
+            ...result,
+        });
+    } catch (error) {
+        if (error.code === "VALIDATION_ERROR") {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+        if (error.code === "NOT_FOUND") {
+            return res.status(404).json({ success: false, message: error.message });
+        }
+        console.error("Check Leave Conflicts Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 module.exports = {
     // Rosters
     listRosters,
@@ -602,6 +637,7 @@ module.exports = {
     addBulkRangeAssignments,
     updateAssignment,
     deleteAssignment,
+    checkLeaveConflicts,
     // My Roster
     getMyRoster,
 };

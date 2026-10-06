@@ -121,6 +121,16 @@ export default function RosterManagementPage() {
   // Selected Active Roster (for Matrix View & Editing)
   const [activeRoster, setActiveRoster] = useState(null);
   const [activeRosterDate, setActiveRosterDate] = useState('');
+  const [userSelectedRosterId, setUserSelectedRosterId] = useState(null);
+
+  // Leave Conflict Confirmation Dialog
+  const [leaveConflictPrompt, setLeaveConflictPrompt] = useState({
+    open: false,
+    employeeName: '',
+    conflictingDates: [],
+    allDatesBlocked: false,
+    onContinue: null,
+  });
 
   // Roster Builder Modal (Create/Edit)
   const [rosterModalOpen, setRosterModalOpen] = useState(false);
@@ -231,21 +241,21 @@ export default function RosterManagementPage() {
       const list = res.data || [];
       setRosters(list);
 
-      // Auto-select first current active published roster (endDate >= today) for matrix view if none selected
+      // Auto-select first current active published roster (endDate >= today) for matrix view ONLY if none selected by user
       const activePublished = list.filter((r) => {
         if (r.status !== 'PUBLISHED') return false;
         const endIso = r.endDate ? getTodayDateStr(r.endDate) : '';
         return endIso >= getTodayDateStr();
       });
-      if (activePublished.length > 0 && (!activeRoster || activeRoster.isHistorical)) {
-        handleOpenRosterDetails(activePublished[0]._id);
+      if (activePublished.length > 0 && !activeRoster && !userSelectedRosterId) {
+        handleOpenRosterDetails(activePublished[0]._id, false);
       }
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to load rosters', 'error');
     } finally {
       setLoading(false);
     }
-  }, [activeRoster]);
+  }, [activeRoster, userSelectedRosterId]);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -315,9 +325,12 @@ export default function RosterManagementPage() {
   }, [canViewWorkforce, fetchRosters, fetchHistory, fetchTemplates, fetchActiveEmployees, fetchMyRoster]);
 
   // Load Single Roster Details
-  const handleOpenRosterDetails = async (rosterId) => {
+  const handleOpenRosterDetails = async (rosterId, isExplicit = true) => {
     try {
       setLoading(true);
+      if (isExplicit) {
+        setUserSelectedRosterId(rosterId);
+      }
       const res = await rosterService.getRoster(rosterId);
       const rosterData = res.data;
       setActiveRoster(rosterData);
@@ -604,79 +617,138 @@ export default function RosterManagementPage() {
     setAssignmentModalOpen(true);
   };
 
-  const handleSaveAssignment = async (overwriteConflicts = false) => {
+  const handleSaveAssignment = async (overwriteConflicts = false, skipLeaveCheck = false) => {
     if (!assignmentForm.employeeId) {
       showToast('Please select an employee', 'warning');
       return;
     }
 
-    const saveProc = async () => {
-      try {
-        setLoading(true);
+    const proceedWithSave = async () => {
+      const saveProc = async () => {
+        try {
+          setLoading(true);
 
-        if (assignmentTarget.editingAssignment) {
-          // Edit existing single date assignment -> marks isOverride: true
-          await rosterService.updateAssignment(
-            activeRoster._id,
-            assignmentTarget.editingAssignment._id,
-            {
+          if (assignmentTarget.editingAssignment) {
+            // Edit existing single date assignment -> marks isOverride: true
+            await rosterService.updateAssignment(
+              activeRoster._id,
+              assignmentTarget.editingAssignment._id,
+              {
+                employeeId: assignmentForm.employeeId,
+                startTime: assignmentForm.startTime,
+                endTime: assignmentForm.endTime,
+                notes: assignmentForm.notes,
+              }
+            );
+            showToast('Assignment updated successfully (single date override)', 'success');
+          } else if (assignmentMode === 'range') {
+            // Bulk Range Assignment
+            const payload = {
               employeeId: assignmentForm.employeeId,
+              startDate: rangeForm.startDate,
+              endDate: rangeForm.endDate,
+              columnId: assignmentForm.columnId,
+              shiftTitle: assignmentForm.shiftTitle,
               startTime: assignmentForm.startTime,
               endTime: assignmentForm.endTime,
-              notes: assignmentForm.notes,
-            }
-          );
-          showToast('Assignment updated successfully (single date override)', 'success');
-        } else if (assignmentMode === 'range') {
-          // Bulk Range Assignment
-          const payload = {
-            employeeId: assignmentForm.employeeId,
-            startDate: rangeForm.startDate,
-            endDate: rangeForm.endDate,
-            columnId: assignmentForm.columnId,
-            shiftTitle: assignmentForm.shiftTitle,
-            startTime: assignmentForm.startTime,
-            endTime: assignmentForm.endTime,
-            dutyArea: assignmentForm.dutyArea,
-            notes: assignmentForm.notes || null,
-            overwriteConflicts,
-          };
-          const res = await rosterService.addBulkRangeAssignment(activeRoster._id, payload);
-          showToast(`Range duty assigned successfully (${res.data?.count || 'multiple'} days)`, 'success');
-        } else {
-          // Single Date Assignment
-          await rosterService.addAssignment(activeRoster._id, assignmentForm);
-          showToast('Staff assigned to duty shift', 'success');
-        }
+              dutyArea: assignmentForm.dutyArea,
+              notes: assignmentForm.notes || null,
+              overwriteConflicts,
+            };
+            const res = await rosterService.addBulkRangeAssignment(activeRoster._id, payload);
+            showToast(`Range duty assigned successfully (${res.data?.count || 'multiple'} days)`, 'success');
+          } else {
+            // Single Date Assignment
+            await rosterService.addAssignment(activeRoster._id, assignmentForm);
+            showToast('Staff assigned to duty shift', 'success');
+          }
 
-        setAssignmentModalOpen(false);
-        setConflictPrompt({ open: false, message: '', existingAssignments: [] });
-        handleOpenRosterDetails(activeRoster._id);
-        fetchRosters();
-      } catch (err) {
-        if (err.response?.status === 409 && err.response?.data?.existingAssignments) {
-          // Open conflict handling confirmation
-          setConflictPrompt({
-            open: true,
-            message: err.response.data.message || 'Some dates in this range already have assignments.',
-            existingAssignments: err.response.data.existingAssignments,
-          });
-        } else {
-          showToast(err.response?.data?.message || 'Failed to save duty assignment', 'error');
+          setAssignmentModalOpen(false);
+          setConflictPrompt({ open: false, message: '', existingAssignments: [] });
+          handleOpenRosterDetails(activeRoster._id);
+          fetchRosters();
+        } catch (err) {
+          if (err.response?.status === 409 && err.response?.data?.existingAssignments) {
+            // Open conflict handling confirmation
+            setConflictPrompt({
+              open: true,
+              message: err.response.data.message || 'Some dates in this range already have assignments.',
+              existingAssignments: err.response.data.existingAssignments,
+            });
+          } else if (err.response?.status === 409 && (err.response?.data?.code === 'LEAVE_CONFLICT' || err.response?.data?.details?.approvedLeaveConflicts)) {
+            const details = err.response.data.details || {};
+            const blockedDates = details.approvedLeaveConflicts || (details.blockedDate ? [{ date: details.blockedDate, leaveType: details.leaveType }] : []);
+            const selectedEmp = activeEmployees.find((e) => String(e._id) === String(assignmentForm.employeeId));
+            setAssignmentModalOpen(false);
+            setLeaveConflictPrompt({
+              open: true,
+              employeeName: selectedEmp ? `${selectedEmp.firstName} ${selectedEmp.lastName}` : (details.employeeName || 'This employee'),
+              conflictingDates: blockedDates,
+              allDatesBlocked: true,
+              onContinue: null,
+            });
+          } else {
+            showToast(err.response?.data?.message || 'Failed to save duty assignment', 'error');
+          }
+        } finally {
+          setLoading(false);
         }
-      } finally {
-        setLoading(false);
+      };
+
+      if (activeRoster && activeRoster.status === 'PUBLISHED') {
+        setPublishEditConfirm({
+          open: true,
+          pendingAction: saveProc,
+        });
+      } else {
+        await saveProc();
       }
     };
 
-    if (activeRoster && activeRoster.status === 'PUBLISHED') {
-      setPublishEditConfirm({
-        open: true,
-        pendingAction: saveProc,
-      });
-    } else {
-      await saveProc();
+    // Pre-check leave conflicts using authoritative backend check
+    if (!skipLeaveCheck) {
+      try {
+        setLoading(true);
+        const isRange = assignmentMode === 'range' && !assignmentTarget.editingAssignment;
+        const rawStart = isRange ? rangeForm.startDate : (assignmentForm.date || activeRoster?.startDate);
+        const rawEnd = isRange ? rangeForm.endDate : (assignmentForm.date || activeRoster?.startDate);
+        const startDate = rawStart ? getTodayDateStr(rawStart) : '';
+        const endDate = rawEnd ? getTodayDateStr(rawEnd) : '';
+
+        if (startDate && endDate) {
+          const checkRes = await rosterService.checkLeaveConflicts(activeRoster._id, {
+            employeeId: assignmentForm.employeeId,
+            startDate,
+            endDate,
+          });
+
+          const hasConflict = checkRes?.hasConflict || checkRes?.data?.hasConflict;
+          if (hasConflict) {
+            const conflictingDates = checkRes?.conflictingDates || checkRes?.data?.conflictingDates || [];
+            const allDatesBlocked = checkRes?.allDatesBlocked ?? checkRes?.data?.allDatesBlocked ?? false;
+            const selectedEmp = activeEmployees.find((e) => String(e._id) === String(assignmentForm.employeeId));
+            const empName = selectedEmp ? `${selectedEmp.firstName} ${selectedEmp.lastName}` : (checkRes?.employeeName || 'This employee');
+
+            setAssignmentModalOpen(false);
+            setLeaveConflictPrompt({
+              open: true,
+              employeeName: empName,
+              conflictingDates,
+              allDatesBlocked,
+              onContinue: () => handleSaveAssignment(overwriteConflicts, true),
+            });
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (checkErr) {
+        console.warn('Pre-assignment leave check warning:', checkErr);
+      } finally {
+        setLoading(false);
+      }
     }
+
+    await proceedWithSave();
   };
 
   const handleOpenRemoveDutyModal = (ass) => {
@@ -700,7 +772,7 @@ export default function RosterManagementPage() {
         setLoading(true);
         await rosterService.removeAssignment(activeRoster._id, assignmentId, scope);
         showToast(
-          scope === 'FROM_DATE_TO_ROSTER_END'
+          scope === 'FROM_DATE_TO_ROSTER_END' || scope === 'ALL_APPLICABLE_DATES'
             ? 'Duty removed for all applicable dates'
             : 'Duty assignment removed',
           'success'
@@ -2251,6 +2323,105 @@ export default function RosterManagementPage() {
           </DialogActions>
         </Dialog>
 
+        {/* LEAVE CONFLICT CONFIRMATION MODAL */}
+        <Dialog
+          open={leaveConflictPrompt.open}
+          onClose={() => {
+            setLeaveConflictPrompt((prev) => ({ ...prev, open: false, onContinue: null }));
+            setAssignmentModalOpen(true);
+          }}
+          maxWidth="xs"
+          fullWidth
+          slotProps={{
+            backdrop: {
+              onClick: () => {
+                setLeaveConflictPrompt((prev) => ({ ...prev, open: false, onContinue: null }));
+                setAssignmentModalOpen(true);
+              },
+            },
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setLeaveConflictPrompt((prev) => ({ ...prev, open: false, onContinue: null }));
+              setAssignmentModalOpen(true);
+            }
+          }}
+          PaperProps={{
+            sx: { borderRadius: '16px', p: 1 }
+          }}
+        >
+          <DialogTitle sx={{ fontWeight: 800, color: '#92400E', display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '8px',
+                backgroundColor: '#FEF3C7',
+                color: '#D97706',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <WarningAmberRounded fontSize="small" />
+            </Box>
+            Leave Conflict
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <Typography variant="body2" sx={{ color: '#1E293B', fontWeight: 600 }}>
+                {leaveConflictPrompt.employeeName} is on leave on the following {leaveConflictPrompt.conflictingDates.length === 1 ? 'date' : 'dates'}:
+              </Typography>
+
+              <Paper variant="outlined" sx={{ p: 2, maxHeight: 180, overflowY: 'auto', bgcolor: '#FFFBEB', borderColor: '#FDE68A' }}>
+                <Stack spacing={0.75}>
+                  {leaveConflictPrompt.conflictingDates?.map((item, i) => {
+                    const dateStr = typeof item === 'string' ? item : item.date;
+                    const formatted = dateStr ? new Date(dateStr + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : dateStr;
+                    return (
+                      <Typography key={i} variant="body2" sx={{ color: '#92400E', fontWeight: 600 }}>
+                        • {formatted} {item.leaveType ? `(${item.leaveType})` : ''}
+                      </Typography>
+                    );
+                  })}
+                </Stack>
+              </Paper>
+
+              <Typography variant="body2" sx={{ color: '#475569' }}>
+                {leaveConflictPrompt.allDatesBlocked
+                  ? 'All requested dates are approved leave dates. No duty assignments will be created.'
+                  : `Duty will not be assigned on ${leaveConflictPrompt.conflictingDates.length === 1 ? 'the leave date' : 'these leave dates'}. The duty will be assigned on the remaining available dates.`}
+              </Typography>
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={() => {
+                setLeaveConflictPrompt((prev) => ({ ...prev, open: false, onContinue: null }));
+                setAssignmentModalOpen(true);
+              }}
+              sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => {
+                const action = leaveConflictPrompt.onContinue;
+                setLeaveConflictPrompt((prev) => ({ ...prev, open: false, onContinue: null }));
+                if (action) action();
+              }}
+              sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 700, px: 2.5 }}
+            >
+              Continue
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* ─── MODAL 4: SHARE ROSTER FOR REVIEW ─── */}
         <Modal
           open={shareModalOpen}
@@ -2466,7 +2637,7 @@ export default function RosterManagementPage() {
                     }
                   />
                   <FormControlLabel
-                    value="FROM_DATE_TO_ROSTER_END"
+                    value="ALL_APPLICABLE_DATES"
                     control={<Radio size="small" color="primary" />}
                     label={
                       <Typography variant="body2" sx={{ fontWeight: 500, color: '#0F172A' }}>

@@ -112,6 +112,11 @@ export const rosterService = {
     return response.data;
   },
 
+  checkLeaveConflicts: async (rosterId, data) => {
+    const response = await client.post(`/v1/rosters/${rosterId}/check-leave-conflicts`, data);
+    return response.data;
+  },
+
   // --- My Roster ---
   getMyRoster: async (tabOrParams) => {
     const params = typeof tabOrParams === 'string' ? { tab: tabOrParams } : tabOrParams;

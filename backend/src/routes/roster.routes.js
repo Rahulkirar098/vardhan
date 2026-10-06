@@ -107,6 +107,12 @@ router.put(
     rosterController.updateAssignment
 );
 
+router.post(
+    "/:id/check-leave-conflicts",
+    authorizePermission(PERMISSIONS.ROSTER_MANAGE),
+    rosterController.checkLeaveConflicts
+);
+
 router.delete(
     "/:id/assignments/:assignmentId",
     authorizePermission(PERMISSIONS.ROSTER_MANAGE),
