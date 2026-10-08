@@ -31,6 +31,7 @@ import accessManagementService from '../../services/accessManagement.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
@@ -689,14 +690,7 @@ const AccessManagementPage = () => {
       </Box>
 
       {/* Summary Cards */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-          gap: 3,
-          mb: 4,
-        }}
-      >
+      <KPIGrid sx={{ mb: 4 }}>
         <KPICard
           title="Total Workforce Users"
           value={stats.total}
@@ -712,7 +706,7 @@ const AccessManagementPage = () => {
           value={stats.active}
           icon={CheckCircleOutlineRounded}
         />
-      </Box>
+      </KPIGrid>
 
       {/* Main Container Card */}
       <GlassCard sx={{ p: { xs: 2, sm: 3 } }}>

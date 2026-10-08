@@ -41,6 +41,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
@@ -853,14 +854,7 @@ const EmployeesPage = () => {
       </Box>
 
       {/* Summary StatCards */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-          gap: 3,
-          mb: 4,
-        }}
-      >
+      <KPIGrid sx={{ mb: 4 }}>
         <KPICard
           title="Total Employees"
           value={stats.total}
@@ -881,7 +875,7 @@ const EmployeesPage = () => {
           value={stats.pendingInvitations ?? pendingInvitationsCount}
           icon={MarkEmailReadRounded}
         />
-      </Box>
+      </KPIGrid>
 
       {/* Main Container Card */}
       <GlassCard sx={{ p: { xs: 2, sm: 3 } }}>

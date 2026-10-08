@@ -7,6 +7,7 @@ import auth from '../../services/auth.service';
 import GlassCard from '../../components/GlassCard';
 import SectionCard from '../../components/SectionCard';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import InfoRow from '../../components/InfoRow';
@@ -374,13 +375,7 @@ const Hospital = () => {
             </GlassCard>
           ) : (
             <>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-                  gap: 2.5,
-                }}
-              >
+              <KPIGrid>
                 <KPICard
                   title="Workforce"
                   value={stats.employeeCount ?? stats.hrCount ?? 0}
@@ -391,7 +386,7 @@ const Hospital = () => {
                   value={formatStatus(hospital.status)}
                   footer={<StatusBadge status={hospital.status} />}
                 />
-              </Box>
+              </KPIGrid>
 
               <SectionCard
                 title="Hospital Information"

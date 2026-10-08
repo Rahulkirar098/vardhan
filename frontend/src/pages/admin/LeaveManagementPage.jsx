@@ -40,6 +40,7 @@ import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
@@ -1081,40 +1082,32 @@ const LeaveManagementPage = () => {
 
         {/* Exactly 4 Summary Metric Cards */}
         {canViewManagement && (
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <KPICard
-                title="Pending Requests"
-                value={stats.pending}
-                icon={HourglassEmptyRounded}
-                color="#D97706"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <KPICard
-                title="Approved Leaves"
-                value={stats.approved}
-                icon={CheckCircleOutlineRounded}
-                color="#16A34A"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <KPICard
-                title="Rejected Leaves"
-                value={stats.rejected}
-                icon={HighlightOffRounded}
-                color="#DC2626"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <KPICard
-                title="Currently On Leave"
-                value={stats.currentlyOnLeave}
-                icon={PersonOutlineRounded}
-                color="#0284C7"
-              />
-            </Grid>
-          </Grid>
+          <KPIGrid>
+            <KPICard
+              title="Pending Requests"
+              value={stats.pending}
+              icon={HourglassEmptyRounded}
+              color="#D97706"
+            />
+            <KPICard
+              title="Approved Leaves"
+              value={stats.approved}
+              icon={CheckCircleOutlineRounded}
+              color="#16A34A"
+            />
+            <KPICard
+              title="Rejected Leaves"
+              value={stats.rejected}
+              icon={HighlightOffRounded}
+              color="#DC2626"
+            />
+            <KPICard
+              title="Currently On Leave"
+              value={stats.currentlyOnLeave}
+              icon={PersonOutlineRounded}
+              color="#0284C7"
+            />
+          </KPIGrid>
         )}
 
         {/* Main Content Area */}

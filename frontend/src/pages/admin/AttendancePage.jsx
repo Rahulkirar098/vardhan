@@ -35,6 +35,7 @@ import {
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import DataTable from '../../components/DataTable';
@@ -880,14 +881,7 @@ const AttendancePage = () => {
         </Paper>
 
         {/* ─── 2. SUMMARY KPI CARDS ────────────────────────────────────────── */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
-            gap: 2,
-            mb: 3.5,
-          }}
-        >
+        <KPIGrid sx={{ mb: 3.5 }}>
           <KPICard
             title="Present"
             value={stats.present}
@@ -916,7 +910,7 @@ const AttendancePage = () => {
             color="#0284C7"
             description="Total attended"
           />
-        </Box>
+        </KPIGrid>
 
         {/* ─── 3. TABS (MY ATTENDANCE vs REGULARIZATION vs WORKFORCE) ──────── */}
         <Box sx={{ borderBottom: '1px solid #E2E8F0', mb: 3 }}>

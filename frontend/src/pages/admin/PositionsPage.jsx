@@ -5,6 +5,7 @@ import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
@@ -493,7 +494,7 @@ const PositionsPage = () => {
                 />
             </Box>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 4 }}>
+            <KPIGrid sx={{ mb: 4 }}>
                 <KPICard 
                     title="Total Positions"
                     value={stats.total}
@@ -509,7 +510,7 @@ const PositionsPage = () => {
                     value={stats.inactive}
                     icon={BusinessCenterRounded}
                 />
-            </Box>
+            </KPIGrid>
 
             <GlassCard>
                 {positions.length === 0 ? (

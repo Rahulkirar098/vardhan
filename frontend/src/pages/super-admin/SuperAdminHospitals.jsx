@@ -7,6 +7,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import DataTable from '../../components/DataTable';
@@ -151,13 +152,7 @@ const Hospitals = () => {
           subtitle="Monitor hospitals across the platform."
         />
 
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
-            gap: 2.5,
-          }}
-        >
+        <KPIGrid>
           <KPICard title="Total Hospitals" value={hospitals.length} footer={<StatusBadge status="active" label="Registered" />} />
           <KPICard title="Active Hospitals" value={activeCount} footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />} />
           <KPICard
@@ -165,7 +160,7 @@ const Hospitals = () => {
             value={Math.max(hospitals.length - activeCount, 0)}
             footer={<StatusBadge status={hospitals.length - activeCount ? 'pending' : 'inactive'} label={hospitals.length - activeCount ? 'Needs attention' : 'None'} />}
           />
-        </Box>
+        </KPIGrid>
 
         <Box sx={{ maxWidth: 420 }}>
           <TextField

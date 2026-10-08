@@ -29,6 +29,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
@@ -442,32 +443,26 @@ const StructurePage = () => {
         {error && <ErrorState message={error} onRetry={fetchFloors} />}
 
         {/* Summary Stats */}
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
-            <KPICard
-              title="Total Floors"
-              value={stats.totalFloors}
-              hint="Active hospital levels"
-              icon={LayersRounded}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <KPICard
-              title="Total Rooms"
-              value={stats.totalRooms}
-              hint="Generic spaces across floors"
-              icon={MeetingRoomRounded}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <KPICard
-              title="Active Rooms"
-              value={stats.activeRooms}
-              hint="Currently operational rooms"
-              icon={MeetingRoomRounded}
-            />
-          </Grid>
-        </Grid>
+        <KPIGrid>
+          <KPICard
+            title="Total Floors"
+            value={stats.totalFloors}
+            hint="Active hospital levels"
+            icon={LayersRounded}
+          />
+          <KPICard
+            title="Total Rooms"
+            value={stats.totalRooms}
+            hint="Generic spaces across floors"
+            icon={MeetingRoomRounded}
+          />
+          <KPICard
+            title="Active Rooms"
+            value={stats.activeRooms}
+            hint="Currently operational rooms"
+            icon={MeetingRoomRounded}
+          />
+        </KPIGrid>
 
         {/* Floor List */}
         <Box>

@@ -35,6 +35,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import ErrorState from '../../components/ErrorState';
 import MainContentLoader from '../../components/common/MainContentLoader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import KPICardWithAction from '../../components/common/KPICardWithAction';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
@@ -984,17 +985,7 @@ const AdminDashboard = () => {
               </Grid>
 
               {/* Employee Summary Cards */}
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(2, 1fr)',
-                    md: 'repeat(4, 1fr)',
-                  },
-                  gap: 2.5,
-                }}
-              >
+              <KPIGrid>
                 <KPICardWithAction
                   title="My Leaves"
                   value={myLeaves.length}
@@ -1027,7 +1018,7 @@ const AdminDashboard = () => {
                   actionLabel="View Profile →"
                   onAction={() => navigate('/profile')}
                 />
-              </Box>
+              </KPIGrid>
 
               {/* Permission-Based Operational Graphs */}
               <OperationalGraphsSection
@@ -1202,18 +1193,8 @@ const AdminDashboard = () => {
           <MainContentLoader />
         ) : (
           <>
-            {/* Hospital Summary KPI Grid (3 cols x 2 rows = 6 cards) */}
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: 'repeat(2, 1fr)',
-                  md: 'repeat(3, 1fr)',
-                },
-                gap: 2.5,
-              }}
-            >
+            {/* Hospital Summary KPI Grid */}
+            <KPIGrid>
               <KPICard
                 title="Total Workforce"
                 value={stats.totalEmployees || stats.activeEmployees || stats.hrCount || 0}
@@ -1259,7 +1240,7 @@ const AdminDashboard = () => {
                 footer={<Chip label={stats.pendingRegularizations > 0 ? 'Action Required' : 'None'} size="small" sx={{ fontSize: '0.7rem', fontWeight: 700, height: 22, borderRadius: '6px', backgroundColor: stats.pendingRegularizations > 0 ? '#FEF3C7' : '#F1F5F9', color: stats.pendingRegularizations > 0 ? '#D97706' : '#475569' }} />}
                 icon={AccessTimeRounded}
               />
-            </Box>
+            </KPIGrid>
 
             {/* Permission-Based Operational Graphs */}
             <OperationalGraphsSection

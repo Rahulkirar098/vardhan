@@ -20,6 +20,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
+import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
@@ -101,31 +102,25 @@ const SuperAdminDashboard = () => {
         ) : (
           <>
             {/* KPI Summary Grid */}
-            <Grid container spacing={2.5}>
-              <Grid item xs={12} sm={6} lg={4}>
-                <KPICard
-                  title="Total Hospitals"
-                  value={hospitals.length}
-                  footer={<StatusBadge status="active" label="Registered Platform Hospitals" />}
-                />
-              </Grid>
+            <KPIGrid>
+              <KPICard
+                title="Total Hospitals"
+                value={hospitals.length}
+                footer={<StatusBadge status="active" label="Registered Platform Hospitals" />}
+              />
 
-              <Grid item xs={12} sm={6} lg={4}>
-                <KPICard
-                  title="Active Hospitals"
-                  value={activeCount}
-                  footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />}
-                />
-              </Grid>
+              <KPICard
+                title="Active Hospitals"
+                value={activeCount}
+                footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />}
+              />
 
-              <Grid item xs={12} sm={6} lg={4}>
-                <KPICard
-                  title="Pending Setup"
-                  value={pendingSetupCount}
-                  footer={<StatusBadge status={pendingSetupCount ? 'pending' : 'inactive'} label={pendingSetupCount ? 'Needs Setup' : 'All Set'} />}
-                />
-              </Grid>
-            </Grid>
+              <KPICard
+                title="Pending Setup"
+                value={pendingSetupCount}
+                footer={<StatusBadge status={pendingSetupCount ? 'pending' : 'inactive'} label={pendingSetupCount ? 'Needs Setup' : 'All Set'} />}
+              />
+            </KPIGrid>
 
             {/* Registered Hospitals Recent Overview */}
             <GlassCard sx={{ p: 3 }}>
