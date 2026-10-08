@@ -13,7 +13,7 @@ import InfoRow from '../../components/InfoRow';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/MainContentLoader';
+import MainContentLoader from '../../components/common/MainContentLoader';
 import Modal from '../../components/Modal';
 
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';

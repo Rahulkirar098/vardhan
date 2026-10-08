@@ -70,7 +70,7 @@ import {
 } from '@mui/icons-material';
 
 import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/MainContentLoader';
+import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';

@@ -5,7 +5,7 @@ import { LocalHospitalRounded, SearchRounded, VisibilityRounded } from '@mui/ico
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/MainContentLoader';
+import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';

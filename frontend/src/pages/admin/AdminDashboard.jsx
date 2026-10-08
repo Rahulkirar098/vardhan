@@ -34,7 +34,7 @@ import employeeService from '../../services/employee.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import ErrorState from '../../components/ErrorState';
-import MainContentLoader from '../../components/MainContentLoader';
+import MainContentLoader from '../../components/common/MainContentLoader';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 import { formatTime12h as format12h, getTodayDateStr } from '../../utils/dateUtils';
 

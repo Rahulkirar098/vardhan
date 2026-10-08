@@ -29,7 +29,7 @@ import {
 } from '@mui/icons-material';
 import accessManagementService from '../../services/accessManagement.service';
 import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/MainContentLoader';
+import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';

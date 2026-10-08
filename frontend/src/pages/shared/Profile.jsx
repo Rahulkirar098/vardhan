@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/MainContentLoader';
+import MainContentLoader from '../../components/common/MainContentLoader';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
