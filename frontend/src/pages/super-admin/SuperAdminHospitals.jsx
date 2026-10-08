@@ -153,12 +153,12 @@ const Hospitals = () => {
         />
 
         <KPIGrid>
-          <KPICard title="Total Hospitals" value={hospitals.length} footer={<StatusBadge status="active" label="Registered" />} />
-          <KPICard title="Active Hospitals" value={activeCount} footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />} />
+          <KPICard title="Total Hospitals" value={hospitals.length} footer="Registered facilities" />
+          <KPICard title="Active Hospitals" value={activeCount} footer="Currently operational" />
           <KPICard
             title="Pending Setup"
             value={Math.max(hospitals.length - activeCount, 0)}
-            footer={<StatusBadge status={hospitals.length - activeCount ? 'pending' : 'inactive'} label={hospitals.length - activeCount ? 'Needs attention' : 'None'} />}
+            footer="Awaiting completion"
           />
         </KPIGrid>
 

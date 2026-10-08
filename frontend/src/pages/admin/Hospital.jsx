@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, MenuItem, Stack, TextField } from '@mui/material';
-import { AddBusinessRounded, EditRounded, LocalHospitalRounded } from '@mui/icons-material';
+import { AddBusinessRounded, EditRounded, LocalHospitalRounded, GroupRounded, CheckCircleOutlineRounded } from '@mui/icons-material';
 import hospitalService from '../../services/hospital.service';
 import auth from '../../services/auth.service';
 import GlassCard from '../../components/GlassCard';
@@ -379,12 +379,14 @@ const Hospital = () => {
                 <KPICard
                   title="Workforce"
                   value={stats.employeeCount ?? stats.hrCount ?? 0}
-                  footer={<StatusBadge status="active" label="Active" />}
+                  footer="All employees"
+                  icon={GroupRounded}
                 />
                 <KPICard
                   title="Status"
                   value={formatStatus(hospital.status)}
-                  footer={<StatusBadge status={hospital.status} />}
+                  footer="Currently operational"
+                  icon={CheckCircleOutlineRounded}
                 />
               </KPIGrid>
 

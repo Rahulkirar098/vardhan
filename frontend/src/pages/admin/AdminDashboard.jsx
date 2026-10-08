@@ -1198,14 +1198,14 @@ const AdminDashboard = () => {
               <KPICard
                 title="Total Workforce"
                 value={stats.totalEmployees || stats.activeEmployees || stats.hrCount || 0}
-                footer={<Chip label="Hospital Employees" size="small" sx={{ fontSize: '0.7rem', fontWeight: 700, height: 22, borderRadius: '6px', backgroundColor: '#DCFCE7', color: '#15803D' }} />}
+                footer="All employees"
                 icon={GroupRounded}
               />
 
               <KPICard
                 title="Active Staff"
                 value={stats.activeEmployees || stats.totalEmployees || 0}
-                footer={<Chip label="Active Status" size="small" sx={{ fontSize: '0.7rem', fontWeight: 700, height: 22, borderRadius: '6px', backgroundColor: '#DCFCE7', color: '#15803D' }} />}
+                footer="Currently employed"
                 icon={BadgeRounded}
               />
 
