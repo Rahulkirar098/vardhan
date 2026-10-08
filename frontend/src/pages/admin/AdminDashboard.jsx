@@ -6,6 +6,7 @@ import {
   Button,
   Chip,
   Grid,
+  IconButton,
   Snackbar,
   Stack,
   Typography,
@@ -23,6 +24,7 @@ import {
   LocalHospitalRounded,
   LoginRounded,
   LogoutRounded,
+  MoreHorizRounded,
   ScheduleRounded,
   VpnKeyRounded,
 } from '@mui/icons-material';
@@ -362,11 +364,31 @@ const LeaveOverviewGraph = ({ data }) => {
   const pending = data?.pending || 0;
   const approved = data?.approved || 0;
   const rejected = data?.rejected || 0;
-  const total = data?.total || (pending + approved + rejected);
+  const currentMonthYear = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
-  const pendingPct = total > 0 ? Math.round((pending / total) * 100) : 0;
-  const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
-  const rejectedPct = total > 0 ? Math.round((rejected / total) * 100) : 0;
+  const items = [
+    {
+      label: 'Pending requests',
+      tag: 'Pending',
+      count: pending,
+      bg: '#FEF3C7',
+      color: '#92400E',
+    },
+    {
+      label: 'Approved requests',
+      tag: 'Approved',
+      count: approved,
+      bg: '#DCFCE7',
+      color: '#15803D',
+    },
+    {
+      label: 'Rejected requests',
+      tag: 'Rejected',
+      count: rejected,
+      bg: '#FEE2E2',
+      color: '#B91C1C',
+    },
+  ];
 
   return (
     <Box
@@ -383,53 +405,61 @@ const LeaveOverviewGraph = ({ data }) => {
       }}
     >
       <Box>
-        <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
-          LEAVE OVERVIEW
-        </Typography>
-        <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.2 }}>
-          Summary of leave requests & status
-        </Typography>
-
-        <Box sx={{ my: 3 }}>
-          <Stack direction="row" sx={{ height: 10, width: '100%', borderRadius: 5, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
-            {pendingPct > 0 && <Box sx={{ width: `${pendingPct}%`, backgroundColor: '#F59E0B' }} />}
-            {approvedPct > 0 && <Box sx={{ width: `${approvedPct}%`, backgroundColor: '#10B981' }} />}
-            {rejectedPct > 0 && <Box sx={{ width: `${rejectedPct}%`, backgroundColor: '#EF4444' }} />}
-          </Stack>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box>
+            <Typography sx={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', letterSpacing: '0.02em' }}>
+              LEAVE OVERVIEW
+            </Typography>
+            <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.3, fontWeight: 500 }}>
+              {currentMonthYear}
+            </Typography>
+          </Box>
+          <IconButton size="small" sx={{ color: '#64748B', p: 0.5 }}>
+            <MoreHorizRounded />
+          </IconButton>
         </Box>
 
-        <Grid container spacing={2}>
-          <Grid xs={12} sm={4}>
-            <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#D97706', textTransform: 'uppercase' }}>
-                Pending
+        <Stack spacing={1.5} sx={{ mt: 1 }}>
+          {items.map((item) => (
+            <Box
+              key={item.label}
+              sx={{
+                p: 1.5,
+                px: 2,
+                borderRadius: '12px',
+                backgroundColor: '#F8FAFC',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#0F172A' }}>
+                {item.label}
               </Typography>
-              <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#92400E', mt: 0.5 }}>
-                {pending}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 0.35,
+                    borderRadius: '12px',
+                    backgroundColor: item.bg,
+                    color: item.color,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {item.tag}
+                </Box>
+                <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', minWidth: 16, textAlign: 'right' }}>
+                  {item.count}
+                </Typography>
+              </Box>
             </Box>
-          </Grid>
-          <Grid xs={12} sm={4}>
-            <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#16A34A', textTransform: 'uppercase' }}>
-                Approved
-              </Typography>
-              <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#166534', mt: 0.5 }}>
-                {approved}
-              </Typography>
-            </Box>
-          </Grid>
-          <Grid xs={12} sm={4}>
-            <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase' }}>
-                Rejected
-              </Typography>
-              <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#991B1B', mt: 0.5 }}>
-                {rejected}
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
+          ))}
+        </Stack>
       </Box>
     </Box>
   );
@@ -475,26 +505,23 @@ const OperationalGraphsSection = ({
         display: 'grid',
         gridTemplateColumns: {
           xs: '1fr',
-          md: visibleCards.length === 1 ? '1fr' : 'repeat(2, 1fr)',
+          sm: visibleCards.length === 2 ? 'repeat(2, 1fr)' : '1fr',
+          md: `repeat(${Math.min(visibleCards.length, 3)}, minmax(0, 1fr))`,
         },
         gap: 2.5,
       }}
     >
-      {visibleCards.map((card, idx) => {
-        const isFullWidthRow = visibleCards.length === 3 && idx === 2;
-        return (
-          <Box
-            key={card.key}
-            sx={{
-              gridColumn: isFullWidthRow ? { xs: 'span 1', md: 'span 2' } : 'span 1',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            {card.component}
-          </Box>
-        );
-      })}
+      {visibleCards.map((card) => (
+        <Box
+          key={card.key}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {card.component}
+        </Box>
+      ))}
     </Box>
   );
 };
@@ -1041,45 +1068,6 @@ const AdminDashboard = () => {
                 }}
               />
 
-              {/* Quick Actions Card - Outlined Secondary Style */}
-              <Box sx={{ p: 3, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                <Stack spacing={2}>
-                  <Box>
-                    <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
-                      Quick Actions
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.2 }}>
-                      Fast access to your self-service tools.
-                    </Typography>
-                  </Box>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ flexWrap: 'wrap' }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<EventNoteRounded />}
-                      onClick={() => navigate('/leaves')}
-                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                    >
-                      Apply Leave
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<ScheduleRounded />}
-                      onClick={() => navigate('/roster')}
-                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                    >
-                      My Shift Roster
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<AccessTimeRounded />}
-                      onClick={() => navigate('/attendance')}
-                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                    >
-                      My Attendance
-                    </Button>
-                  </Stack>
-                </Stack>
-              </Box>
             </>
           )}
 
@@ -1361,72 +1349,6 @@ const AdminDashboard = () => {
                   }
                 />
               )}
-            </Box>
-
-            {/* Quick Actions Card - All Neutral Outline Style */}
-            <Box sx={{ p: 3, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-              <Stack spacing={2}>
-                <Box>
-                  <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
-                    Quick Actions
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.2 }}>
-                    Jump straight into managing your hospital modules.
-                  </Typography>
-                </Box>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ flexWrap: 'wrap' }}>
-                  {canManageRoster && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<ScheduleRounded />}
-                      onClick={() => navigate('/roster')}
-                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                    >
-                      Manage Roster
-                    </Button>
-                  )}
-                  {canViewAttendance && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<AccessTimeRounded />}
-                      onClick={() => navigate('/attendance')}
-                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                    >
-                      Attendance
-                    </Button>
-                  )}
-                  {canViewLeaves && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<EventNoteRounded />}
-                      onClick={() => navigate('/leaves')}
-                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                    >
-                      Leave Management
-                    </Button>
-                  )}
-                  {canAccessManagement && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<VpnKeyRounded />}
-                      onClick={() => navigate('/access-management')}
-                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                    >
-                      Access Management
-                    </Button>
-                  )}
-                  {canViewStructure && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<LayersRounded />}
-                      onClick={() => navigate('/structure')}
-                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                    >
-                      Hospital Structure
-                    </Button>
-                  )}
-                </Stack>
-              </Stack>
             </Box>
           </>
         )}
