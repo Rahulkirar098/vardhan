@@ -41,7 +41,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
-import StatCard from '../../components/StatCard';
+import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
@@ -861,24 +861,24 @@ const EmployeesPage = () => {
           mb: 4,
         }}
       >
-        <StatCard
-          label="Total Employees"
-          value={loading ? '-' : stats.total}
+        <KPICard
+          title="Total Employees"
+          value={stats.total}
           icon={GroupsRounded}
         />
-        <StatCard
-          label="Active"
-          value={loading ? '-' : stats.active}
+        <KPICard
+          title="Active"
+          value={stats.active}
           icon={CheckCircleOutlineRounded}
         />
-        <StatCard
-          label="Inactive"
-          value={loading ? '-' : stats.inactive}
+        <KPICard
+          title="Inactive"
+          value={stats.inactive}
           icon={PersonOffRounded}
         />
-        <StatCard
-          label="Pending Invitations"
-          value={loading ? '-' : (stats.pendingInvitations ?? pendingInvitationsCount)}
+        <KPICard
+          title="Pending Invitations"
+          value={stats.pendingInvitations ?? pendingInvitationsCount}
           icon={MarkEmailReadRounded}
         />
       </Box>

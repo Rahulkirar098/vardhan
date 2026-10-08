@@ -5,7 +5,7 @@ import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
-import StatCard from '../../components/StatCard';
+import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
@@ -494,19 +494,19 @@ const PositionsPage = () => {
             </Box>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 4 }}>
-                <StatCard 
-                    label="Total Positions"
-                    value={loading ? "-" : stats.total}
+                <KPICard 
+                    title="Total Positions"
+                    value={stats.total}
                     icon={BusinessCenterRounded}
                 />
-                <StatCard 
-                    label="Active"
-                    value={loading ? "-" : stats.active}
+                <KPICard 
+                    title="Active"
+                    value={stats.active}
                     icon={BusinessCenterRounded}
                 />
-                <StatCard 
-                    label="Inactive"
-                    value={loading ? "-" : stats.inactive}
+                <KPICard 
+                    title="Inactive"
+                    value={stats.inactive}
                     icon={BusinessCenterRounded}
                 />
             </Box>

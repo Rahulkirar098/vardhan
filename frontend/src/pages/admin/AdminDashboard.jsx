@@ -35,6 +35,8 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import ErrorState from '../../components/ErrorState';
 import MainContentLoader from '../../components/common/MainContentLoader';
+import KPICard from '../../components/common/KPICard';
+import KPICardWithAction from '../../components/common/KPICardWithAction';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 import { formatTime12h as format12h, getTodayDateStr } from '../../utils/dateUtils';
 
@@ -91,111 +93,7 @@ const getUserRoleFromStorage = () => {
   return 'employee';
 };
 
-// ─── POLISHED SAAS DASHBOARD CARD ──────────────────────────────────────────────
-const DashboardMetricCard = ({ label, value, hint, badgeLabel, badgeStatus, icon: Icon, actionButton }) => {
-  return (
-    <Box
-      sx={{
-        p: 2.5,
-        height: '100%',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '14px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        transition: 'all 150ms ease',
-        '&:hover': {
-          borderColor: '#CBD5E1',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        },
-      }}
-    >
-      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }} spacing={1}>
-        <Typography
-          sx={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            color: '#64748B',
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-            lineHeight: 1.3,
-          }}
-        >
-          {label}
-        </Typography>
-        {Icon && (
-          <Box
-            sx={{
-              width: 34,
-              height: 34,
-              borderRadius: '8px',
-              backgroundColor: '#F8FAFC',
-              border: '1px solid #F1F5F9',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#475569',
-              flexShrink: 0,
-            }}
-          >
-            <Icon sx={{ fontSize: 18 }} />
-          </Box>
-        )}
-      </Stack>
 
-      <Box sx={{ my: 1.5 }}>
-        <Typography
-          sx={{
-            fontSize: '1.875rem',
-            fontWeight: 800,
-            color: '#0F172A',
-            letterSpacing: '-0.03em',
-            lineHeight: 1.1,
-          }}
-        >
-          {value}
-        </Typography>
-      </Box>
-
-      <Box sx={{ pt: 0.5 }}>
-        {hint && (
-          <Typography sx={{ fontSize: '0.775rem', color: '#64748B', fontWeight: 500 }}>
-            {hint}
-          </Typography>
-        )}
-
-        {badgeLabel && (
-          <Chip
-            label={badgeLabel}
-            size="small"
-            sx={{
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              height: 22,
-              borderRadius: '6px',
-              backgroundColor:
-                badgeStatus === 'active'
-                  ? '#DCFCE7'
-                  : badgeStatus === 'pending'
-                  ? '#FEF3C7'
-                  : '#F1F5F9',
-              color:
-                badgeStatus === 'active'
-                  ? '#15803D'
-                  : badgeStatus === 'pending'
-                  ? '#D97706'
-                  : '#475569',
-            }}
-          />
-        )}
-
-        {actionButton && <Box sx={{ mt: 1 }}>{actionButton}</Box>}
-      </Box>
-    </Box>
-  );
-};
 
 // ─── OPERATIONAL SECTION CARD ──────────────────────────────────────────────────
 const SectionCard = ({ title, subtitle, value, valueLabel, icon: Icon, action }) => {
@@ -571,26 +469,32 @@ const OperationalGraphsSection = ({
   if (visibleCards.length === 0) return null;
 
   return (
-    <Grid container spacing={2.5}>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: {
+          xs: '1fr',
+          md: visibleCards.length === 1 ? '1fr' : 'repeat(2, 1fr)',
+        },
+        gap: 2.5,
+      }}
+    >
       {visibleCards.map((card, idx) => {
-        let xsWidth = 12;
-        let mdWidth = 6;
-
-        if (visibleCards.length === 1) {
-          xsWidth = 12;
-          mdWidth = 12;
-        } else if (visibleCards.length === 3 && idx === 2) {
-          xsWidth = 12;
-          mdWidth = 12;
-        }
-
+        const isFullWidthRow = visibleCards.length === 3 && idx === 2;
         return (
-          <Grid xs={xsWidth} md={mdWidth} key={card.key}>
+          <Box
+            key={card.key}
+            sx={{
+              gridColumn: isFullWidthRow ? { xs: 'span 1', md: 'span 2' } : 'span 1',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             {card.component}
-          </Grid>
+          </Box>
         );
       })}
-    </Grid>
+    </Box>
   );
 };
 
@@ -1080,60 +984,50 @@ const AdminDashboard = () => {
               </Grid>
 
               {/* Employee Summary Cards */}
-              <Grid container spacing={2.5}>
-                <Grid xs={12} sm={6} lg={3}>
-                  <DashboardMetricCard
-                    label="My Leaves"
-                    value={myLeaves.length}
-                    hint={pendingLeavesCount ? `${pendingLeavesCount} request pending approval` : 'No pending requests'}
-                    icon={EventNoteRounded}
-                    actionButton={
-                      <Button size="small" onClick={() => navigate('/leaves')} sx={{ color: '#0F172A', textTransform: 'none', fontWeight: 600, p: 0 }}>
-                        Apply Leave →
-                      </Button>
-                    }
-                  />
-                </Grid>
-                <Grid xs={12} sm={6} lg={3}>
-                  <DashboardMetricCard
-                    label="My Attendance"
-                    value={todayAttendanceState ? 'Active' : 'Recorded'}
-                    hint="View past attendance history"
-                    icon={AccessTimeRounded}
-                    actionButton={
-                      <Button size="small" onClick={() => navigate('/attendance')} sx={{ color: '#0F172A', textTransform: 'none', fontWeight: 600, p: 0 }}>
-                        Attendance History →
-                      </Button>
-                    }
-                  />
-                </Grid>
-                <Grid xs={12} sm={6} lg={3}>
-                  <DashboardMetricCard
-                    label="Regularization"
-                    value={pendingRegsCount}
-                    hint={pendingRegsCount ? 'Pending manager action' : 'No pending requests'}
-                    icon={FingerprintRounded}
-                    actionButton={
-                      <Button size="small" onClick={() => navigate('/attendance')} sx={{ color: '#0F172A', textTransform: 'none', fontWeight: 600, p: 0 }}>
-                        Request Regularization →
-                      </Button>
-                    }
-                  />
-                </Grid>
-                <Grid xs={12} sm={6} lg={3}>
-                  <DashboardMetricCard
-                    label="My Profile"
-                    value="Account"
-                    hint="Personal details & credentials"
-                    icon={BadgeRounded}
-                    actionButton={
-                      <Button size="small" onClick={() => navigate('/profile')} sx={{ color: '#0F172A', textTransform: 'none', fontWeight: 600, p: 0 }}>
-                        View Profile →
-                      </Button>
-                    }
-                  />
-                </Grid>
-              </Grid>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(2, 1fr)',
+                    md: 'repeat(4, 1fr)',
+                  },
+                  gap: 2.5,
+                }}
+              >
+                <KPICardWithAction
+                  title="My Leaves"
+                  value={myLeaves.length}
+                  description={pendingLeavesCount ? `${pendingLeavesCount} request pending approval` : 'No pending requests'}
+                  icon={EventNoteRounded}
+                  actionLabel="Apply Leave →"
+                  onAction={() => navigate('/leaves')}
+                />
+                <KPICardWithAction
+                  title="My Attendance"
+                  value={todayAttendanceState ? 'Active' : 'Recorded'}
+                  description="View past attendance history"
+                  icon={AccessTimeRounded}
+                  actionLabel="Attendance History →"
+                  onAction={() => navigate('/attendance')}
+                />
+                <KPICardWithAction
+                  title="Regularization"
+                  value={pendingRegsCount}
+                  description={pendingRegsCount ? 'Pending manager action' : 'No pending requests'}
+                  icon={FingerprintRounded}
+                  actionLabel="Request Regularization →"
+                  onAction={() => navigate('/attendance')}
+                />
+                <KPICardWithAction
+                  title="My Profile"
+                  value="Account"
+                  description="Personal details & credentials"
+                  icon={BadgeRounded}
+                  actionLabel="View Profile →"
+                  onAction={() => navigate('/profile')}
+                />
+              </Box>
 
               {/* Permission-Based Operational Graphs */}
               <OperationalGraphsSection
@@ -1308,76 +1202,64 @@ const AdminDashboard = () => {
           <MainContentLoader />
         ) : (
           <>
-            {/* Hospital Summary KPI Grid (3 cols x 2 rows) */}
-            <Grid container spacing={2.5}>
-              <Grid xs={12} sm={6} md={4}>
-                <DashboardMetricCard
-                  label="Total Workforce"
-                  value={stats.totalEmployees || stats.activeEmployees || stats.hrCount || 0}
-                  badgeLabel="Hospital Employees"
-                  badgeStatus="active"
-                  icon={GroupRounded}
-                />
-              </Grid>
+            {/* Hospital Summary KPI Grid (3 cols x 2 rows = 6 cards) */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, 1fr)',
+                  md: 'repeat(3, 1fr)',
+                },
+                gap: 2.5,
+              }}
+            >
+              <KPICard
+                title="Total Workforce"
+                value={stats.totalEmployees || stats.activeEmployees || stats.hrCount || 0}
+                footer={<Chip label="Hospital Employees" size="small" sx={{ fontSize: '0.7rem', fontWeight: 700, height: 22, borderRadius: '6px', backgroundColor: '#DCFCE7', color: '#15803D' }} />}
+                icon={GroupRounded}
+              />
 
-              <Grid xs={12} sm={6} md={4}>
-                <DashboardMetricCard
-                  label="Active Staff"
-                  value={stats.activeEmployees || stats.totalEmployees || 0}
-                  badgeLabel="Active Status"
-                  badgeStatus="active"
-                  icon={BadgeRounded}
-                />
-              </Grid>
+              <KPICard
+                title="Active Staff"
+                value={stats.activeEmployees || stats.totalEmployees || 0}
+                footer={<Chip label="Active Status" size="small" sx={{ fontSize: '0.7rem', fontWeight: 700, height: 22, borderRadius: '6px', backgroundColor: '#DCFCE7', color: '#15803D' }} />}
+                icon={BadgeRounded}
+              />
 
-              <Grid xs={12} sm={6} md={4}>
-                <DashboardMetricCard
-                  label="Today's Attendance"
-                  value={stats.todayAttendance}
-                  hint="Present / Checked in staff today"
-                  icon={AccessTimeRounded}
-                  actionButton={
-                    <Button size="small" onClick={() => navigate('/attendance')} sx={{ color: '#0F172A', textTransform: 'none', fontWeight: 600, p: 0 }}>
-                      View Attendance →
-                    </Button>
-                  }
-                />
-              </Grid>
+              <KPICardWithAction
+                title="Today's Attendance"
+                value={stats.todayAttendance}
+                description="Present / Checked in staff today"
+                icon={AccessTimeRounded}
+                actionLabel="View Attendance →"
+                onAction={() => navigate('/attendance')}
+              />
 
-              <Grid xs={12} sm={6} md={4}>
-                <DashboardMetricCard
-                  label="Pending Leave Requests"
-                  value={stats.pendingLeaves}
-                  badgeLabel={stats.pendingLeaves > 0 ? 'Action Required' : 'Up to date'}
-                  badgeStatus={stats.pendingLeaves > 0 ? 'pending' : 'inactive'}
-                  icon={EventNoteRounded}
-                />
-              </Grid>
+              <KPICard
+                title="Pending Leave Requests"
+                value={stats.pendingLeaves}
+                footer={<Chip label={stats.pendingLeaves > 0 ? 'Action Required' : 'Up to date'} size="small" sx={{ fontSize: '0.7rem', fontWeight: 700, height: 22, borderRadius: '6px', backgroundColor: stats.pendingLeaves > 0 ? '#FEF3C7' : '#F1F5F9', color: stats.pendingLeaves > 0 ? '#D97706' : '#475569' }} />}
+                icon={EventNoteRounded}
+              />
 
-              <Grid xs={12} sm={6} md={4}>
-                <DashboardMetricCard
-                  label="Today's Scheduled Staff"
-                  value={stats.todayRosterAssigned}
-                  hint="Assigned in published roster today"
-                  icon={ScheduleRounded}
-                  actionButton={
-                    <Button size="small" onClick={() => navigate('/roster')} sx={{ color: '#0F172A', textTransform: 'none', fontWeight: 600, p: 0 }}>
-                      Manage Roster →
-                    </Button>
-                  }
-                />
-              </Grid>
+              <KPICardWithAction
+                title="Today's Scheduled Staff"
+                value={stats.todayRosterAssigned}
+                description="Assigned in published roster today"
+                icon={ScheduleRounded}
+                actionLabel="Manage Roster →"
+                onAction={() => navigate('/roster')}
+              />
 
-              <Grid xs={12} sm={6} md={4}>
-                <DashboardMetricCard
-                  label="Pending Regularization"
-                  value={stats.pendingRegularizations}
-                  badgeLabel={stats.pendingRegularizations > 0 ? 'Action Required' : 'None'}
-                  badgeStatus={stats.pendingRegularizations > 0 ? 'pending' : 'inactive'}
-                  icon={AccessTimeRounded}
-                />
-              </Grid>
-            </Grid>
+              <KPICard
+                title="Pending Regularization"
+                value={stats.pendingRegularizations}
+                footer={<Chip label={stats.pendingRegularizations > 0 ? 'Action Required' : 'None'} size="small" sx={{ fontSize: '0.7rem', fontWeight: 700, height: 22, borderRadius: '6px', backgroundColor: stats.pendingRegularizations > 0 ? '#FEF3C7' : '#F1F5F9', color: stats.pendingRegularizations > 0 ? '#D97706' : '#475569' }} />}
+                icon={AccessTimeRounded}
+              />
+            </Box>
 
             {/* Permission-Based Operational Graphs */}
             <OperationalGraphsSection
@@ -1401,103 +1283,104 @@ const AdminDashboard = () => {
             />
 
             {/* Operational Section Cards (2 Columns) */}
-            <Grid container spacing={2.5}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  md: 'repeat(2, 1fr)',
+                },
+                gap: 2.5,
+              }}
+            >
               {/* ATTENDANCE OVERVIEW */}
               {canViewAttendance && (
-                <Grid xs={12} md={6}>
-                  <SectionCard
-                    title="Attendance Today"
-                    subtitle="Track staff check-ins, check-outs, and active duty status."
-                    value={stats.todayAttendance}
-                    valueLabel="Staff checked in for today's shift"
-                    icon={AccessTimeRounded}
-                    action={
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        endIcon={<ArrowForwardRounded fontSize="small" />}
-                        onClick={() => navigate('/attendance')}
-                        sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                      >
-                        Open Attendance Log
-                      </Button>
-                    }
-                  />
-                </Grid>
+                <SectionCard
+                  title="Attendance Today"
+                  subtitle="Track staff check-ins, check-outs, and active duty status."
+                  value={stats.todayAttendance}
+                  valueLabel="Staff checked in for today's shift"
+                  icon={AccessTimeRounded}
+                  action={
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      endIcon={<ArrowForwardRounded fontSize="small" />}
+                      onClick={() => navigate('/attendance')}
+                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Open Attendance Log
+                    </Button>
+                  }
+                />
               )}
 
               {/* LEAVE MANAGEMENT OVERVIEW */}
               {canViewLeaves && (
-                <Grid xs={12} md={6}>
-                  <SectionCard
-                    title="Leave Management"
-                    subtitle="Review and approve staff leave requests."
-                    value={stats.pendingLeaves}
-                    valueLabel={stats.pendingLeaves === 1 ? '1 request needs review' : `${stats.pendingLeaves} requests need review`}
-                    icon={EventNoteRounded}
-                    action={
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        endIcon={<ArrowForwardRounded fontSize="small" />}
-                        onClick={() => navigate('/leaves')}
-                        sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                      >
-                        Review Leave Requests
-                      </Button>
-                    }
-                  />
-                </Grid>
+                <SectionCard
+                  title="Leave Management"
+                  subtitle="Review and approve staff leave requests."
+                  value={stats.pendingLeaves}
+                  valueLabel={stats.pendingLeaves === 1 ? '1 request needs review' : `${stats.pendingLeaves} requests need review`}
+                  icon={EventNoteRounded}
+                  action={
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      endIcon={<ArrowForwardRounded fontSize="small" />}
+                      onClick={() => navigate('/leaves')}
+                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Review Leave Requests
+                    </Button>
+                  }
+                />
               )}
 
               {/* ROSTER OPERATIONAL OVERVIEW */}
               {canViewRoster && (
-                <Grid xs={12} md={6}>
-                  <SectionCard
-                    title="Roster & Duty Planning"
-                    subtitle="Manage shift templates, published schedules, and duty assignments."
-                    value={stats.todayRosterAssigned}
-                    valueLabel="Staff assigned on published roster today"
-                    icon={ScheduleRounded}
-                    action={
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        endIcon={<ArrowForwardRounded fontSize="small" />}
-                        onClick={() => navigate('/roster')}
-                        sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                      >
-                        Manage Work Roster
-                      </Button>
-                    }
-                  />
-                </Grid>
+                <SectionCard
+                  title="Roster & Duty Planning"
+                  subtitle="Manage shift templates, published schedules, and duty assignments."
+                  value={stats.todayRosterAssigned}
+                  valueLabel="Staff assigned on published roster today"
+                  icon={ScheduleRounded}
+                  action={
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      endIcon={<ArrowForwardRounded fontSize="small" />}
+                      onClick={() => navigate('/roster')}
+                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Manage Work Roster
+                    </Button>
+                  }
+                />
               )}
 
               {/* REGULARIZATION OVERVIEW */}
               {canViewAttendance && (
-                <Grid xs={12} md={6}>
-                  <SectionCard
-                    title="Attendance Regularization"
-                    subtitle="Approve or decline attendance correction requests."
-                    value={stats.pendingRegularizations}
-                    valueLabel="Pending regularization requests"
-                    icon={AccessTimeRounded}
-                    action={
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        endIcon={<ArrowForwardRounded fontSize="small" />}
-                        onClick={() => navigate('/attendance')}
-                        sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-                      >
-                        Review Regularizations
-                      </Button>
-                    }
-                  />
-                </Grid>
+                <SectionCard
+                  title="Attendance Regularization"
+                  subtitle="Approve or decline attendance correction requests."
+                  value={stats.pendingRegularizations}
+                  valueLabel="Pending regularization requests"
+                  icon={AccessTimeRounded}
+                  action={
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      endIcon={<ArrowForwardRounded fontSize="small" />}
+                      onClick={() => navigate('/attendance')}
+                      sx={{ borderColor: '#E5E7EB', color: '#0F172A', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Review Regularizations
+                    </Button>
+                  }
+                />
               )}
-            </Grid>
+            </Box>
 
             {/* Quick Actions Card - All Neutral Outline Style */}
             <Box sx={{ p: 3, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>

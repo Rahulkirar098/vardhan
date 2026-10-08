@@ -40,7 +40,7 @@ import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
-import StatCard from '../../components/StatCard';
+import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
@@ -1083,39 +1083,35 @@ const LeaveManagementPage = () => {
         {canViewManagement && (
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                label="Pending Requests"
+              <KPICard
+                title="Pending Requests"
                 value={stats.pending}
                 icon={HourglassEmptyRounded}
                 color="#D97706"
-                loading={loading}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                label="Approved Leaves"
+              <KPICard
+                title="Approved Leaves"
                 value={stats.approved}
                 icon={CheckCircleOutlineRounded}
                 color="#16A34A"
-                loading={loading}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                label="Rejected Leaves"
+              <KPICard
+                title="Rejected Leaves"
                 value={stats.rejected}
                 icon={HighlightOffRounded}
                 color="#DC2626"
-                loading={loading}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                label="Currently On Leave"
+              <KPICard
+                title="Currently On Leave"
                 value={stats.currentlyOnLeave}
                 icon={PersonOutlineRounded}
                 color="#0284C7"
-                loading={loading}
               />
             </Grid>
           </Grid>

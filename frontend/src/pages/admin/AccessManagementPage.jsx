@@ -31,7 +31,7 @@ import accessManagementService from '../../services/accessManagement.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
-import StatCard from '../../components/StatCard';
+import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
@@ -697,19 +697,19 @@ const AccessManagementPage = () => {
           mb: 4,
         }}
       >
-        <StatCard
-          label="Total Workforce Users"
-          value={loading ? '-' : stats.total}
+        <KPICard
+          title="Total Workforce Users"
+          value={stats.total}
           icon={PeopleOutlineRounded}
         />
-        <StatCard
-          label="HRMS Module Enabled"
-          value={loading ? '-' : stats.hrms}
+        <KPICard
+          title="HRMS Module Enabled"
+          value={stats.hrms}
           icon={SecurityRounded}
         />
-        <StatCard
-          label="Active Accounts"
-          value={loading ? '-' : stats.active}
+        <KPICard
+          title="Active Accounts"
+          value={stats.active}
           icon={CheckCircleOutlineRounded}
         />
       </Box>

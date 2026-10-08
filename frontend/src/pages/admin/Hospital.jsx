@@ -7,7 +7,7 @@ import auth from '../../services/auth.service';
 import GlassCard from '../../components/GlassCard';
 import SectionCard from '../../components/SectionCard';
 import PageHeader from '../../components/PageHeader';
-import StatCard from '../../components/StatCard';
+import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import InfoRow from '../../components/InfoRow';
 import EmptyState from '../../components/EmptyState';
@@ -381,13 +381,13 @@ const Hospital = () => {
                   gap: 2.5,
                 }}
               >
-                <StatCard
-                  label="Workforce"
+                <KPICard
+                  title="Workforce"
                   value={stats.employeeCount ?? stats.hrCount ?? 0}
                   footer={<StatusBadge status="active" label="Active" />}
                 />
-                <StatCard
-                  label="Status"
+                <KPICard
+                  title="Status"
                   value={formatStatus(hospital.status)}
                   footer={<StatusBadge status={hospital.status} />}
                 />

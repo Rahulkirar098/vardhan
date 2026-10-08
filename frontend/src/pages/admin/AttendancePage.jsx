@@ -35,7 +35,7 @@ import {
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
-import StatCard from '../../components/StatCard';
+import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import DataTable from '../../components/DataTable';
 import EmptyState from '../../components/EmptyState';
@@ -888,33 +888,33 @@ const AttendancePage = () => {
             mb: 3.5,
           }}
         >
-          <StatCard
+          <KPICard
             title="Present"
             value={stats.present}
             icon={CheckCircleOutlineRounded}
             color="#16A34A"
-            caption="Days recorded"
+            description="Days recorded"
           />
-          <StatCard
+          <KPICard
             title="Half Day"
             value={stats.halfDay}
             icon={HourglassEmptyRounded}
             color="#D97706"
-            caption="Half day logs"
+            description="Half day logs"
           />
-          <StatCard
+          <KPICard
             title="Absent"
             value={stats.absent}
             icon={EventBusyRounded}
             color="#DC2626"
-            caption="Absences"
+            description="Absences"
           />
-          <StatCard
+          <KPICard
             title="Working Days"
             value={stats.workingDays}
             icon={EventAvailableRounded}
             color="#0284C7"
-            caption="Total attended"
+            description="Total attended"
           />
         </Box>
 

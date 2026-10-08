@@ -7,7 +7,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
-import StatCard from '../../components/StatCard';
+import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
 import DataTable from '../../components/DataTable';
 
@@ -158,10 +158,10 @@ const Hospitals = () => {
             gap: 2.5,
           }}
         >
-          <StatCard label="Total Hospitals" value={hospitals.length} footer={<StatusBadge status="active" label="Registered" />} />
-          <StatCard label="Active Hospitals" value={activeCount} footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />} />
-          <StatCard
-            label="Pending Setup"
+          <KPICard title="Total Hospitals" value={hospitals.length} footer={<StatusBadge status="active" label="Registered" />} />
+          <KPICard title="Active Hospitals" value={activeCount} footer={<StatusBadge status={activeCount ? 'active' : 'inactive'} label={activeCount ? 'Operational' : 'None'} />} />
+          <KPICard
+            title="Pending Setup"
             value={Math.max(hospitals.length - activeCount, 0)}
             footer={<StatusBadge status={hospitals.length - activeCount ? 'pending' : 'inactive'} label={hospitals.length - activeCount ? 'Needs attention' : 'None'} />}
           />
