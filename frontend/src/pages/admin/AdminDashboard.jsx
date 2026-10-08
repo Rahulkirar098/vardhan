@@ -6,7 +6,6 @@ import {
   Button,
   Chip,
   Grid,
-  Skeleton,
   Snackbar,
   Stack,
   Typography,
@@ -35,6 +34,7 @@ import employeeService from '../../services/employee.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import ErrorState from '../../components/ErrorState';
+import MainContentLoader from '../../components/MainContentLoader';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 import { formatTime12h as format12h, getTodayDateStr } from '../../utils/dateUtils';
 
@@ -910,14 +910,7 @@ const AdminDashboard = () => {
           {error && <ErrorState message={error} onRetry={fetchOverview} />}
 
           {loading ? (
-            <Grid container spacing={2.5}>
-              <Grid xs={12} md={6}>
-                <Skeleton variant="rounded" height={180} sx={{ borderRadius: '14px' }} />
-              </Grid>
-              <Grid xs={12} md={6}>
-                <Skeleton variant="rounded" height={180} sx={{ borderRadius: '14px' }} />
-              </Grid>
-            </Grid>
+            <MainContentLoader />
           ) : (
             <>
               {/* Today Status & Duty Cards */}
@@ -1312,13 +1305,7 @@ const AdminDashboard = () => {
         {error && <ErrorState message={error} onRetry={fetchOverview} />}
 
         {loading ? (
-          <Grid container spacing={2.5}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Grid xs={12} sm={6} lg={4} key={i}>
-                <Skeleton variant="rounded" height={130} sx={{ borderRadius: '14px' }} />
-              </Grid>
-            ))}
-          </Grid>
+          <MainContentLoader />
         ) : (
           <>
             {/* Hospital Summary KPI Grid (3 cols x 2 rows) */}

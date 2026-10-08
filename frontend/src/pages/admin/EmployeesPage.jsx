@@ -39,6 +39,7 @@ import employeeService from '../../services/employee.service';
 import positionService from '../../services/position.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
@@ -822,6 +823,14 @@ const EmployeesPage = () => {
     );
   }
 
+  if (loading) {
+    return (
+      <AppLayout>
+        <MainContentLoader />
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       {/* Header */}
@@ -964,11 +973,7 @@ const EmployeesPage = () => {
             </Stack>
 
             {/* Data Table */}
-            {loading && employees.length === 0 ? (
-              <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-                <Typography color="text.secondary">Loading employees...</Typography>
-              </Box>
-            ) : employees.length === 0 ? (
+            {employees.length === 0 ? (
               <EmptyState
                 title="No employees found"
                 description={
@@ -1024,11 +1029,7 @@ const EmployeesPage = () => {
               </TextField>
             </Stack>
 
-            {loading && rawInvitations.length === 0 ? (
-              <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-                <Typography color="text.secondary">Loading invitations...</Typography>
-              </Box>
-            ) : filteredInvitations.length === 0 ? (
+            {filteredInvitations.length === 0 ? (
               <EmptyState
                 title="No invitations found"
                 description={

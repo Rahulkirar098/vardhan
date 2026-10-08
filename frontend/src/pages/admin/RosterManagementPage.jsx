@@ -70,6 +70,7 @@ import {
 } from '@mui/icons-material';
 
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
@@ -108,6 +109,7 @@ export default function RosterManagementPage() {
 
   // Loading & Toast States
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [toast, setToast] = useState({ open: false, message: '', severity: 'info' });
 
   // Data Collections
@@ -315,13 +317,24 @@ export default function RosterManagementPage() {
   }, []);
 
   useEffect(() => {
-    if (canViewWorkforce) {
-      fetchRosters();
-      fetchHistory();
-      fetchTemplates();
-      fetchActiveEmployees();
-    }
-    fetchMyRoster();
+    let isMounted = true;
+    const init = async () => {
+      try {
+        if (canViewWorkforce) {
+          await Promise.allSettled([
+            fetchRosters(),
+            fetchHistory(),
+            fetchTemplates(),
+            fetchActiveEmployees(),
+          ]);
+        }
+        await fetchMyRoster();
+      } finally {
+        if (isMounted) setInitialLoading(false);
+      }
+    };
+    init();
+    return () => { isMounted = false; };
   }, [canViewWorkforce, fetchRosters, fetchHistory, fetchTemplates, fetchActiveEmployees, fetchMyRoster]);
 
   // Load Single Roster Details
@@ -977,6 +990,14 @@ export default function RosterManagementPage() {
     if (!assignmentForm.employeeId) return null;
     return activeEmployees.find((e) => e._id === assignmentForm.employeeId);
   }, [activeEmployees, assignmentForm.employeeId]);
+
+  if (initialLoading) {
+    return (
+      <AppLayout title="Hospital Duty Roster">
+        <MainContentLoader />
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Hospital Duty Roster">

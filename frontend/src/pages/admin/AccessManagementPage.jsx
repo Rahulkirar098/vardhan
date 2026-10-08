@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import accessManagementService from '../../services/accessManagement.service';
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
@@ -670,6 +671,14 @@ const AccessManagementPage = () => {
     );
   }
 
+  if (loading) {
+    return (
+      <AppLayout>
+        <MainContentLoader />
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <Box mb={4}>
@@ -740,11 +749,7 @@ const AccessManagementPage = () => {
 
         </Stack>
 
-        {loading && users.length === 0 ? (
-          <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-            <Typography color="text.secondary">Loading workforce access list...</Typography>
-          </Box>
-        ) : filteredUsers.length === 0 ? (
+        {filteredUsers.length === 0 ? (
           <EmptyState
             title="No workforce users found"
             description={

@@ -33,6 +33,7 @@ import {
   VisibilityRounded,
 } from '@mui/icons-material';
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
@@ -636,6 +637,14 @@ const AttendancePage = () => {
     },
   ];
 
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <MainContentLoader />
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

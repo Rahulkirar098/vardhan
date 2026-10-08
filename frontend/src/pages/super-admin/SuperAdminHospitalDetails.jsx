@@ -5,11 +5,11 @@ import { ArrowBackRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import SectionCard from '../../components/SectionCard';
 import InfoRow from '../../components/InfoRow';
 import StatusBadge from '../../components/StatusBadge';
-import Loading from '../../components/Loading';
 
 const formatStatus = (status) => {
   if (!status) return 'Active';
@@ -62,9 +62,7 @@ const HospitalDetails = () => {
   return (
     <AppLayout onLogout={handleLogout}>
       {loading ? (
-        <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
-          <Loading label="Loading hospital…" height="auto" />
-        </Box>
+        <MainContentLoader />
       ) : error ? (
         <Alert severity="error">{error}</Alert>
       ) : !hospital ? (

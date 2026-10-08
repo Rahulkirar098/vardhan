@@ -13,7 +13,7 @@ import InfoRow from '../../components/InfoRow';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import AppLayout from '../../components/AppLayout';
-import Loading from '../../components/Loading';
+import MainContentLoader from '../../components/MainContentLoader';
 import Modal from '../../components/Modal';
 
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
@@ -345,9 +345,7 @@ const Hospital = () => {
   return (
     <AppLayout onLogout={handleLogout}>
       {loading ? (
-        <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
-          <Loading label="Loading hospital…" height="auto" />
-        </Box>
+        <MainContentLoader />
       ) : (
         <Stack spacing={4}>
           <PageHeader

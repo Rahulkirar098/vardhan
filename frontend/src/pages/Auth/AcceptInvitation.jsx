@@ -18,6 +18,7 @@ import {
 import employeeService from '../../services/employee.service';
 import AuthLayout from '../../components/AuthLayout';
 import StatusBadge from '../../components/StatusBadge';
+import MainContentLoader from '../../components/MainContentLoader';
 
 const AcceptInvitation = () => {
   const { token } = useParams();
@@ -78,9 +79,7 @@ const AcceptInvitation = () => {
         title="Staff Onboarding"
         subtitle="We are verifying your invitation…"
       >
-        <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={28} />
-        </Box>
+        <MainContentLoader />
       </AuthLayout>
     );
   }

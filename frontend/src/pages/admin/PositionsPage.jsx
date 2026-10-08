@@ -3,6 +3,7 @@ import { Box, Button, Checkbox, Chip, FormControlLabel, FormGroup, IconButton, P
 import { AddRounded, EditRounded, PowerSettingsNewRounded, BusinessCenterRounded, CalendarMonthRounded } from '@mui/icons-material';
 import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
@@ -464,6 +465,14 @@ const PositionsPage = () => {
         );
     }
 
+    if (loading) {
+        return (
+            <AppLayout>
+                <MainContentLoader />
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout>
             <Box mb={4}>
@@ -503,11 +512,7 @@ const PositionsPage = () => {
             </Box>
 
             <GlassCard>
-                {loading && positions.length === 0 ? (
-                    <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-                        <Typography color="text.secondary">Loading positions...</Typography>
-                    </Box>
-                ) : positions.length === 0 ? (
+                {positions.length === 0 ? (
                     <EmptyState 
                         title="No Positions Found"
                         description="Start by adding your first hospital position."

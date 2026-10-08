@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
@@ -299,6 +300,14 @@ const Profile = () => {
       : profile?.role === 'super_admin'
       ? 'Super Administrator'
       : 'Staff');
+
+  if (loading) {
+    return (
+      <AppLayout onLogout={handleLogout}>
+        <MainContentLoader />
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout onLogout={handleLogout}>

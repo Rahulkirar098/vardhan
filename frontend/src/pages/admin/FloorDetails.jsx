@@ -10,7 +10,6 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  Skeleton,
   Snackbar,
   Stack,
   TextField,
@@ -27,6 +26,7 @@ import {
 import structureService from '../../services/structure.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
@@ -414,17 +414,7 @@ const FloorDetails = () => {
           </Stack>
 
           {loading ? (
-            <Grid container spacing={2.5}>
-              {[1, 2, 3].map((i) => (
-                <Grid item xs={12} sm={6} md={4} key={i}>
-                  <GlassCard sx={{ p: 2.5, height: 160 }}>
-                    <Skeleton variant="text" width="60%" height={32} />
-                    <Skeleton variant="text" width="40%" height={20} sx={{ mb: 2 }} />
-                    <Skeleton variant="rectangular" height={36} sx={{ borderRadius: '8px', mt: 2 }} />
-                  </GlassCard>
-                </Grid>
-              ))}
-            </Grid>
+            <MainContentLoader />
           ) : rooms.length === 0 ? (
             <GlassCard sx={{ p: 3 }}>
               <EmptyState

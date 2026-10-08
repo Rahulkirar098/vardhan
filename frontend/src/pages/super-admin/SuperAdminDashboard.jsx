@@ -5,7 +5,6 @@ import {
   Button,
   Chip,
   Grid,
-  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -19,6 +18,7 @@ import { ArrowForwardRounded, LocalHospitalRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
+import MainContentLoader from '../../components/MainContentLoader';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
@@ -97,13 +97,7 @@ const SuperAdminDashboard = () => {
         {error && <ErrorState message={error} onRetry={fetchHospitals} />}
 
         {loading ? (
-          <Grid container spacing={2.5}>
-            {[1, 2, 3].map((i) => (
-              <Grid item xs={12} sm={6} lg={4} key={i}>
-                <Skeleton variant="rounded" height={130} sx={{ borderRadius: '12px' }} />
-              </Grid>
-            ))}
-          </Grid>
+          <MainContentLoader />
         ) : (
           <>
             {/* KPI Summary Grid */}
