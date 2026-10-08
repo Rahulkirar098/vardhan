@@ -31,14 +31,15 @@ const KPICardWithAction = ({
   return (
     <Box
       sx={{
-        p: 2.25,
+        p: 1.25,
+        px: 1.5,
         width: '100%',
         height: '100%',
-        minHeight: 115,
+        minHeight: 80,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        borderRadius: '12px',
+        borderRadius: '10px',
         border: '1px solid #E5E7EB',
         backgroundColor: '#FFFFFF',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
@@ -51,7 +52,7 @@ const KPICardWithAction = ({
         ...sx,
       }}
     >
-      <Stack spacing={1.25} sx={{ height: '100%', justifyContent: 'space-between' }}>
+      <Stack spacing={0.5} sx={{ height: '100%', justifyContent: 'space-between' }}>
         {/* Header: Title at TOP-LEFT, Icon Container at TOP-RIGHT */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Typography
@@ -60,7 +61,7 @@ const KPICardWithAction = ({
               fontWeight: 600,
               color: '#64748B',
               textTransform: 'none',
-              lineHeight: 1.3,
+              lineHeight: 1.2,
               pr: 1,
             }}
           >
@@ -69,9 +70,9 @@ const KPICardWithAction = ({
           {IconProp && (
             <Box
               sx={{
-                width: 38,
-                height: 38,
-                borderRadius: '10px',
+                width: 32,
+                height: 32,
+                borderRadius: '8px',
                 backgroundColor: '#F1F5F9',
                 display: 'flex',
                 alignItems: 'center',
@@ -87,19 +88,19 @@ const KPICardWithAction = ({
         {/* Body: Large Bold Value */}
         <Typography
           sx={{
-            fontSize: '1.75rem',
+            fontSize: '1.5rem',
             fontWeight: 800,
             color: '#0F172A',
             letterSpacing: '-0.02em',
             lineHeight: 1,
-            my: 0.25,
+            my: 0.1,
           }}
         >
           {value !== undefined && value !== null ? value : '-'}
         </Typography>
 
         {/* Bottom Container (Description + Action) */}
-        <Stack spacing={0.75} sx={{ pt: 0.25, mt: 'auto' }}>
+        <Stack spacing={0.5} sx={{ pt: 0.1, mt: 'auto' }}>
           {cardFooter && (
             typeof cardFooter === 'string' ? (
               <Typography

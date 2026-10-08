@@ -28,14 +28,15 @@ const KPICard = ({
   return (
     <Box
       sx={{
-        p: 2.25,
+        p: 1.25,
+        px: 1.5,
         width: '100%',
         height: '100%',
-        minHeight: 100,
+        minHeight: 80,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        borderRadius: '12px',
+        borderRadius: '10px',
         border: '1px solid #E5E7EB',
         backgroundColor: '#FFFFFF',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
@@ -48,7 +49,7 @@ const KPICard = ({
         ...sx,
       }}
     >
-      <Stack spacing={1.25} sx={{ height: '100%', justifyContent: 'space-between' }}>
+      <Stack spacing={0.5} sx={{ height: '100%', justifyContent: 'space-between' }}>
         {/* Header: Title at TOP-LEFT, Icon Container at TOP-RIGHT */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Typography
@@ -57,7 +58,7 @@ const KPICard = ({
               fontWeight: 600,
               color: '#64748B',
               textTransform: 'none',
-              lineHeight: 1.3,
+              lineHeight: 1.2,
               pr: 1,
             }}
           >
@@ -66,9 +67,9 @@ const KPICard = ({
           {IconProp && (
             <Box
               sx={{
-                width: 38,
-                height: 38,
-                borderRadius: '10px',
+                width: 32,
+                height: 32,
+                borderRadius: '8px',
                 backgroundColor: '#F1F5F9',
                 display: 'flex',
                 alignItems: 'center',
@@ -84,21 +85,21 @@ const KPICard = ({
         {/* Body: Large Bold Value */}
         <Typography
           sx={{
-            fontSize: '1.75rem',
+            fontSize: '1.5rem',
             fontWeight: 800,
             color: '#0F172A',
             letterSpacing: '-0.02em',
             lineHeight: 1,
-            my: 0.25,
+            my: 0.1,
           }}
         >
           {value !== undefined && value !== null ? value : '-'}
         </Typography>
 
         {/* Footer / Description */}
-        <Box sx={{ pt: 0.25, mt: 'auto' }}>
-          {cardFooter ? (
-            typeof cardFooter === 'string' ? (
+        {cardFooter && (
+          <Box sx={{ pt: 0.1, mt: 'auto' }}>
+            {typeof cardFooter === 'string' ? (
               <Typography
                 variant="body2"
                 sx={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 500 }}
@@ -107,11 +108,9 @@ const KPICard = ({
               </Typography>
             ) : (
               cardFooter
-            )
-          ) : (
-            <Box sx={{ height: 18 }} />
-          )}
-        </Box>
+            )}
+          </Box>
+        )}
       </Stack>
     </Box>
   );
