@@ -6,7 +6,7 @@ import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import SectionCard from '../../components/SectionCard';
 import InfoRow from '../../components/InfoRow';
 import StatusBadge from '../../components/StatusBadge';
@@ -68,23 +68,23 @@ const HospitalDetails = () => {
       ) : !hospital ? (
         <Alert severity="warning">Hospital not found.</Alert>
       ) : (
-        <Stack spacing={4} sx={{ maxWidth: 1100 }}>
-          <Box>
-            <Button
-              variant="text"
-              size="small"
-              startIcon={<ArrowBackRounded fontSize="small" />}
-              onClick={() => navigate('/super-admin/dashboard')}
-              sx={{ px: 0, mb: 1.5, color: 'text.secondary' }}
-            >
-              Back to Hospitals
-            </Button>
-            <PageHeader
-              title={hospital.name}
-              subtitle={`Hospital Code · ${hospital.code || 'N/A'}`}
-              actions={<StatusBadge status={hospital.status} />}
-            />
-          </Box>
+        <>
+          <PageHeader
+            breadcrumb={
+              <Button
+                variant="text"
+                size="small"
+                startIcon={<ArrowBackRounded fontSize="small" />}
+                onClick={() => navigate('/super-admin/dashboard')}
+                sx={{ px: 0, mb: -0.5, color: 'text.secondary' }}
+              >
+                Back to Hospitals
+              </Button>
+            }
+            title={hospital.name}
+            description={`Hospital Code · ${hospital.code || 'N/A'}`}
+            actions={<StatusBadge status={hospital.status} />}
+          />
 
           <Box
             sx={{
@@ -120,7 +120,7 @@ const HospitalDetails = () => {
               <InfoRow label="Status" value={formatStatus(admin.status)} />
             </SectionCard>
           </Box>
-        </Stack>
+        </>
       )}
     </AppLayout>
   );

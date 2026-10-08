@@ -195,11 +195,22 @@ const AppLayout = ({ children, onLogout }) => {
             minWidth: 0,
             height: '100%',
             overflowY: 'auto',
-            p: { xs: 2, md: 4 },
+            p: { xs: 2.5, md: 4 },
             width: { md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
           }}
         >
-          <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>{children}</Box>
+          <Box
+            sx={{
+              width: '100%',
+              maxWidth: 1280,
+              mx: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: { xs: 3, md: 3.5 },
+            }}
+          >
+            {children}
+          </Box>
         </Box>
       </Box>
     </Box>

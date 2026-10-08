@@ -37,6 +37,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import ErrorState from '../../components/ErrorState';
 import MainContentLoader from '../../components/common/MainContentLoader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import KPICardWithAction from '../../components/common/KPICardWithAction';
@@ -826,18 +827,10 @@ const AdminDashboard = () => {
   if (userRole === 'employee') {
     return (
       <AppLayout onLogout={handleLogout}>
-        <Stack spacing={3.5}>
-          {/* Header Intro */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }} spacing={2}>
-            <Box>
-              <Typography sx={{ fontSize: { xs: '1.5rem', md: '1.875rem' }, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-                {getGreeting()}, {userName}
-              </Typography>
-              <Typography sx={{ fontSize: '0.875rem', color: '#64748B', mt: 0.5 }}>
-                Here is your personal work and shift summary for today.
-              </Typography>
-            </Box>
-          </Stack>
+        <PageHeader
+          title={`${getGreeting()}, ${userName}`}
+            description="Here is your personal work and shift summary for today."
+          />
 
           {error && <ErrorState message={error} onRetry={fetchOverview} />}
 
@@ -1085,7 +1078,6 @@ const AdminDashboard = () => {
               {snackbar.message}
             </Alert>
           </Snackbar>
-        </Stack>
       </AppLayout>
     );
   }
@@ -1097,83 +1089,76 @@ const AdminDashboard = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Stack spacing={3.5}>
-        {/* Header Intro & Actions */}
-        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }} spacing={2}>
-          <Box>
-            <Typography sx={{ fontSize: { xs: '1.5rem', md: '1.875rem' }, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {getGreeting()}, {userName}
-            </Typography>
-            <Typography sx={{ fontSize: '0.875rem', color: '#64748B', mt: 0.5 }}>
-              {hospitalDisplayName} · Overview of hospital operations and team.
-            </Typography>
-          </Box>
+      {/* Header Intro & Actions */}
+      <PageHeader
+          title={`${getGreeting()}, ${userName}`}
+          description={`${hospitalDisplayName} · Overview of hospital operations and team.`}
+          actions={
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="outlined"
+                startIcon={<AddRounded sx={{ fontSize: 18 }} />}
+                onClick={() => navigate('/employees')}
+                sx={{
+                  backgroundColor: '#FFFFFF',
+                  borderColor: '#E5E7EB',
+                  color: '#0F172A',
+                  fontWeight: 600,
+                  fontSize: '0.8125rem',
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  px: 2,
+                  py: 0.85,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  '&:hover': { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' },
+                }}
+              >
+                Add Employee
+              </Button>
 
-          {/* Quick Action Buttons */}
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            <Button
-              variant="outlined"
-              startIcon={<AddRounded sx={{ fontSize: 18 }} />}
-              onClick={() => navigate('/employees')}
-              sx={{
-                backgroundColor: '#FFFFFF',
-                borderColor: '#E5E7EB',
-                color: '#0F172A',
-                fontWeight: 600,
-                fontSize: '0.8125rem',
-                borderRadius: '8px',
-                textTransform: 'none',
-                px: 2,
-                py: 0.85,
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                '&:hover': { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' },
-              }}
-            >
-              Add Employee
-            </Button>
+              <Button
+                variant="outlined"
+                startIcon={<AddRounded sx={{ fontSize: 18 }} />}
+                onClick={() => navigate('/positions')}
+                sx={{
+                  backgroundColor: '#FFFFFF',
+                  borderColor: '#E5E7EB',
+                  color: '#0F172A',
+                  fontWeight: 600,
+                  fontSize: '0.8125rem',
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  px: 2,
+                  py: 0.85,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  '&:hover': { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' },
+                }}
+              >
+                Create Position
+              </Button>
 
-            <Button
-              variant="outlined"
-              startIcon={<AddRounded sx={{ fontSize: 18 }} />}
-              onClick={() => navigate('/positions')}
-              sx={{
-                backgroundColor: '#FFFFFF',
-                borderColor: '#E5E7EB',
-                color: '#0F172A',
-                fontWeight: 600,
-                fontSize: '0.8125rem',
-                borderRadius: '8px',
-                textTransform: 'none',
-                px: 2,
-                py: 0.85,
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                '&:hover': { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' },
-              }}
-            >
-              Create Position
-            </Button>
-
-            <Button
-              variant="contained"
-              startIcon={<AddRounded sx={{ fontSize: 18 }} />}
-              onClick={() => navigate('/roster')}
-              sx={{
-                backgroundColor: '#0F172A',
-                color: '#FFFFFF',
-                fontWeight: 700,
-                fontSize: '0.8125rem',
-                borderRadius: '8px',
-                textTransform: 'none',
-                px: 2.25,
-                py: 0.85,
-                boxShadow: '0 2px 4px rgba(15,23,42,0.15)',
-                '&:hover': { backgroundColor: '#1E293B' },
-              }}
-            >
-              Create Roster
-            </Button>
-          </Stack>
-        </Stack>
+              <Button
+                variant="contained"
+                startIcon={<AddRounded sx={{ fontSize: 18 }} />}
+                onClick={() => navigate('/roster')}
+                sx={{
+                  backgroundColor: '#0F172A',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '0.8125rem',
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  px: 2.25,
+                  py: 0.85,
+                  boxShadow: '0 2px 4px rgba(15,23,42,0.15)',
+                  '&:hover': { backgroundColor: '#1E293B' },
+                }}
+              >
+                Create Roster
+              </Button>
+            </Stack>
+          }
+        />
 
         {error && <ErrorState message={error} onRetry={fetchOverview} />}
 
@@ -1365,9 +1350,8 @@ const AdminDashboard = () => {
             sx={{ width: '100%' }}
           >
             {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </Stack>
+        </Alert>
+      </Snackbar>
     </AppLayout>
   );
 };

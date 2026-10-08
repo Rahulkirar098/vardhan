@@ -6,7 +6,7 @@ import hospitalService from '../../services/hospital.service';
 import auth from '../../services/auth.service';
 import GlassCard from '../../components/GlassCard';
 import SectionCard from '../../components/SectionCard';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
@@ -348,10 +348,10 @@ const Hospital = () => {
       {loading ? (
         <MainContentLoader />
       ) : (
-        <Stack spacing={4}>
+        <>
           <PageHeader
             title="Hospital"
-            subtitle="Manage your hospital profile and information."
+            description="Manage your hospital profile and information."
             actions={
               hospital && hasPermission(PERMISSIONS.HOSPITAL_UPDATE) ? (
                 <Button variant="outlined" startIcon={<EditRounded />} onClick={() => setEditOpen(true)}>
@@ -407,7 +407,7 @@ const Hospital = () => {
               </SectionCard>
             </>
           )}
-        </Stack>
+        </>
       )}
       <CreateHospitalModal
         open={createOpen}

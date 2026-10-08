@@ -40,7 +40,7 @@ import positionService from '../../services/position.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
@@ -834,12 +834,10 @@ const EmployeesPage = () => {
 
   return (
     <AppLayout>
-      {/* Header */}
-      <Box mb={4}>
-        <PageHeader
+      <PageHeader
           title="Employees"
-          subtitle="Manage your hospital's employee roster."
-          action={
+          description="Manage your hospital's employee roster."
+          actions={
             hasCreate && (
               <Button
                 variant="contained"
@@ -851,31 +849,30 @@ const EmployeesPage = () => {
             )
           }
         />
-      </Box>
 
-      {/* Summary StatCards */}
-      <KPIGrid sx={{ mb: 4 }}>
-        <KPICard
-          title="Total Employees"
-          value={stats.total}
-          icon={GroupsRounded}
-        />
-        <KPICard
-          title="Active"
-          value={stats.active}
-          icon={CheckCircleOutlineRounded}
-        />
-        <KPICard
-          title="Inactive"
-          value={stats.inactive}
-          icon={PersonOffRounded}
-        />
-        <KPICard
-          title="Pending Invitations"
-          value={stats.pendingInvitations ?? pendingInvitationsCount}
-          icon={MarkEmailReadRounded}
-        />
-      </KPIGrid>
+        {/* Summary StatCards */}
+        <KPIGrid>
+          <KPICard
+            title="Total Employees"
+            value={stats.total}
+            icon={GroupsRounded}
+          />
+          <KPICard
+            title="Active"
+            value={stats.active}
+            icon={CheckCircleOutlineRounded}
+          />
+          <KPICard
+            title="Inactive"
+            value={stats.inactive}
+            icon={PersonOffRounded}
+          />
+          <KPICard
+            title="Pending Invitations"
+            value={stats.pendingInvitations ?? pendingInvitationsCount}
+            icon={MarkEmailReadRounded}
+          />
+        </KPIGrid>
 
       {/* Main Container Card */}
       <GlassCard sx={{ p: { xs: 2, sm: 3 } }}>

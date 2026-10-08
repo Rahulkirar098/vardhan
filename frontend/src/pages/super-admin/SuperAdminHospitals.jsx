@@ -6,7 +6,7 @@ import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
@@ -146,10 +146,9 @@ const Hospitals = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Stack spacing={4}>
         <PageHeader
           title="Hospitals"
-          subtitle="Monitor hospitals across the platform."
+          description="Monitor hospitals across the platform."
         />
 
         <KPIGrid>
@@ -217,7 +216,6 @@ const Hospitals = () => {
             )}
           />
         </Stack>
-      </Stack>
     </AppLayout>
   );
 };

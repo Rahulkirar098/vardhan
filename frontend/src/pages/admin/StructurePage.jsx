@@ -28,7 +28,7 @@ import structureService from '../../services/structure.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
@@ -422,10 +422,9 @@ const StructurePage = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Stack spacing={4}>
-        <PageHeader
+      <PageHeader
           title="Hospital Structure"
-          subtitle="Manage hospital floors and rooms"
+          description="Manage hospital floors and rooms"
           actions={
             hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
               <Button
@@ -502,7 +501,6 @@ const StructurePage = () => {
             </Grid>
           )}
         </Box>
-      </Stack>
 
       {/* Add / Edit Floor Modal */}
       <FloorFormModal

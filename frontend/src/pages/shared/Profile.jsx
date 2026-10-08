@@ -27,6 +27,7 @@ import {
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
+import PageHeader from '../../components/common/PageHeader';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
@@ -311,60 +312,31 @@ const Profile = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', p: { xs: 1, sm: 2, md: 3 } }}>
-        {/* Page Header */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            mb: 3.5,
-          }}
-        >
-          <Box>
-            <Typography
-              variant="h4"
+      <PageHeader
+          title="My Profile"
+          description="Your personal details, account, and module access."
+          actions={
+            <Button
+              variant="contained"
+              startIcon={<EditRounded />}
+              onClick={() => handleOpenEditModal(0)}
               sx={{
-                fontWeight: 800,
-                color: '#0B132B',
-                fontSize: { xs: '1.45rem', sm: '1.75rem' },
-                letterSpacing: '-0.02em',
-                mb: 0.5,
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                borderRadius: '8px',
+                px: 2.5,
+                py: 0.9,
+                backgroundColor: '#0F172A',
+                color: '#FFFFFF',
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: '#1E293B', boxShadow: 'none' },
               }}
             >
-              My Profile
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#64748B',
-                fontSize: { xs: '0.85rem', sm: '0.925rem' },
-              }}
-            >
-              Your personal details, account, and module access.
-            </Typography>
-          </Box>
-
-          <Button
-            variant="contained"
-            startIcon={<EditRounded />}
-            onClick={() => handleOpenEditModal(0)}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              borderRadius: '8px',
-              px: 2.5,
-              py: 0.9,
-              backgroundColor: '#0F172A',
-              color: '#FFFFFF',
-              boxShadow: 'none',
-              '&:hover': { backgroundColor: '#1E293B', boxShadow: 'none' },
-            }}
-          >
-            Edit Profile
-          </Button>
-        </Box>
+              Edit Profile
+            </Button>
+          }
+        />
 
         {error && !profile && (
           <Alert severity="error" sx={{ mb: 3, borderRadius: '10px' }}>
@@ -936,7 +908,6 @@ const Profile = () => {
             )}
           </DialogContent>
         </Dialog>
-      </Box>
     </AppLayout>
   );
 };

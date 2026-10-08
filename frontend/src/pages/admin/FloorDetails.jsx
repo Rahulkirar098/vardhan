@@ -27,7 +27,7 @@ import structureService from '../../services/structure.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
@@ -367,21 +367,19 @@ const FloorDetails = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-      <Stack spacing={4}>
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-          <Button
-            variant="text"
-            startIcon={<ArrowBackRounded />}
-            onClick={() => navigate('/structure')}
-            sx={{ color: 'text.secondary', fontWeight: 600, px: 1 }}
-          >
-            Back to Structure
-          </Button>
-        </Stack>
-
         <PageHeader
+          breadcrumb={
+            <Button
+              variant="text"
+              startIcon={<ArrowBackRounded />}
+              onClick={() => navigate('/structure')}
+              sx={{ color: 'text.secondary', fontWeight: 600, px: 0, minWidth: 0, mb: -0.5 }}
+            >
+              Back to Structure
+            </Button>
+          }
           title={floor?.name || 'Floor Details'}
-          subtitle={
+          description={
             floor
               ? `Floor ${floor.floorNumber}${floor.code ? ` • Code: ${floor.code}` : ''}`
               : 'Manage rooms and spaces'
@@ -439,7 +437,6 @@ const FloorDetails = () => {
             </Grid>
           )}
         </Box>
-      </Stack>
 
       {/* Add / Edit Room Modal */}
       <RoomFormModal

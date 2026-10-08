@@ -34,7 +34,7 @@ import {
 } from '@mui/icons-material';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
@@ -649,8 +649,7 @@ const AttendancePage = () => {
 
   return (
     <AppLayout>
-      <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', pb: 6 }}>
-        {/* Page Header */}
+      {/* Page Header */}
         <PageHeader
           title="Attendance"
           description="Track your daily attendance and working history."
@@ -1244,7 +1243,6 @@ const AttendancePage = () => {
             />
           </Box>
         )}
-      </Box>
 
       {/* Request Regularization Modal */}
       <RequestRegularizationModal

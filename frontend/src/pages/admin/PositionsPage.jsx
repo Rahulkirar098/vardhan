@@ -4,7 +4,7 @@ import { AddRounded, EditRounded, PowerSettingsNewRounded, BusinessCenterRounded
 import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
@@ -476,10 +476,9 @@ const PositionsPage = () => {
 
     return (
         <AppLayout>
-            <Box mb={4}>
-                <PageHeader 
+            <PageHeader 
                     title="Position Master" 
-                    subtitle="Manage employee positions and designations across the hospital."
+                    description="Manage employee positions and designations across the hospital."
                     actions={
                         canCreate ? (
                             <Button
@@ -492,45 +491,44 @@ const PositionsPage = () => {
                         ) : null
                     }
                 />
-            </Box>
 
-            <KPIGrid sx={{ mb: 4 }}>
-                <KPICard 
-                    title="Total Positions"
-                    value={stats.total}
-                    icon={BusinessCenterRounded}
-                />
-                <KPICard 
-                    title="Active"
-                    value={stats.active}
-                    icon={BusinessCenterRounded}
-                />
-                <KPICard 
-                    title="Inactive"
-                    value={stats.inactive}
-                    icon={BusinessCenterRounded}
-                />
-            </KPIGrid>
-
-            <GlassCard>
-                {positions.length === 0 ? (
-                    <EmptyState 
-                        title="No Positions Found"
-                        description="Start by adding your first hospital position."
+                <KPIGrid>
+                    <KPICard 
+                        title="Total Positions"
+                        value={stats.total}
                         icon={BusinessCenterRounded}
-                        actionLabel="Add Position"
-                        onAction={handleOpenAdd}
                     />
-                ) : (
-                    <DataTable 
-                        columns={columns}
-                        rows={positions}
-                        getRowKey={(pos) => pos._id}
-                        renderCell={renderCell}
-                        renderActions={renderActions}
+                    <KPICard 
+                        title="Active"
+                        value={stats.active}
+                        icon={BusinessCenterRounded}
                     />
-                )}
-            </GlassCard>
+                    <KPICard 
+                        title="Inactive"
+                        value={stats.inactive}
+                        icon={BusinessCenterRounded}
+                    />
+                </KPIGrid>
+
+                <GlassCard>
+                    {positions.length === 0 ? (
+                        <EmptyState 
+                            title="No Positions Found"
+                            description="Start by adding your first hospital position."
+                            icon={BusinessCenterRounded}
+                            actionLabel="Add Position"
+                            onAction={handleOpenAdd}
+                        />
+                    ) : (
+                        <DataTable 
+                            columns={columns}
+                            rows={positions}
+                            getRowKey={(pos) => pos._id}
+                            renderCell={renderCell}
+                            renderActions={renderActions}
+                        />
+                    )}
+                </GlassCard>
 
             <Modal 
                 open={isAddOpen}

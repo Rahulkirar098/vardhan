@@ -39,7 +39,7 @@ import {
 import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
@@ -1056,12 +1056,11 @@ const LeaveManagementPage = () => {
 
   return (
     <AppLayout>
-      <Stack spacing={3}>
-        {/* Header */}
+      {/* Header */}
         <PageHeader
           title="Leave Management"
           description="Review employee leave applications, authorize workforce requests, and manage personal leave history."
-          action={
+          actions={
             canApply && (
               <Button
                 variant="contained"
@@ -1236,7 +1235,6 @@ const LeaveManagementPage = () => {
             </>
           )}
         </GlassCard>
-      </Stack>
 
       {/* Apply Leave Modal */}
       <ApplyLeaveModal

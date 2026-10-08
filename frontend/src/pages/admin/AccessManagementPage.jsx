@@ -30,7 +30,7 @@ import {
 import accessManagementService from '../../services/accessManagement.service';
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/StatusBadge';
@@ -682,31 +682,29 @@ const AccessManagementPage = () => {
 
   return (
     <AppLayout>
-      <Box mb={4}>
-        <PageHeader
+      <PageHeader
           title="Access Management"
-          subtitle="Configure module access and system permissions for hospital workforce."
+          description="Configure module access and system permissions for hospital workforce."
         />
-      </Box>
 
-      {/* Summary Cards */}
-      <KPIGrid sx={{ mb: 4 }}>
-        <KPICard
-          title="Total Workforce Users"
-          value={stats.total}
-          icon={PeopleOutlineRounded}
-        />
-        <KPICard
-          title="HRMS Module Enabled"
-          value={stats.hrms}
-          icon={SecurityRounded}
-        />
-        <KPICard
-          title="Active Accounts"
-          value={stats.active}
-          icon={CheckCircleOutlineRounded}
-        />
-      </KPIGrid>
+        {/* Summary Cards */}
+        <KPIGrid>
+          <KPICard
+            title="Total Workforce Users"
+            value={stats.total}
+            icon={PeopleOutlineRounded}
+          />
+          <KPICard
+            title="HRMS Module Enabled"
+            value={stats.hrms}
+            icon={SecurityRounded}
+          />
+          <KPICard
+            title="Active Accounts"
+            value={stats.active}
+            icon={CheckCircleOutlineRounded}
+          />
+        </KPIGrid>
 
       {/* Main Container Card */}
       <GlassCard sx={{ p: { xs: 2, sm: 3 } }}>

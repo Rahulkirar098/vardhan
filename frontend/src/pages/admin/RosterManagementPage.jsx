@@ -71,7 +71,7 @@ import {
 
 import AppLayout from '../../components/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
@@ -1001,11 +1001,10 @@ export default function RosterManagementPage() {
 
   return (
     <AppLayout title="Hospital Duty Roster">
-      <Box sx={{ p: { xs: 2, md: 3 } }}>
-        <PageHeader
+      <PageHeader
           title="Hospital Duty Roster"
-          subtitle="Hospital-wide duty planning, custom shift matrix layouts, and staff allocations."
-          action={
+          description="Hospital-wide duty planning, custom shift matrix layouts, and staff allocations."
+          actions={
             canManage && (
               <Stack direction="row" spacing={1.5}>
                 <Button
@@ -2699,7 +2698,6 @@ export default function RosterManagementPage() {
             {toast.message}
           </Alert>
         </Snackbar>
-      </Box>
     </AppLayout>
   );
 }
