@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
+  Chip,
   CircularProgress,
   IconButton,
   Paper,
@@ -14,6 +15,7 @@ import { AppInput, AppButton } from '../../components/common';
 import {
   AccessTimeRounded,
   AddRounded,
+  CalendarMonthRounded,
   CheckCircleOutlineRounded,
   CheckRounded,
   CloseRounded,
@@ -26,6 +28,7 @@ import {
   PersonOutlineRounded,
   RefreshRounded,
   ScheduleRounded,
+  SearchRounded,
   TodayRounded,
   VisibilityRounded,
 } from '@mui/icons-material';
@@ -89,6 +92,8 @@ const AttendancePage = () => {
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [myHistory, setMyHistory] = useState([]);
   const [workforceHistory, setWorkforceHistory] = useState([]);
+  const [workforceSearch, setWorkforceSearch] = useState('');
+  const [workforceDateFilter, setWorkforceDateFilter] = useState('');
   const [myLeaves, setMyLeaves] = useState([]);
   const [myRegularizations, setMyRegularizations] = useState([]);
   const [workforceRegularizations, setWorkforceRegularizations] = useState([]);
@@ -233,6 +238,48 @@ const AttendancePage = () => {
     return myHistory.find((a) => a.dateStr === selectedDateStr) || null;
   }, [myHistory, selectedDateStr]);
 
+  const groupedWorkforceHistory = useMemo(() => {
+    if (!Array.isArray(workforceHistory) || workforceHistory.length === 0) {
+      return [];
+    }
+
+    const searchLower = workforceSearch.trim().toLowerCase();
+
+    const filtered = workforceHistory.filter((item) => {
+      const emp = item.employeeId || {};
+      const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim().toLowerCase();
+      const code = String(emp.employeeId || '').toLowerCase();
+      const position = String(emp.positionId?.name || '').toLowerCase();
+      const itemDate = item.dateStr || (item.date ? getTodayDateStr(item.date) : '');
+
+      const matchesSearch =
+        !searchLower ||
+        name.includes(searchLower) ||
+        code.includes(searchLower) ||
+        position.includes(searchLower);
+      const matchesDate = !workforceDateFilter || itemDate === workforceDateFilter;
+
+      return matchesSearch && matchesDate;
+    });
+
+    const groupsMap = new Map();
+    filtered.forEach((item) => {
+      const rawDate = item.dateStr || (item.date ? getTodayDateStr(item.date) : '');
+      if (!groupsMap.has(rawDate)) {
+        groupsMap.set(rawDate, []);
+      }
+      groupsMap.get(rawDate).push(item);
+    });
+
+    const sortedDates = Array.from(groupsMap.keys()).sort((a, b) => b.localeCompare(a));
+
+    return sortedDates.map((dateKey) => ({
+      dateStr: dateKey,
+      formattedDate: formatDate(dateKey),
+      records: groupsMap.get(dateKey),
+    }));
+  }, [workforceHistory, workforceSearch, workforceDateFilter]);
+
   const selectedDateLeave = useMemo(() => {
     return (
       myLeaves.find((l) => {
@@ -307,7 +354,7 @@ const AttendancePage = () => {
         const name = emp.firstName ? `${emp.firstName} ${emp.lastName}` : 'Staff Employee';
         return (
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <InitialsAvatar name={name} size={34} />
+            <InitialsAvatar name={name} size={34} src={emp.avatarUrl} />
             <Box>
               <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }} noWrap>
                 {name}
@@ -1181,24 +1228,106 @@ const AttendancePage = () => {
             </Box>
           </Box>
         ) : (
-          /* ─── 6. WORKFORCE ATTENDANCE TABLE ───────────────────────────── */
+          /* ─── 6. WORKFORCE ATTENDANCE TABLE (DATE-WISE GROUPING) ───────── */
           <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', mb: 2 }}>
-              Hospital Workforce Attendance
-            </Typography>
-            <DataTable
-              columns={workforceColumns}
-              rows={workforceHistory}
-              getRowKey={(row) => row._id}
-              renderCell={(row, column) =>
-                typeof column.render === 'function'
-                  ? column.render(row)
-                  : row?.[column.key]
-              }
-              loading={loading}
-              emptyTitle="No workforce records found"
-              emptyDescription="Attendance records for your hospital workforce will appear here."
-            />
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              justifyContent="space-between"
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              spacing={2}
+              sx={{ mb: 3 }}
+            >
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                  Hospital Workforce Attendance
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#64748B', mt: 0.25 }}>
+                  Date-wise breakdown of attendance check-ins and working duration for hospital employees.
+                </Typography>
+              </Box>
+
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <AppInput
+                  size="small"
+                  placeholder="Search employee or ID..."
+                  value={workforceSearch}
+                  onChange={(e) => setWorkforceSearch(e.target.value)}
+                  startIcon={SearchRounded}
+                  sx={{ width: { xs: '100%', sm: 220 } }}
+                />
+                <AppInput
+                  type="date"
+                  size="small"
+                  value={workforceDateFilter}
+                  onChange={(e) => setWorkforceDateFilter(e.target.value)}
+                  sx={{ width: { xs: '100%', sm: 170 } }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Stack>
+            </Stack>
+
+            {loading ? (
+              <MainContentLoader />
+            ) : groupedWorkforceHistory.length === 0 ? (
+              <EmptyState
+                title="No workforce records found"
+                description="Attendance records for your hospital workforce will appear here."
+              />
+            ) : (
+              <Stack spacing={3.5}>
+                {groupedWorkforceHistory.map((group) => (
+                  <Box key={group.dateStr}>
+                    {/* Date Header Card */}
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 1.75,
+                        px: 2.5,
+                        mb: 1.5,
+                        borderRadius: '12px',
+                        backgroundColor: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <CalendarMonthRounded sx={{ color: '#0F172A', fontSize: 22 }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                          {group.formattedDate}
+                        </Typography>
+                      </Stack>
+
+                      <Chip
+                        label={`${group.records.length} Employee${group.records.length !== 1 ? 's' : ''}`}
+                        size="small"
+                        sx={{
+                          backgroundColor: '#E0F2FE',
+                          color: '#0369A1',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          borderRadius: '6px',
+                        }}
+                      />
+                    </Paper>
+
+                    {/* Table of employees for this date */}
+                    <DataTable
+                      columns={workforceColumns}
+                      rows={group.records}
+                      getRowKey={(row) => row._id}
+                      renderCell={(row, column) =>
+                        typeof column.render === 'function'
+                          ? column.render(row)
+                          : row?.[column.key]
+                      }
+                      loading={false}
+                    />
+                  </Box>
+                ))}
+              </Stack>
+            )}
           </Box>
         )}
 
