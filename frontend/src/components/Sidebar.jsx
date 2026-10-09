@@ -109,14 +109,15 @@ const NavItem = ({ item, currentPath, onClick }) => {
         py: 0.85,
         mb: 0.4,
         borderRadius: '10px',
-        backgroundColor: active ? '#0F172A' : 'transparent',
-        color: active ? '#FFFFFF' : '#334155',
+        backgroundColor: active ? '#E0F2FE' : 'transparent',
+        color: active ? '#252525' : '#6B7280',
+        borderLeft: active ? '3px solid #0284C7' : '3px solid transparent',
         transition: 'all 120ms ease',
         '&:hover': {
-          backgroundColor: active ? '#0F172A' : '#F1F5F9',
-          color: active ? '#FFFFFF' : '#0F172A',
+          backgroundColor: active ? '#E0F2FE' : '#F3F4F6',
+          color: '#252525',
           '& .MuiListItemIcon-root': {
-            color: active ? '#FFFFFF' : '#0F172A',
+            color: active ? '#0284C7' : '#252525',
           },
         },
       }}
@@ -124,7 +125,7 @@ const NavItem = ({ item, currentPath, onClick }) => {
       <ListItemIcon
         sx={{
           minWidth: 32,
-          color: active ? '#FFFFFF' : '#64748B',
+          color: active ? '#0284C7' : '#9CA3AF',
           transition: 'color 120ms ease',
           '& .MuiSvgIcon-root': {
             fontSize: 20,
@@ -139,7 +140,7 @@ const NavItem = ({ item, currentPath, onClick }) => {
           primary: {
             fontSize: '0.885rem',
             fontWeight: active ? 700 : 500,
-            color: active ? '#FFFFFF' : 'inherit',
+            color: active ? '#252525' : 'inherit',
             noWrap: true,
           },
         }}

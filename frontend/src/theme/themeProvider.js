@@ -8,24 +8,24 @@ export const createAppTheme = (mode = 'light') => {
     palette: {
       mode,
       primary: {
-        main: colors.primary,
-        contrastText: colors.primaryForeground,
+        main: colors.primary, // #252525
+        contrastText: colors.primaryForeground, // #FFFFFF
       },
       secondary: {
-        main: colors.secondary,
-        contrastText: colors.secondaryForeground,
+        main: colors.lightGrayBg, // #F3F4F6
+        contrastText: colors.primary, // #252525
       },
       background: {
-        default: isDark ? '#0F172A' : colors.background,
-        paper: isDark ? '#1E293B' : colors.card,
+        default: isDark ? '#121212' : colors.background, // #F9FAFB
+        paper: isDark ? '#1E1E1E' : colors.card, // #FFFFFF
       },
       text: {
-        primary: isDark ? '#F8FAFC' : colors.foreground,
-        secondary: colors.mutedForeground,
+        primary: isDark ? '#F9FAFB' : colors.foreground, // #252525
+        secondary: colors.secondaryText, // #6B7280
       },
-      divider: isDark ? '#334155' : colors.border,
+      divider: colors.border, // #E5E7EB
       action: {
-        hover: isDark ? 'rgba(241, 245, 249, 0.08)' : 'rgba(15, 23, 42, 0.04)',
+        hover: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.lightGrayBg, // #F3F4F6
         disabledOpacity: 0.55,
       },
       status: colors.status,
@@ -55,8 +55,8 @@ export const createAppTheme = (mode = 'light') => {
         styleOverrides: {
           body: {
             fontFamily: typography.fontFamily,
-            backgroundColor: isDark ? '#0F172A' : colors.background,
-            color: isDark ? '#F8FAFC' : colors.foreground,
+            backgroundColor: isDark ? '#121212' : colors.background,
+            color: isDark ? '#F9FAFB' : colors.foreground,
             margin: 0,
             padding: 0,
             boxSizing: 'border-box',
@@ -73,15 +73,42 @@ export const createAppTheme = (mode = 'light') => {
             paddingLeft: '18px',
             paddingRight: '18px',
             boxShadow: 'none',
+            transition: transitions.normal,
             '&:hover': {
               boxShadow: 'none',
             },
+            '&:focus-visible': {
+              outline: `2px solid ${colors.strongBlue}`,
+              outlineOffset: '2px',
+            },
+            '&.Mui-disabled': {
+              opacity: 0.55,
+              cursor: 'not-allowed',
+            },
           },
           containedPrimary: {
-            backgroundColor: colors.primary,
-            color: colors.primaryForeground,
+            backgroundColor: colors.primary, // #252525
+            color: colors.primaryForeground, // #FFFFFF
             '&:hover': {
-              backgroundColor: '#1E293B',
+              backgroundColor: colors.primaryHover, // #374151
+            },
+          },
+          outlinedSecondary: {
+            backgroundColor: colors.card, // #FFFFFF
+            color: colors.primary, // #252525
+            borderColor: colors.border, // #E5E7EB
+            '&:hover': {
+              backgroundColor: colors.lightBlueBg, // #E0F2FE
+              borderColor: colors.strongBlue, // #0284C7
+            },
+          },
+          outlined: {
+            backgroundColor: colors.card,
+            color: colors.primary,
+            borderColor: colors.border,
+            '&:hover': {
+              backgroundColor: colors.lightBlueBg,
+              borderColor: colors.strongBlue,
             },
           },
         },
@@ -96,10 +123,10 @@ export const createAppTheme = (mode = 'light') => {
               borderColor: colors.border,
             },
             '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: colors.ring,
+              borderColor: colors.strongBlue,
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: colors.ring,
+              borderColor: colors.strongBlue,
               borderWidth: '1.5px',
             },
           },
@@ -136,10 +163,10 @@ export const createAppTheme = (mode = 'light') => {
           head: {
             fontSize: typography.fontSize.tableHeader,
             fontWeight: typography.fontWeight.bold,
-            color: colors.mutedForeground,
+            color: colors.secondaryText,
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
-            backgroundColor: colors.sidebar,
+            backgroundColor: colors.lightGrayBg,
             height: '40px',
             padding: '10px 16px',
           },
@@ -150,7 +177,7 @@ export const createAppTheme = (mode = 'light') => {
           root: {
             height: '44px',
             '&:hover': {
-              backgroundColor: `${colors.secondary}80`,
+              backgroundColor: colors.lightGrayBg,
             },
           },
         },
@@ -168,7 +195,7 @@ export const createAppTheme = (mode = 'light') => {
       MuiTabs: {
         styleOverrides: {
           indicator: {
-            backgroundColor: colors.primary,
+            backgroundColor: colors.strongBlue,
             height: 3,
             borderRadius: '3px 3px 0 0',
           },
@@ -182,6 +209,10 @@ export const createAppTheme = (mode = 'light') => {
             fontSize: '0.875rem',
             minHeight: '40px',
             padding: '6px 16px',
+            color: colors.secondaryText,
+            '&.Mui-selected': {
+              color: colors.primary,
+            },
           },
         },
       },

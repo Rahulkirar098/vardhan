@@ -1,30 +1,40 @@
 /**
  * Nuvince Centralized Design Tokens
- * Based on Nuvince System Specifications
+ * Finalized Brand Color System: Charcoal (#252525), Light Gray (#F3F4F6), Light Blue (#E0F2FE), Strong Blue (#0284C7)
  */
 
 export const colors = {
-  // Light Mode Base Palette
-  background: '#FFFFFF',
+  // Base Brand Palette
+  primary: '#252525',
+  primaryHover: '#374151',
+  primaryForeground: '#FFFFFF',
+  
+  background: '#F9FAFB',
   card: '#FFFFFF',
-  foreground: '#020618',
-  primary: '#0F172B',
-  primaryForeground: '#F8FAFC',
-  secondary: '#F1F5F9',
-  secondaryForeground: '#0F172B',
-  muted: '#F1F5F9',
-  mutedForeground: '#62748E',
-  accent: '#F1F5F9',
-  accentForeground: '#0F172B',
-  border: '#E2E8F0',
-  borderSoft: '#F1F5F9',
-  input: '#E2E8F0',
-  ring: '#90A1B9',
-  sidebar: '#F8FAFC',
+  lightGrayBg: '#F3F4F6',
+  
+  border: '#E5E7EB',
+  borderSoft: '#F3F4F6',
+  input: '#E5E7EB',
+  ring: '#0284C7',
+  
+  foreground: '#252525',
+  secondaryText: '#6B7280',
+  mutedForeground: '#9CA3AF',
+  
+  // Interactive & Accent Colors
+  lightBlueBg: '#E0F2FE',
+  lightBlueAccent: '#38BDF8',
+  strongBlue: '#0284C7',
+  
+  sidebar: '#FFFFFF',
+  sidebarActiveBg: '#E0F2FE',
+  sidebarActiveText: '#252525',
+  
   destructive: '#E7000B',
   destructiveForeground: '#FFFFFF',
 
-  // Status Colors (Solid & Soft Light backgrounds)
+  // Status Colors
   status: {
     success: {
       main: '#1C985A',
@@ -51,10 +61,10 @@ export const colors = {
       text: '#075985',
     },
     neutral: {
-      main: '#62748E',
-      light: '#F8FAFC',
-      border: '#E2E8F0',
-      text: '#334155',
+      main: '#6B7280',
+      light: '#F3F4F6',
+      border: '#E5E7EB',
+      text: '#374151',
     },
   },
 
@@ -68,7 +78,7 @@ export const colors = {
   ],
 
   // Overlay
-  overlay: 'rgba(15, 23, 43, 0.45)',
+  overlay: 'rgba(37, 37, 37, 0.45)',
 };
 
 export const typography = {
@@ -128,9 +138,9 @@ export const sizing = {
     pageMaxWidth: '1440px',
   },
   shadows: {
-    card: '0 1px 3px rgba(2, 6, 24, 0.04), 0 1px 2px rgba(2, 6, 24, 0.02)',
-    dropdown: '0 10px 15px -3px rgba(2, 6, 24, 0.08), 0 4px 6px -4px rgba(2, 6, 24, 0.03)',
-    modal: '0 20px 25px -5px rgba(2, 6, 24, 0.12), 0 8px 10px -6px rgba(2, 6, 24, 0.04)',
+    card: '0 1px 3px rgba(37, 37, 37, 0.04), 0 1px 2px rgba(37, 37, 37, 0.02)',
+    dropdown: '0 10px 15px -3px rgba(37, 37, 37, 0.08), 0 4px 6px -4px rgba(37, 37, 37, 0.03)',
+    modal: '0 20px 25px -5px rgba(37, 37, 37, 0.12), 0 8px 10px -6px rgba(37, 37, 37, 0.04)',
   },
 };
 

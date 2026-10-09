@@ -15,6 +15,9 @@ import {
 
 /**
  * Reusable StyledButton component using MUI styled() API
+ * Brand specs: Primary (#252525, hover #374151, text #FFFFFF)
+ * Secondary (#FFFFFF bg, #252525 text, #E5E7EB border, hover #E0F2FE bg with #0284C7 border)
+ * Focus (#0284C7 visible outline)
  */
 export const StyledButton = styled(Button, {
   shouldForwardProp: (prop) => prop !== 'variantType',
@@ -34,38 +37,33 @@ export const StyledButton = styled(Button, {
           },
         };
       case 'secondary':
-        return {
-          backgroundColor: colors.secondary || '#F1F5F9',
-          color: colors.foreground || '#020618',
-          '&:hover': {
-            backgroundColor: '#E2E8F0',
-          },
-        };
       case 'outline':
         return {
-          backgroundColor: colors.background || '#FFFFFF',
-          color: colors.foreground || '#020618',
-          border: `1px solid ${colors.border || '#E2E8F0'}`,
+          backgroundColor: colors.card || '#FFFFFF',
+          color: theme.palette.text.primary || '#252525',
+          border: `1px solid ${theme.palette.divider || '#E5E7EB'}`,
           '&:hover': {
-            borderColor: colors.ring || '#90A1B9',
-            backgroundColor: colors.secondary || '#F1F5F9',
+            borderColor: colors.strongBlue || '#0284C7',
+            backgroundColor: colors.lightBlueBg || '#E0F2FE',
+            color: theme.palette.text.primary || '#252525',
           },
         };
       case 'ghost':
         return {
           backgroundColor: 'transparent',
-          color: colors.foreground || '#020618',
+          color: theme.palette.text.primary || '#252525',
           '&:hover': {
-            backgroundColor: colors.secondary || '#F1F5F9',
+            backgroundColor: colors.lightBlueBg || '#E0F2FE',
+            color: colors.strongBlue || '#0284C7',
           },
         };
       case 'primary':
       default:
         return {
-          backgroundColor: colors.primary || '#0F172B',
-          color: colors.primaryForeground || '#F8FAFC',
+          backgroundColor: theme.palette.primary.main || '#252525',
+          color: theme.palette.primary.contrastText || '#FFFFFF',
           '&:hover': {
-            backgroundColor: '#1E293B',
+            backgroundColor: colors.primaryHover || '#374151',
           },
         };
     }
@@ -81,6 +79,10 @@ export const StyledButton = styled(Button, {
     boxShadow: 'none',
     transition: 'all 180ms cubic-bezier(0.4, 0, 0.2, 1)',
     ...getVariantStyles(),
+    '&:focus-visible': {
+      outline: `2px solid ${colors.strongBlue || '#0284C7'}`,
+      outlineOffset: '2px',
+    },
     '&.Mui-disabled': {
       opacity: 0.55,
       cursor: 'not-allowed',
@@ -92,28 +94,28 @@ export const StyledButton = styled(Button, {
  * Reusable StyledTextField component
  */
 export const StyledTextField = styled(TextField)(({ theme }) => {
-  const colors = theme.custom?.colors || {};
+  const colors = theme.custom?.tokens?.colors || {};
   return {
     '& .MuiOutlinedInput-root': {
       borderRadius: theme.shape.borderRadius || 10,
-      backgroundColor: colors.background || '#FFFFFF',
+      backgroundColor: theme.palette.background.paper || '#FFFFFF',
       fontSize: '0.875rem',
       transition: 'all 180ms ease',
       '& fieldset': {
-        borderColor: colors.border || '#E2E8F0',
+        borderColor: theme.palette.divider || '#E5E7EB',
       },
       '&:hover fieldset': {
-        borderColor: colors.ring || '#90A1B9',
+        borderColor: colors.strongBlue || '#0284C7',
       },
       '&.Mui-focused fieldset': {
-        borderColor: colors.primary || '#0F172B',
+        borderColor: colors.strongBlue || '#0284C7',
         borderWidth: '1.5px',
       },
     },
     '& .MuiInputLabel-root': {
       fontSize: '0.875rem',
       fontWeight: 500,
-      color: colors.mutedForeground || '#62748E',
+      color: theme.palette.text.secondary || '#6B7280',
     },
   };
 });
@@ -122,13 +124,12 @@ export const StyledTextField = styled(TextField)(({ theme }) => {
  * Reusable StyledPanel / StyledCard component
  */
 export const StyledPanel = styled(Paper)(({ theme }) => {
-  const colors = theme.custom?.colors || {};
-  const sizing = theme.custom?.sizing || {};
+  const sizing = theme.custom?.tokens?.sizing || {};
   return {
     borderRadius: theme.shape.borderRadius || 10,
-    backgroundColor: colors.background || '#FFFFFF',
-    border: `1px solid ${colors.border || '#E2E8F0'}`,
-    boxShadow: sizing.shadows?.card || '0 1px 3px rgba(2, 6, 24, 0.04)',
+    backgroundColor: theme.palette.background.paper || '#FFFFFF',
+    border: `1px solid ${theme.palette.divider || '#E5E7EB'}`,
+    boxShadow: sizing.shadows?.card || '0 1px 3px rgba(37, 37, 37, 0.04)',
     padding: theme.spacing(3),
     boxSizing: 'border-box',
   };
@@ -142,12 +143,12 @@ export const StyledCard = StyledPanel;
 export const StyledBadge = styled(Chip, {
   shouldForwardProp: (prop) => prop !== 'statusType',
 })(({ theme, statusType = 'neutral' }) => {
-  const statusColors = theme.custom?.colors?.status || {};
+  const statusColors = theme.custom?.tokens?.colors?.status || {};
   const conf = statusColors[statusType] || statusColors.neutral || {
-    main: '#62748E',
-    light: '#F8FAFC',
-    border: '#E2E8F0',
-    text: '#334155',
+    main: '#6B7280',
+    light: '#F3F4F6',
+    border: '#E5E7EB',
+    text: '#374151',
   };
 
   return {
@@ -169,18 +170,19 @@ export const StyledBadge = styled(Chip, {
  * Reusable StyledIconButton component
  */
 export const StyledIconButton = styled(IconButton)(({ theme }) => {
-  const colors = theme.custom?.colors || {};
+  const colors = theme.custom?.tokens?.colors || {};
   return {
     width: 36,
     height: 36,
     borderRadius: 8,
-    border: `1px solid ${colors.border || '#E2E8F0'}`,
-    backgroundColor: colors.background || '#FFFFFF',
-    color: colors.foreground || '#020618',
+    border: `1px solid ${theme.palette.divider || '#E5E7EB'}`,
+    backgroundColor: theme.palette.background.paper || '#FFFFFF',
+    color: theme.palette.text.primary || '#252525',
     transition: 'all 120ms ease',
     '&:hover': {
-      borderColor: colors.ring || '#90A1B9',
-      backgroundColor: colors.secondary || '#F1F5F9',
+      borderColor: colors.strongBlue || '#0284C7',
+      backgroundColor: colors.lightBlueBg || '#E0F2FE',
+      color: colors.strongBlue || '#0284C7',
     },
   };
 });
@@ -189,14 +191,13 @@ export const StyledIconButton = styled(IconButton)(({ theme }) => {
  * Reusable StyledDialog component wrapper
  */
 export const StyledDialog = styled(Dialog)(({ theme }) => {
-  const colors = theme.custom?.colors || {};
-  const sizing = theme.custom?.sizing || {};
+  const sizing = theme.custom?.tokens?.sizing || {};
   return {
     '& .MuiDialog-paper': {
       borderRadius: '14px',
-      border: `1px solid ${colors.border || '#E2E8F0'}`,
-      boxShadow: sizing.shadows?.modal || '0 20px 25px -5px rgba(2, 6, 24, 0.12)',
-      backgroundColor: colors.background || '#FFFFFF',
+      border: `1px solid ${theme.palette.divider || '#E5E7EB'}`,
+      boxShadow: sizing.shadows?.modal || '0 20px 25px -5px rgba(37, 37, 37, 0.12)',
+      backgroundColor: theme.palette.background.paper || '#FFFFFF',
       backgroundImage: 'none',
       padding: '8px',
     },
@@ -207,9 +208,9 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
  * Reusable StyledSegmentedTabs & StyledTab
  */
 export const StyledSegmentedTabs = styled(Tabs)(({ theme }) => {
-  const colors = theme.custom?.colors || {};
+  const colors = theme.custom?.tokens?.colors || {};
   return {
-    backgroundColor: colors.secondary || '#F1F5F9',
+    backgroundColor: colors.lightGrayBg || '#F3F4F6',
     borderRadius: '10px',
     padding: '3px',
     minHeight: '36px',
@@ -220,7 +221,7 @@ export const StyledSegmentedTabs = styled(Tabs)(({ theme }) => {
 });
 
 export const StyledSegmentedTab = styled(Tab)(({ theme }) => {
-  const colors = theme.custom?.colors || {};
+  const colors = theme.custom?.tokens?.colors || {};
   return {
     textTransform: 'none',
     fontWeight: 600,
@@ -228,13 +229,13 @@ export const StyledSegmentedTab = styled(Tab)(({ theme }) => {
     minHeight: '32px',
     padding: '6px 14px',
     borderRadius: '7px',
-    color: colors.mutedForeground || '#62748E',
+    color: theme.palette.text.secondary || '#6B7280',
     transition: 'all 120ms ease',
     '&.Mui-selected': {
-      backgroundColor: colors.primary || '#0F172B',
+      backgroundColor: theme.palette.primary.main || '#252525',
       color: '#FFFFFF',
       fontWeight: 700,
-      boxShadow: '0 1px 3px rgba(15,23,42,0.15)',
+      boxShadow: '0 1px 3px rgba(37, 37, 37, 0.15)',
     },
   };
 });
