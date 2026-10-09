@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Alert,
   Box,
   Button,
   Chip,
   Grid,
   IconButton,
-  Snackbar,
   Stack,
   Typography,
 } from '@mui/material';
@@ -41,6 +39,7 @@ import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import KPICardWithAction from '../../components/common/KPICardWithAction';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 import { formatTime12h as format12h, getTodayDateStr } from '../../utils/dateUtils';
 
@@ -551,11 +550,7 @@ const AdminDashboard = () => {
   const [myLeaves, setMyLeaves] = useState([]);
   const [myRegularizations, setMyRegularizations] = useState([]);
   const [actionLoading, setActionLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-
-  const showSnack = (message, severity = 'info') => {
-    setSnackbar({ open: true, message, severity });
-  };
+  const { showSnackbar: showSnack } = useSnackbar();
 
   // Permission Checks
   const canManageRoster = hasPermission(PERMISSIONS.ROSTER_MANAGE);
@@ -1063,21 +1058,6 @@ const AdminDashboard = () => {
 
             </>
           )}
-
-          <Snackbar
-            open={snackbar.open}
-            autoHideDuration={4000}
-            onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-          >
-            <Alert
-              onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-              severity={snackbar.severity}
-              variant="filled"
-              sx={{ width: '100%' }}
-            >
-              {snackbar.message}
-            </Alert>
-          </Snackbar>
       </AppLayout>
     );
   }
@@ -1337,21 +1317,6 @@ const AdminDashboard = () => {
             </Box>
           </>
         )}
-
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={4000}
-          onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-        >
-          <Alert
-            onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-            severity={snackbar.severity}
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-        </Alert>
-      </Snackbar>
     </AppLayout>
   );
 };

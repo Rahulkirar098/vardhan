@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -12,7 +11,6 @@ import {
   MenuItem,
   Paper,
   Select,
-  Snackbar,
   Stack,
   Tab,
   Tabs,
@@ -49,6 +47,7 @@ import { UnifiedCalendar } from '../../components/calendar';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import { leaveService } from '../../services/leave.service';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
@@ -193,7 +192,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
 
         {/* Start Date & End Date (Always visible) */}
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid xs={12} sm={6}>
             <TextField
               label="Start Date"
               type="date"
@@ -211,7 +210,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
               }}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid xs={12} sm={6}>
             <TextField
               label="End Date"
               type="date"
@@ -227,7 +226,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
 
         {/* Day Type Dropdown */}
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={dayType === 'HALF_DAY' ? 6 : 12}>
+          <Grid xs={12} sm={dayType === 'HALF_DAY' ? 6 : 12}>
             <FormControl fullWidth required>
               <InputLabel id="day-type-select-label">Day Type</InputLabel>
               <Select
@@ -244,7 +243,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
 
           {/* Half Day Session Dropdown (only visible when Day Type is Half Day) */}
           {dayType === 'HALF_DAY' && (
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <FormControl fullWidth required>
                 <InputLabel id="half-day-session-label">Half Day Session</InputLabel>
                 <Select
@@ -444,7 +443,7 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
 
         {/* Employee & Timing Info Grid */}
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2, borderRadius: '10px' }}>
               <Typography variant="caption" color="text.secondary">
                 Employee
@@ -458,7 +457,7 @@ const LeaveDetailsModal = ({ open, leave, onClose }) => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid xs={12} sm={6}>
             <Paper variant="outlined" sx={{ p: 2, borderRadius: '10px' }}>
               <Typography variant="caption" color="text.secondary">
                 Duration
@@ -732,8 +731,7 @@ const LeaveCalendarView = ({ leaves, canViewManagement }) => {
 
 // ─── Main Leave Management Page ──────────────────────────────────────────────
 const LeaveManagementPage = () => {
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const showSnack = (message, severity = 'success') => setSnackbar({ open: true, message, severity });
+  const { showSnackbar: showSnack } = useSnackbar();
 
   const currentUserRole = localStorage.getItem('role') || 'employee';
   const currentUserId = useMemo(() => {
@@ -1146,7 +1144,7 @@ const LeaveManagementPage = () => {
               {/* Search & Filter Controls */}
               <Box sx={{ p: 2.5, borderBottom: '1px solid #F1F5F9' }}>
                 <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} sm={6} md={4}>
+                  <Grid xs={12} sm={6} md={4}>
                     <TextField
                       fullWidth
                       size="small"
@@ -1170,7 +1168,7 @@ const LeaveManagementPage = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
                       <InputLabel id="type-filter-select-label">Leave Type</InputLabel>
                       <Select
@@ -1293,23 +1291,6 @@ const LeaveManagementPage = () => {
         onCancel={() => setCancellingLeave(null)}
         onConfirm={handleCancelConfirm}
       />
-
-      {/* Global Toast */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%', borderRadius: '8px', boxShadow: 3 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </AppLayout>
   );
 };

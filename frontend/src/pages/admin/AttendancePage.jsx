@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
   IconButton,
   Paper,
-  Snackbar,
   Stack,
   Tab,
   Tabs,
@@ -48,6 +46,7 @@ import { UnifiedCalendar } from '../../components/calendar';
 import attendanceService from '../../services/attendance.service';
 import leaveService from '../../services/leave.service';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 
 import {
   formatDate,
@@ -96,7 +95,13 @@ const AttendancePage = () => {
   const [workforceRegularizations, setWorkforceRegularizations] = useState([]);
   const [stats, setStats] = useState({ present: 0, halfDay: 0, absent: 0, workingDays: 0 });
   const [selectedDateStr, setSelectedDateStr] = useState(() => getTodayDateStr());
-  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+  const { showSnackbar } = useSnackbar();
+  const setToast = useCallback((arg) => {
+    if (typeof arg === 'function') return;
+    if (arg && arg.open && arg.message) {
+      showSnackbar(arg.message, arg.severity || 'info');
+    }
+  }, [showSnackbar]);
 
   // Regularization modal & cancel state
   const [isRegularizationModalOpen, setIsRegularizationModalOpen] = useState(false);
@@ -1458,22 +1463,6 @@ const AttendancePage = () => {
           sx={{ mt: 2 }}
         />
       </ConfirmDialog>
-
-      {/* Toast Notification */}
-      <Snackbar
-        open={toast.open}
-        autoHideDuration={4000}
-        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          severity={toast.severity}
-          onClose={() => setToast((prev) => ({ ...prev, open: false }))}
-          sx={{ borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-        >
-          {toast.message}
-        </Alert>
-      </Snackbar>
     </AppLayout>
   );
 };

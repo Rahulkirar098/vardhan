@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Checkbox, Chip, FormControlLabel, FormGroup, IconButton, Paper, Stack, TextField, Tooltip, Typography, Snackbar, Alert } from '@mui/material';
+import { Box, Button, Checkbox, Chip, FormControlLabel, FormGroup, IconButton, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { AddRounded, EditRounded, PowerSettingsNewRounded, BusinessCenterRounded, CalendarMonthRounded } from '@mui/icons-material';
 import DataTable from '../../components/DataTable';
 import AppLayout from '../../components/AppLayout';
@@ -13,6 +13,7 @@ import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 import { positionService } from '../../services/position.service';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
@@ -214,8 +215,7 @@ const ScheduleEditor = ({ value, onChange }) => {
 };
 
 const PositionsPage = () => {
-    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-    const showSnack = (message, severity = 'success') => setSnackbar({ open: true, message, severity });
+    const { showSnackbar: showSnack } = useSnackbar();
     
     const [positions, setPositions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -818,22 +818,6 @@ const PositionsPage = () => {
                 loading={submitting}
                 destructive={selectedPosition?.status === 'active'}
             />
-
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={4000}
-                onClose={() => setSnackbar({ ...snackbar, open: false })}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            >
-                <Alert
-                    onClose={() => setSnackbar({ ...snackbar, open: false })}
-                    severity={snackbar.severity}
-                    variant="filled"
-                    sx={{ width: '100%' }}
-                >
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
         </AppLayout>
     );
 };

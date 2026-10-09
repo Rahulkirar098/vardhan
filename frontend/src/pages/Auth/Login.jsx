@@ -68,63 +68,7 @@ const Login = () => {
           localStorage.setItem('permissions', JSON.stringify(response?.data?.data?.user?.permissions || []));
           localStorage.setItem('modules', JSON.stringify(response?.data?.data?.user?.modules || ['core']));
 
-          if (role === 'super_admin') {
-            navigate('/super-admin/dashboard');
-            return;
-          }
-
-          if (role === 'admin') {
-            navigate('/hospital');
-            return;
-          }
-
-          if (role === 'employee') {
-            const userMods = response?.data?.data?.user?.modules || ['core'];
-            const userPerms = response?.data?.data?.user?.permissions || [];
-            const hasHrms = userMods.includes('hrms');
-
-            if (hasHrms && userPerms.includes('employee.view')) {
-              navigate('/employees');
-              return;
-            }
-
-            const hasAnyLeave =
-              userPerms.includes('leave.apply') ||
-              userPerms.includes('leave.view_own') ||
-              userPerms.includes('leave.view') ||
-              userPerms.includes('leave.approve') ||
-              userPerms.includes('leave.manage');
-
-            if (hasHrms && hasAnyLeave) {
-              navigate('/leaves');
-              return;
-            }
-
-            if (userPerms.includes('structure.view')) {
-              navigate('/structure');
-              return;
-            }
-
-            if (userPerms.includes('position.view')) {
-              navigate('/positions');
-              return;
-            }
-
-            if (userPerms.includes('access.view')) {
-              navigate('/access-management');
-              return;
-            }
-
-            if (userPerms.includes('hospital.view')) {
-              navigate('/hospital');
-              return;
-            }
-
-            navigate('/profile');
-            return;
-          }
-
-          navigate('/hospital');
+          navigate('/dashboard');
           return;
         } catch (decodeError) {
           console.error('Token decode error:', decodeError);

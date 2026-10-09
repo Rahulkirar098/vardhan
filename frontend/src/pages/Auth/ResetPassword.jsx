@@ -8,7 +8,6 @@ import {
   Divider,
   IconButton,
   InputAdornment,
-  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -16,6 +15,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successOpen, setSuccessOpen] = useState(false);
+  const { showSnackbar } = useSnackbar();
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -54,7 +54,7 @@ const ResetPassword = () => {
     try {
       setLoading(true);
       await auth.resetPassword({ token, password: form.password });
-      setSuccessOpen(true);
+      showSnackbar('Password reset successfully. Redirecting to login.', 'success');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       setError(
@@ -150,17 +150,6 @@ const ResetPassword = () => {
           </Link>
         </Typography>
       </Stack>
-
-      <Snackbar
-        open={successOpen}
-        autoHideDuration={2000}
-        onClose={() => setSuccessOpen(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert severity="success" variant="filled">
-          Password reset successfully. Redirecting to login.
-        </Alert>
-      </Snackbar>
     </AuthLayout>
   );
 };

@@ -111,7 +111,7 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
 
         {/* Date & Status Grid */}
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid xs={12} sm={6}>
             <TextField
               label="Date"
               type="date"
@@ -124,7 +124,7 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
             />
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid xs={12} sm={6}>
             <FormControl fullWidth required>
               <InputLabel id="requested-status-select-label">Attendance Status</InputLabel>
               <Select
@@ -145,7 +145,7 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
 
         {/* Check In & Check Out Times */}
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid xs={12} sm={6}>
             <TextField
               label="Check In"
               type="time"
@@ -157,7 +157,7 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
             />
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid xs={12} sm={6}>
             <TextField
               label="Check Out"
               type="time"

@@ -25,7 +25,6 @@ import {
   Radio,
   RadioGroup,
   Select,
-  Snackbar,
   Stack,
   Tab,
   Table,
@@ -78,6 +77,7 @@ import Modal from '../../components/Modal';
 import { UnifiedCalendar } from '../../components/calendar';
 import { generateFrontendRosterPDF } from '../../utils/rosterPdfGenerator';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 import EmptyState from '../../components/EmptyState';
 import InitialsAvatar from '../../components/InitialsAvatar';
 
@@ -110,7 +110,6 @@ export default function RosterManagementPage() {
   // Loading & Toast States
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [toast, setToast] = useState({ open: false, message: '', severity: 'info' });
 
   // Data Collections
   const [rosters, setRosters] = useState([]);
@@ -231,9 +230,7 @@ export default function RosterManagementPage() {
     scope: 'THIS_DATE',
   });
 
-  const showToast = (message, severity = 'info') => {
-    setToast({ open: true, message, severity });
-  };
+  const { showSnackbar: showToast } = useSnackbar();
 
   // --- Data Fetching ---
   const fetchRosters = useCallback(async () => {
@@ -1435,7 +1432,7 @@ export default function RosterManagementPage() {
         {activeTab === 'drafts' && canManage && (
           <Grid container spacing={3}>
             {draftsList.length === 0 ? (
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <EmptyState
                   icon={EditOutlined}
                   title="No Active Draft Rosters"
@@ -1449,7 +1446,7 @@ export default function RosterManagementPage() {
               </Grid>
             ) : (
               draftsList.map((r) => (
-                <Grid item xs={12} md={6} lg={4} key={r._id}>
+                <Grid xs={12} md={6} lg={4} key={r._id}>
                   <GlassCard sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
                       <Box>
@@ -1547,7 +1544,7 @@ export default function RosterManagementPage() {
         {activeTab === 'history' && canViewWorkforce && (
           <Grid container spacing={3}>
             {historyRosters.length === 0 ? (
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <EmptyState
                   icon={EventNoteRounded}
                   title="No Previous Rosters Available"
@@ -1556,7 +1553,7 @@ export default function RosterManagementPage() {
               </Grid>
             ) : (
               historyRosters.map((hr) => (
-                <Grid item xs={12} md={6} lg={4} key={hr._id}>
+                <Grid xs={12} md={6} lg={4} key={hr._id}>
                   <GlassCard sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
                       <Box>
@@ -1629,7 +1626,7 @@ export default function RosterManagementPage() {
             ) : (
               <Grid container spacing={3}>
                 {templates.map((t) => (
-                  <Grid item xs={12} md={6} lg={4} key={t._id}>
+                  <Grid xs={12} md={6} lg={4} key={t._id}>
                     <GlassCard sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
                         <Box>
@@ -1746,7 +1743,7 @@ export default function RosterManagementPage() {
               />
             ) : (
               <Grid container spacing={3}>
-                <Grid item xs={12} md={7}>
+                <Grid xs={12} md={7}>
                   <Stack spacing={2}>
                     {(myRosterSubTab === 'history' ? myHistoryAssignments : myCurrentAssignments).map((ass) => (
                       <Paper key={ass.id || ass._id} variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: '#0284C7' }}>
@@ -1770,7 +1767,7 @@ export default function RosterManagementPage() {
                     ))}
                   </Stack>
                 </Grid>
-                <Grid item xs={12} md={5}>
+                <Grid xs={12} md={5}>
                   <UnifiedCalendar events={myRosterCalendarEvents} initialView="month" />
                 </Grid>
               </Grid>
@@ -1826,7 +1823,7 @@ export default function RosterManagementPage() {
             />
 
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <TextField
                   label="Start Date"
                   type="date"
@@ -1837,7 +1834,7 @@ export default function RosterManagementPage() {
                   required
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <TextField
                   label="End Date"
                   type="date"
@@ -1876,7 +1873,7 @@ export default function RosterManagementPage() {
                 {rosterForm.columns.map((col, idx) => (
                   <Paper key={col.id} variant="outlined" sx={{ p: 1.5 }}>
                     <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} sm={4}>
+                      <Grid xs={12} sm={4}>
                         <TextField
                           label="Shift Title"
                           size="small"
@@ -1889,7 +1886,7 @@ export default function RosterManagementPage() {
                           }}
                         />
                       </Grid>
-                      <Grid item xs={5} sm={3}>
+                      <Grid xs={5} sm={3}>
                         <TextField
                           label="Start Time"
                           type="time"
@@ -1904,7 +1901,7 @@ export default function RosterManagementPage() {
                           }}
                         />
                       </Grid>
-                      <Grid item xs={5} sm={3}>
+                      <Grid xs={5} sm={3}>
                         <TextField
                           label="End Time"
                           type="time"
@@ -1919,7 +1916,7 @@ export default function RosterManagementPage() {
                           }}
                         />
                       </Grid>
-                      <Grid item xs={2} sm={2} align="right">
+                      <Grid xs={2} sm={2} align="right">
                         <IconButton
                           color="error"
                           size="small"
@@ -1966,7 +1963,7 @@ export default function RosterManagementPage() {
                 {rosterForm.dutyAreas.map((da, idx) => (
                   <Paper key={da.id} variant="outlined" sx={{ p: 1.5 }}>
                     <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={10}>
+                      <Grid xs={10}>
                         <TextField
                           label="Duty Area Name"
                           size="small"
@@ -1979,7 +1976,7 @@ export default function RosterManagementPage() {
                           }}
                         />
                       </Grid>
-                      <Grid item xs={2} align="right">
+                      <Grid xs={2} align="right">
                         <IconButton
                           color="error"
                           size="small"
@@ -2064,7 +2061,7 @@ export default function RosterManagementPage() {
                 {templateForm.columns.map((col, idx) => (
                   <Paper key={col.id} variant="outlined" sx={{ p: 1.5 }}>
                     <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} sm={4}>
+                      <Grid xs={12} sm={4}>
                         <TextField
                           label="Shift Title"
                           size="small"
@@ -2077,7 +2074,7 @@ export default function RosterManagementPage() {
                           }}
                         />
                       </Grid>
-                      <Grid item xs={5} sm={3}>
+                      <Grid xs={5} sm={3}>
                         <TextField
                           label="Start Time"
                           type="time"
@@ -2092,7 +2089,7 @@ export default function RosterManagementPage() {
                           }}
                         />
                       </Grid>
-                      <Grid item xs={5} sm={3}>
+                      <Grid xs={5} sm={3}>
                         <TextField
                           label="End Time"
                           type="time"
@@ -2107,7 +2104,7 @@ export default function RosterManagementPage() {
                           }}
                         />
                       </Grid>
-                      <Grid item xs={2} sm={2} align="right">
+                      <Grid xs={2} sm={2} align="right">
                         <IconButton
                           color="error"
                           size="small"
@@ -2154,7 +2151,7 @@ export default function RosterManagementPage() {
                 {templateForm.dutyAreas.map((da, idx) => (
                   <Paper key={da.id} variant="outlined" sx={{ p: 1.5 }}>
                     <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={10}>
+                      <Grid xs={10}>
                         <TextField
                           label="Duty Area Name"
                           size="small"
@@ -2167,7 +2164,7 @@ export default function RosterManagementPage() {
                           }}
                         />
                       </Grid>
-                      <Grid item xs={2} align="right">
+                      <Grid xs={2} align="right">
                         <IconButton
                           color="error"
                           size="small"
@@ -2239,7 +2236,7 @@ export default function RosterManagementPage() {
 
             {assignmentMode === 'range' && !assignmentTarget.editingAssignment && (
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid xs={6}>
                   <TextField
                     label="From Date"
                     type="date"
@@ -2250,7 +2247,7 @@ export default function RosterManagementPage() {
                     required
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid xs={6}>
                   <TextField
                     label="To Date"
                     type="date"
@@ -2265,7 +2262,7 @@ export default function RosterManagementPage() {
             )}
 
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <TextField
                   label="Start Time"
                   type="time"
@@ -2275,7 +2272,7 @@ export default function RosterManagementPage() {
                   onChange={(e) => setAssignmentForm((p) => ({ ...p, startTime: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <TextField
                   label="End Time"
                   type="time"
@@ -2687,17 +2684,6 @@ export default function RosterManagementPage() {
             </Button>
           </DialogActions>
         </Dialog>
-
-        {/* Global Toast Notification */}
-        <Snackbar
-          open={toast.open}
-          autoHideDuration={5000}
-          onClose={() => setToast((p) => ({ ...p, open: false }))}
-        >
-          <Alert severity={toast.severity} onClose={() => setToast((p) => ({ ...p, open: false }))}>
-            {toast.message}
-          </Alert>
-        </Snackbar>
     </AppLayout>
   );
 }

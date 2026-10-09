@@ -1,6 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
 import {
-  Alert,
   Box,
   Button,
   Checkbox,
@@ -13,7 +11,6 @@ import {
   InputAdornment,
   MenuItem,
   Paper,
-  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -38,6 +35,7 @@ import GlassCard from '../../components/GlassCard';
 import Modal from '../../components/Modal';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import DataTable from '../../components/DataTable';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
@@ -533,10 +531,7 @@ const AccessManagementPage = () => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-
-  const showSnack = (message, severity = 'success') =>
-    setSnackbar({ open: true, message, severity });
+  const { showSnackbar: showSnack } = useSnackbar();
 
   const loadUsers = useCallback(async () => {
     try {
@@ -773,22 +768,6 @@ const AccessManagementPage = () => {
           setSelectedUser(null);
         }}
       />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          severity={snackbar.severity}
-          variant="filled"
-          onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </AppLayout>
   );
 };

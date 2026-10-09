@@ -96,7 +96,7 @@ const Landing = () => {
 
       <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
         <Grid container spacing={{ xs: 6, md: 8 }} sx={{ alignItems: 'center' }}>
-          <Grid item xs={12} md={6}>
+          <Grid xs={12} md={6}>
             <Stack spacing={3}>
               <Typography
                 variant="caption"
@@ -150,7 +150,7 @@ const Landing = () => {
             </Stack>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid xs={12} md={6}>
             <Box
               sx={{
                 borderRadius: '24px',
@@ -241,7 +241,7 @@ const Landing = () => {
 
           <Grid container spacing={2.5}>
             {features.map(({ icon: Icon, title, text }) => (
-              <Grid item xs={12} sm={6} lg={3} key={title}>
+              <Grid xs={12} sm={6} lg={3} key={title}>
                 <Box
                   sx={{
                     height: '100%',

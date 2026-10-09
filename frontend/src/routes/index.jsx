@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Landing from '../pages/Auth/Landing';
-import Login from '../pages/Auth/Login';
+import Login from '../pages/auth/Login';
 import Register from '../pages/Auth/Register';
 import ForgotPassword from '../pages/Auth/ForgotPassword';
 import ResetPassword from '../pages/Auth/ResetPassword';
@@ -61,6 +61,16 @@ export const getDefaultRedirectForRole = (role) => {
   }
 
   return '/login';
+};
+
+const DashboardRoute = () => {
+  const role = getUserRole();
+
+  if (role === 'super_admin') {
+    return <Navigate to="/super-admin/dashboard" replace />;
+  }
+
+  return <AdminDashboard />;
 };
 
 const ProtectedRoute = ({ children, allowedRoles, requiredModule, requiredPermission, requiredAnyPermission }) => {
@@ -159,8 +169,8 @@ const AppRoutes = () => {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'employee']}>
-            <AdminDashboard />
+          <ProtectedRoute allowedRoles={['admin', 'employee', 'super_admin']}>
+            <DashboardRoute />
           </ProtectedRoute>
         }
       />

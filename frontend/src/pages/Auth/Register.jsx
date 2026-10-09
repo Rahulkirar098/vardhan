@@ -8,7 +8,6 @@ import {
   Divider,
   IconButton,
   InputAdornment,
-  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -16,6 +15,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successOpen, setSuccessOpen] = useState(false);
+  const { showSnackbar } = useSnackbar();
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -60,7 +60,7 @@ const Register = () => {
         password: form.password,
       });
 
-      setSuccessOpen(true);
+      showSnackbar('Account created successfully. Redirecting to login...', 'success');
       setTimeout(() => {
         navigate('/login');
       }, 1000);
@@ -163,17 +163,6 @@ const Register = () => {
           </Link>
         </Typography>
       </Stack>
-
-      <Snackbar
-        open={successOpen}
-        autoHideDuration={2000}
-        onClose={() => setSuccessOpen(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert severity="success" variant="filled">
-          Account created successfully. Please login.
-        </Alert>
-      </Snackbar>
     </AuthLayout>
   );
 };

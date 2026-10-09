@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Alert,
   Box,
   Button,
   Grid,
@@ -10,7 +9,6 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -34,6 +32,7 @@ import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
 const initialRoomForm = {
@@ -288,7 +287,12 @@ const FloorDetails = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [toastMessage, setToastMessage] = useState('');
+  const { showSnackbar } = useSnackbar();
+  const setToastMessage = (msg) => {
+    if (!msg) return;
+    const severity = msg.includes('Unable') || msg.includes('Failed') ? 'error' : 'success';
+    showSnackbar(msg, severity);
+  };
 
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
@@ -426,7 +430,7 @@ const FloorDetails = () => {
           ) : (
             <Grid container spacing={2.5}>
               {rooms.map((room) => (
-                <Grid item xs={12} sm={6} md={4} key={room._id}>
+                <Grid xs={12} sm={6} md={4} key={room._id}>
                   <RoomCard
                     room={room}
                     onEdit={handleOpenEdit}
@@ -462,23 +466,6 @@ const FloorDetails = () => {
         submitting={deactivating}
         onConfirm={handleConfirmDeactivate}
       />
-
-      {/* Toast Feedback */}
-      <Snackbar
-        open={Boolean(toastMessage)}
-        autoHideDuration={4000}
-        onClose={() => setToastMessage('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setToastMessage('')}
-          severity={toastMessage.includes('Unable') ? 'error' : 'success'}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {toastMessage}
-        </Alert>
-      </Snackbar>
     </AppLayout>
   );
 };

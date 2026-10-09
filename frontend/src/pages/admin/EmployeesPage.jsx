@@ -1,6 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import {
-  Alert,
   Box,
   Button,
   Checkbox,
@@ -13,14 +12,13 @@ import {
   InputAdornment,
   MenuItem,
   Paper,
-  Snackbar,
   Stack,
   Tab,
   Tabs,
   TextField,
   Tooltip,
   Typography,
-} from '@mui/material';
+} from "@mui/material";
 import {
   AddRounded,
   CheckCircleOutlineRounded,
@@ -34,62 +32,63 @@ import {
   PowerSettingsNewRounded,
   ReplayRounded,
   SearchRounded,
-} from '@mui/icons-material';
-import employeeService from '../../services/employee.service';
-import positionService from '../../services/position.service';
-import auth from '../../services/auth.service';
-import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/common/PageHeader';
-import KPIGrid from '../../components/wrapper/KPIGrid';
-import KPICard from '../../components/common/KPICard';
-import StatusBadge from '../../components/StatusBadge';
-import GlassCard from '../../components/GlassCard';
-import Modal from '../../components/Modal';
-import { getTodayDateStr } from '../../utils/dateUtils';
-import ConfirmDialog from '../../components/ConfirmDialog';
-import EmptyState from '../../components/EmptyState';
-import ErrorState from '../../components/ErrorState';
-import InitialsAvatar from '../../components/InitialsAvatar';
-import DataTable from '../../components/DataTable';
-import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+} from "@mui/icons-material";
+import employeeService from "../../services/employee.service";
+import positionService from "../../services/position.service";
+import auth from "../../services/auth.service";
+import AppLayout from "../../components/AppLayout";
+import MainContentLoader from "../../components/common/MainContentLoader";
+import PageHeader from "../../components/common/PageHeader";
+import KPIGrid from "../../components/wrapper/KPIGrid";
+import KPICard from "../../components/common/KPICard";
+import StatusBadge from "../../components/StatusBadge";
+import GlassCard from "../../components/GlassCard";
+import Modal from "../../components/Modal";
+import { getTodayDateStr } from "../../utils/dateUtils";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import EmptyState from "../../components/EmptyState";
+import ErrorState from "../../components/ErrorState";
+import { useSnackbar } from "../../components/common/SnackbarProvider";
+import InitialsAvatar from "../../components/InitialsAvatar";
+import DataTable from "../../components/DataTable";
+import { hasPermission, PERMISSIONS } from "../../utils/permissions";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const formatDate = (d) => {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 };
 
 // ─── Invite Employee Modal ────────────────────────────────────────────────────
 const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    positionId: '',
-    dateOfJoining: '',
-    employeeId: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    positionId: "",
+    dateOfJoining: "",
+    employeeId: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const resetForm = () => {
     setForm({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      positionId: '',
-      dateOfJoining: '',
-      employeeId: '',
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      positionId: "",
+      dateOfJoining: "",
+      employeeId: "",
     });
-    setError('');
+    setError("");
     setSubmitting(false);
   };
 
@@ -110,11 +109,23 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
   };
 
   const handleSubmit = async () => {
-    setError('');
-    if (!form.firstName.trim()) { setError('First name is required.'); return; }
-    if (!form.lastName.trim()) { setError('Last name is required.'); return; }
-    if (!form.email.trim()) { setError('Email is required.'); return; }
-    if (!form.positionId) { setError('Position is required.'); return; }
+    setError("");
+    if (!form.firstName.trim()) {
+      setError("First name is required.");
+      return;
+    }
+    if (!form.lastName.trim()) {
+      setError("Last name is required.");
+      return;
+    }
+    if (!form.email.trim()) {
+      setError("Email is required.");
+      return;
+    }
+    if (!form.positionId) {
+      setError("Position is required.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -127,10 +138,12 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
         dateOfJoining: form.dateOfJoining || undefined,
         employeeId: form.employeeId.trim() || undefined,
       });
-      onSuccess('Invitation sent successfully.');
+      onSuccess("Invitation sent successfully.");
       handleClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to send employee invitation.');
+      setError(
+        err?.response?.data?.message || "Unable to send employee invitation.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -150,7 +163,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
       startIcon={AddRounded}
     >
       <Stack spacing={2.5}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             label="First Name"
             name="firstName"
@@ -181,7 +194,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
           fullWidth
           placeholder="e.g. rahul.sharma@hospital.com"
         />
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             label="Phone (optional)"
             name="phone"
@@ -199,7 +212,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
             placeholder="Auto-generated if blank"
           />
         </Stack>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             select
             label="Position *"
@@ -214,7 +227,15 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
                 displayEmpty: true,
                 renderValue: (selected) => {
                   if (!selected) {
-                    return <Typography component="span" variant="body2" color="text.secondary">Select Position</Typography>;
+                    return (
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        Select Position
+                      </Typography>
+                    );
                   }
                   const found = positions.find((p) => p._id === selected);
                   return found ? found.name : selected;
@@ -247,25 +268,43 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
 };
 
 // ─── Edit Employee Modal ──────────────────────────────────────────────────────
-const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) => {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', positionId: '', dateOfJoining: '', lastWorkingDay: '' });
+const EditEmployeeModal = ({
+  open,
+  employee,
+  onClose,
+  onSuccess,
+  positions,
+}) => {
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    positionId: "",
+    dateOfJoining: "",
+    lastWorkingDay: "",
+  });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  
+  const [error, setError] = useState("");
+
   const hasPositionUpdate = hasPermission(PERMISSIONS.EMPLOYEE_POSITION_UPDATE);
 
   useEffect(() => {
     if (open && employee) {
       setForm({
-        firstName: employee.firstName || '',
-        lastName: employee.lastName || '',
-        email: employee.email || '',
-        phone: employee.phone || '',
-        positionId: employee.positionId?._id || employee.positionId || '',
-        dateOfJoining: employee.dateOfJoining ? getTodayDateStr(employee.dateOfJoining) : '',
-        lastWorkingDay: employee.lastWorkingDay ? getTodayDateStr(employee.lastWorkingDay) : '',
+        firstName: employee.firstName || "",
+        lastName: employee.lastName || "",
+        email: employee.email || "",
+        phone: employee.phone || "",
+        positionId: employee.positionId?._id || employee.positionId || "",
+        dateOfJoining: employee.dateOfJoining
+          ? getTodayDateStr(employee.dateOfJoining)
+          : "",
+        lastWorkingDay: employee.lastWorkingDay
+          ? getTodayDateStr(employee.lastWorkingDay)
+          : "",
       });
-      setError('');
+      setError("");
       setSubmitting(false);
     }
   }, [open, employee]);
@@ -276,18 +315,31 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
   };
 
   const handleSubmit = async () => {
-    setError('');
-    if (!form.firstName.trim()) { setError('First name is required.'); return; }
-    if (!form.lastName.trim()) { setError('Last name is required.'); return; }
-    if (!form.email.trim()) { setError('Email is required.'); return; }
-    if (form.dateOfJoining && form.lastWorkingDay && form.lastWorkingDay < form.dateOfJoining) {
-      setError('Last Working Day cannot be earlier than Date of Joining.');
+    setError("");
+    if (!form.firstName.trim()) {
+      setError("First name is required.");
+      return;
+    }
+    if (!form.lastName.trim()) {
+      setError("Last name is required.");
+      return;
+    }
+    if (!form.email.trim()) {
+      setError("Email is required.");
+      return;
+    }
+    if (
+      form.dateOfJoining &&
+      form.lastWorkingDay &&
+      form.lastWorkingDay < form.dateOfJoining
+    ) {
+      setError("Last Working Day cannot be earlier than Date of Joining.");
       return;
     }
 
     try {
       setSubmitting(true);
-      
+
       const payload = {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -302,11 +354,11 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
       }
 
       await employeeService.updateEmployee(employee._id, payload);
-      
-      onSuccess('Employee updated successfully.');
+
+      onSuccess("Employee updated successfully.");
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to update employee.');
+      setError(err?.response?.data?.message || "Unable to update employee.");
     } finally {
       setSubmitting(false);
     }
@@ -326,7 +378,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
       startIcon={EditRounded}
     >
       <Stack spacing={2.5}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             label="First Name"
             name="firstName"
@@ -354,7 +406,7 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
           required
           fullWidth
         />
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             label="Phone"
             name="phone"
@@ -378,26 +430,36 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
-              {employee?.positionId?._id && !positions.some(p => p._id === employee.positionId?._id) && (
-                <MenuItem key={employee.positionId._id} value={employee.positionId._id}>
-                  {employee.positionId.name} (Current)
-                </MenuItem>
-              )}
+              {employee?.positionId?._id &&
+                !positions.some((p) => p._id === employee.positionId?._id) && (
+                  <MenuItem
+                    key={employee.positionId._id}
+                    value={employee.positionId._id}
+                  >
+                    {employee.positionId.name} (Current)
+                  </MenuItem>
+                )}
               {positions.map((p) => (
-                <MenuItem key={p._id} value={p._id}>{p.name}</MenuItem>
+                <MenuItem key={p._id} value={p._id}>
+                  {p.name}
+                </MenuItem>
               ))}
             </TextField>
           ) : (
             <TextField
               label="Position"
               name="positionId"
-              value={positions.find(p => p._id === form.positionId)?.name || employee?.positionId?.name || 'None'}
+              value={
+                positions.find((p) => p._id === form.positionId)?.name ||
+                employee?.positionId?.name ||
+                "None"
+              }
               fullWidth
               disabled
             />
           )}
         </Stack>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             label="Date of Joining"
             name="dateOfJoining"
@@ -407,7 +469,12 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
             fullWidth
             slotProps={{ inputLabel: { shrink: true } }}
           />
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ flex: 1 }}
+          >
             <TextField
               label="Last Working Day (LWD)"
               name="lastWorkingDay"
@@ -416,15 +483,26 @@ const EditEmployeeModal = ({ open, employee, onClose, onSuccess, positions }) =>
               onChange={handleChange}
               fullWidth
               slotProps={{ inputLabel: { shrink: true } }}
-              helperText={form.lastWorkingDay ? 'Inclusive employment end date' : 'Not Set'}
+              helperText={
+                form.lastWorkingDay
+                  ? "Inclusive employment end date"
+                  : "Not Set"
+              }
             />
             {form.lastWorkingDay && (
               <Button
                 variant="outlined"
                 color="secondary"
                 size="small"
-                onClick={() => setForm((prev) => ({ ...prev, lastWorkingDay: '' }))}
-                sx={{ textTransform: 'none', minWidth: 70, height: 40, mt: -2.5 }}
+                onClick={() =>
+                  setForm((prev) => ({ ...prev, lastWorkingDay: "" }))
+                }
+                sx={{
+                  textTransform: "none",
+                  minWidth: 70,
+                  height: 40,
+                  mt: -2.5,
+                }}
               >
                 Clear
               </Button>
@@ -452,38 +530,91 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
     >
       <Stack spacing={2.5}>
         <Stack direction="row" spacing={2} alignItems="center">
-          <InitialsAvatar name={fullName} sx={{ width: 56, height: 56, fontSize: '1.25rem' }} />
+          <InitialsAvatar
+            name={fullName}
+            sx={{ width: 56, height: 56, fontSize: "1.25rem" }}
+          />
           <Box>
-            <Typography variant="h6" fontWeight={700}>{fullName}</Typography>
-            <StatusBadge status={employee.employmentStatus === 'ACTIVE' ? 'active' : 'inactive'} />
+            <Typography variant="h6" fontWeight={700}>
+              {fullName}
+            </Typography>
+            <StatusBadge
+              status={
+                employee.employmentStatus === "ACTIVE" ? "active" : "inactive"
+              }
+            />
           </Box>
         </Stack>
         <Divider />
         {[
-          { label: 'Employee ID', value: employee.employeeId },
-          { label: 'Email', value: employee.email },
-          { label: 'Phone', value: employee.phone || '—' },
-          { label: 'Position', value: employee.positionId?.name || '—' },
-          { label: 'Date of Joining', value: formatDate(employee.dateOfJoining) },
-          { label: 'Last Working Day', value: employee.lastWorkingDay ? formatDate(employee.lastWorkingDay) : 'Not Set' },
-          { label: 'Employment Status', value: employee.employmentStatus },
-          { label: 'Nuvince Account', value: employee.userId ? (employee.employmentStatus === 'INACTIVE' ? 'Disabled' : 'Active') : 'No Login' },
-          { label: 'Role', value: employee.userId ? 'Employee' : '—' },
-          { label: 'Modules', value: employee.userId?.modules?.length ? employee.userId.modules.join(', ') : '—' },
-          { label: 'Permissions', value: employee.userId?.permissions?.length ? employee.userId.permissions.length + ' permissions' : '—' },
-          ...(employee.createdBy ? [{
-            label: 'Created By',
-            value: typeof employee.createdBy === 'object'
-              ? (employee.createdBy.name || 'Admin')
-              : 'Admin',
-          }] : []),
-          { label: 'Created', value: formatDate(employee.createdAt) },
+          { label: "Employee ID", value: employee.employeeId },
+          { label: "Email", value: employee.email },
+          { label: "Phone", value: employee.phone || "—" },
+          { label: "Position", value: employee.positionId?.name || "—" },
+          {
+            label: "Date of Joining",
+            value: formatDate(employee.dateOfJoining),
+          },
+          {
+            label: "Last Working Day",
+            value: employee.lastWorkingDay
+              ? formatDate(employee.lastWorkingDay)
+              : "Not Set",
+          },
+          { label: "Employment Status", value: employee.employmentStatus },
+          {
+            label: "Nuvince Account",
+            value: employee.userId
+              ? employee.employmentStatus === "INACTIVE"
+                ? "Disabled"
+                : "Active"
+              : "No Login",
+          },
+          { label: "Role", value: employee.userId ? "Employee" : "—" },
+          {
+            label: "Modules",
+            value: employee.userId?.modules?.length
+              ? employee.userId.modules.join(", ")
+              : "—",
+          },
+          {
+            label: "Permissions",
+            value: employee.userId?.permissions?.length
+              ? employee.userId.permissions.length + " permissions"
+              : "—",
+          },
+          ...(employee.createdBy
+            ? [
+                {
+                  label: "Created By",
+                  value:
+                    typeof employee.createdBy === "object"
+                      ? employee.createdBy.name || "Admin"
+                      : "Admin",
+                },
+              ]
+            : []),
+          { label: "Created", value: formatDate(employee.createdAt) },
         ].map(({ label, value }) => (
-          <Stack key={label} direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="body2" color="text.secondary" sx={{ minWidth: 140 }}>
+          <Stack
+            key={label}
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ minWidth: 140 }}
+            >
               {label}
             </Typography>
-            <Typography variant="body2" fontWeight={500} textAlign="right" color={value === 'Disabled' ? 'error' : 'text.primary'}>
+            <Typography
+              variant="body2"
+              fontWeight={500}
+              textAlign="right"
+              color={value === "Disabled" ? "error" : "text.primary"}
+            >
               {value}
             </Typography>
           </Stack>
@@ -497,17 +628,23 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
   const [rawInvitations, setRawInvitations] = useState([]);
-  const [invitationStatusFilter, setInvitationStatusFilter] = useState('pending');
+  const [invitationStatusFilter, setInvitationStatusFilter] =
+    useState("pending");
   const [positions, setPositions] = useState([]);
-  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, pendingInvitations: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    pendingInvitations: 0,
+  });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [tabIndex, setTabIndex] = useState(0);
 
   // Search & filter
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
 
   // Modals & Actions
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -522,49 +659,83 @@ const EmployeesPage = () => {
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling, setCancelling] = useState(false);
 
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-
-  const showSnack = (message, severity = 'success') =>
-    setSnackbar({ open: true, message, severity });
+  const { showSnackbar: showSnack } = useSnackbar();
 
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    auth.me().then(res => {
-      const user = res?.data?.data;
-      if (user) {
-        setCurrentUser(user);
-        if (user.permissions) {
-          localStorage.setItem('permissions', JSON.stringify(user.permissions));
+    auth
+      .me()
+      .then((res) => {
+        const user = res?.data?.data;
+        if (user) {
+          setCurrentUser(user);
+          if (user.permissions) {
+            localStorage.setItem(
+              "permissions",
+              JSON.stringify(user.permissions),
+            );
+          }
+          if (user.modules) {
+            localStorage.setItem("modules", JSON.stringify(user.modules));
+          }
         }
-        if (user.modules) {
-          localStorage.setItem('modules', JSON.stringify(user.modules));
-        }
-      }
-    }).catch(() => {});
+      })
+      .catch(() => {});
   }, []);
 
-  const hasCreate = hasPermission(PERMISSIONS.EMPLOYEE_CREATE, currentUser?.role, currentUser?.permissions);
-  const hasUpdate = hasPermission(PERMISSIONS.EMPLOYEE_UPDATE, currentUser?.role, currentUser?.permissions);
-  const hasDeactivate = hasPermission(PERMISSIONS.EMPLOYEE_DELETE, currentUser?.role, currentUser?.permissions);
+  const hasCreate = hasPermission(
+    PERMISSIONS.EMPLOYEE_CREATE,
+    currentUser?.role,
+    currentUser?.permissions,
+  );
+  const hasUpdate = hasPermission(
+    PERMISSIONS.EMPLOYEE_UPDATE,
+    currentUser?.role,
+    currentUser?.permissions,
+  );
+  const hasDeactivate = hasPermission(
+    PERMISSIONS.EMPLOYEE_DELETE,
+    currentUser?.role,
+    currentUser?.permissions,
+  );
 
   const loadEmployees = useCallback(async () => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
       const [empRes, invRes, statRes, posRes] = await Promise.all([
-        employeeService.listEmployees({ search: search || undefined, status: statusFilter || undefined, role: roleFilter || undefined }),
+        employeeService.listEmployees({
+          search: search || undefined,
+          status: statusFilter || undefined,
+          role: roleFilter || undefined,
+        }),
         employeeService.listInvitations().catch(() => ({ data: { data: [] } })),
-        employeeService.getEmployeeStats().catch(() => ({ data: { data: { total: 0, active: 0, inactive: 0, pendingInvitations: 0 } } })),
-        positionService.getPositions({ status: 'active' }).catch(() => ({ data: [] })),
+        employeeService
+          .getEmployeeStats()
+          .catch(() => ({
+            data: {
+              data: { total: 0, active: 0, inactive: 0, pendingInvitations: 0 },
+            },
+          })),
+        positionService
+          .getPositions({ status: "active" })
+          .catch(() => ({ data: [] })),
       ]);
       setEmployees(empRes?.data?.data?.employees || []);
       const allInvs = invRes?.data?.data || [];
       setRawInvitations(allInvs);
-      setStats(statRes?.data?.data || { total: 0, active: 0, inactive: 0, pendingInvitations: 0 });
+      setStats(
+        statRes?.data?.data || {
+          total: 0,
+          active: 0,
+          inactive: 0,
+          pendingInvitations: 0,
+        },
+      );
       setPositions(posRes?.data || []);
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to load employees.');
+      setError(err?.response?.data?.message || "Failed to load employees.");
     } finally {
       setLoading(false);
     }
@@ -577,37 +748,49 @@ const EmployeesPage = () => {
 
   const handleDeactivateConfirm = async () => {
     if (!deactivateTarget) return;
-    const isActive = deactivateTarget.employmentStatus === 'ACTIVE';
-    const newStatus = isActive ? 'INACTIVE' : 'ACTIVE';
+    const isActive = deactivateTarget.employmentStatus === "ACTIVE";
+    const newStatus = isActive ? "INACTIVE" : "ACTIVE";
     try {
       setDeactivating(true);
-      await employeeService.updateEmployeeStatus(deactivateTarget._id, newStatus);
-      showSnack(`Employee ${isActive ? 'deactivated' : 'activated'} successfully.`);
+      await employeeService.updateEmployeeStatus(
+        deactivateTarget._id,
+        newStatus,
+      );
+      showSnack(
+        `Employee ${isActive ? "deactivated" : "activated"} successfully.`,
+      );
       setDeactivateTarget(null);
       loadEmployees();
     } catch (err) {
-      showSnack(err?.response?.data?.message || 'Failed to update employee status.', 'error');
+      showSnack(
+        err?.response?.data?.message || "Failed to update employee status.",
+        "error",
+      );
     } finally {
       setDeactivating(false);
     }
   };
 
   const getEffectiveStatus = (inv) => {
-    if (!inv) return 'pending';
-    const isExpiredByDate = inv.status === 'pending' && inv.expiresAt && new Date(inv.expiresAt) < new Date();
-    return isExpiredByDate ? 'expired' : inv.status;
+    if (!inv) return "pending";
+    const isExpiredByDate =
+      inv.status === "pending" &&
+      inv.expiresAt &&
+      new Date(inv.expiresAt) < new Date();
+    return isExpiredByDate ? "expired" : inv.status;
   };
 
   const filteredInvitations = rawInvitations.filter((inv) => {
     const effStatus = getEffectiveStatus(inv);
-    if (invitationStatusFilter === 'pending') return effStatus === 'pending';
-    if (invitationStatusFilter === 'expired') return effStatus === 'expired';
-    if (invitationStatusFilter === 'cancelled') return effStatus === 'cancelled';
+    if (invitationStatusFilter === "pending") return effStatus === "pending";
+    if (invitationStatusFilter === "expired") return effStatus === "expired";
+    if (invitationStatusFilter === "cancelled")
+      return effStatus === "cancelled";
     return true; // 'all'
   });
 
   const pendingInvitationsCount = rawInvitations.filter(
-    (inv) => getEffectiveStatus(inv) === 'pending'
+    (inv) => getEffectiveStatus(inv) === "pending",
   ).length;
 
   const handleResendConfirm = async () => {
@@ -615,11 +798,14 @@ const EmployeesPage = () => {
     try {
       setResending(true);
       await employeeService.resendInvitation(resendTarget._id);
-      showSnack('Invitation resent successfully.');
+      showSnack("Invitation resent successfully.");
       setResendTarget(null);
       loadEmployees();
     } catch (err) {
-      showSnack(err?.response?.data?.message || 'Failed to resend invitation.', 'error');
+      showSnack(
+        err?.response?.data?.message || "Failed to resend invitation.",
+        "error",
+      );
     } finally {
       setResending(false);
     }
@@ -630,109 +816,175 @@ const EmployeesPage = () => {
     try {
       setCancelling(true);
       await employeeService.cancelInvitation(cancelTarget._id);
-      showSnack('Invitation cancelled successfully.');
+      showSnack("Invitation cancelled successfully.");
       setCancelTarget(null);
       loadEmployees();
     } catch (err) {
-      showSnack(err?.response?.data?.message || 'Failed to cancel invitation.', 'error');
+      showSnack(
+        err?.response?.data?.message || "Failed to cancel invitation.",
+        "error",
+      );
     } finally {
       setCancelling(false);
     }
   };
 
   const employeeColumns = [
-    { key: 'employee', label: 'EMPLOYEE', minWidth: 220 },
-    { key: 'employeeId', label: 'EMPLOYEE ID', minWidth: 120 },
-    { key: 'position', label: 'POSITION', minWidth: 140 },
-    { key: 'role', label: 'ROLE', minWidth: 110 },
-    { key: 'joined', label: 'JOINED', minWidth: 120 },
-    { key: 'lwd', label: 'LAST WORKING DAY', minWidth: 140 },
-    { key: 'status', label: 'STATUS', minWidth: 110 }
+    { key: "employee", label: "EMPLOYEE", minWidth: 220 },
+    { key: "employeeId", label: "EMPLOYEE ID", minWidth: 120 },
+    { key: "position", label: "POSITION", minWidth: 140 },
+    { key: "role", label: "ROLE", minWidth: 110 },
+    { key: "joined", label: "JOINED", minWidth: 120 },
+    { key: "lwd", label: "LAST WORKING DAY", minWidth: 140 },
+    { key: "status", label: "STATUS", minWidth: 110 },
   ];
-  
+
   const renderEmployeeCell = (emp, column) => {
     const fullName = `${emp.firstName} ${emp.lastName}`;
-    const isActive = emp.employmentStatus === 'ACTIVE';
-    const roleLabel = emp.userId ? 'Employee' : 'No Login';
-  
+    const isActive = emp.employmentStatus === "ACTIVE";
+    const roleLabel = emp.userId ? "Employee" : "No Login";
+
     switch (column.key) {
-      case 'employee':
+      case "employee":
         return (
-          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 200 }}>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            alignItems="center"
+            sx={{ minWidth: 200 }}
+          >
             <InitialsAvatar name={fullName} size={32} />
             <Box sx={{ minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600} sx={{ whiteSpace: 'nowrap' }}>{fullName}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', whiteSpace: 'nowrap' }}>{emp.email}</Typography>
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                {fullName}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", whiteSpace: "nowrap" }}
+              >
+                {emp.email}
+              </Typography>
             </Box>
           </Stack>
         );
-      case 'employeeId':
+      case "employeeId":
         return (
-          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600, whiteSpace: 'nowrap' }}>
-            {emp.employeeId || '—'}
+          <Typography
+            variant="body2"
+            sx={{
+              fontFamily: "monospace",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {emp.employeeId || "—"}
           </Typography>
         );
-      case 'position':
-        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{emp.positionId?.name || '—'}</Typography>;
-      case 'role':
+      case "position":
+        return (
+          <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+            {emp.positionId?.name || "—"}
+          </Typography>
+        );
+      case "role":
         return (
           <Chip
             label={roleLabel}
             size="small"
             variant="outlined"
             sx={{
-              fontSize: '0.75rem',
+              fontSize: "0.75rem",
               height: 22,
               fontWeight: 600,
-              backgroundColor: '#F5F5F5',
-              borderColor: '#E5E5E5',
-              color: '#0A0A0A'
+              backgroundColor: "#F5F5F5",
+              borderColor: "#E5E5E5",
+              color: "#0A0A0A",
             }}
           />
         );
-      case 'joined':
-        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{formatDate(emp.dateOfJoining)}</Typography>;
-      case 'lwd':
+      case "joined":
         return (
-          <Typography variant="body2" color={emp.lastWorkingDay ? 'text.primary' : 'text.secondary'} sx={{ whiteSpace: 'nowrap' }}>
-            {emp.lastWorkingDay ? formatDate(emp.lastWorkingDay) : 'Not Set'}
+          <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+            {formatDate(emp.dateOfJoining)}
           </Typography>
         );
-      case 'status':
-        return <StatusBadge status={isActive ? 'active' : 'inactive'} />;
+      case "lwd":
+        return (
+          <Typography
+            variant="body2"
+            color={emp.lastWorkingDay ? "text.primary" : "text.secondary"}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            {emp.lastWorkingDay ? formatDate(emp.lastWorkingDay) : "Not Set"}
+          </Typography>
+        );
+      case "status":
+        return <StatusBadge status={isActive ? "active" : "inactive"} />;
       default:
         return null;
     }
   };
-  
+
   const renderEmployeeActions = (emp) => {
-    const isActive = emp.employmentStatus === 'ACTIVE';
+    const isActive = emp.employmentStatus === "ACTIVE";
     const isSelf = Boolean(
-      (currentUser?.employeeId && String(currentUser.employeeId) === String(emp._id)) ||
-      (currentUser?.id && emp.userId && String(currentUser.id) === String(emp.userId?._id || emp.userId)) ||
-      (currentUser?.email && emp.email && currentUser.email.toLowerCase() === emp.email.toLowerCase())
+      (currentUser?.employeeId &&
+        String(currentUser.employeeId) === String(emp._id)) ||
+      (currentUser?.id &&
+        emp.userId &&
+        String(currentUser.id) === String(emp.userId?._id || emp.userId)) ||
+      (currentUser?.email &&
+        emp.email &&
+        currentUser.email.toLowerCase() === emp.email.toLowerCase()),
     );
 
     return (
-      <Box display="flex" justifyContent="flex-end" gap={0.5} sx={{ whiteSpace: 'nowrap' }}>
+      <Box
+        display="flex"
+        justifyContent="flex-end"
+        gap={0.5}
+        sx={{ whiteSpace: "nowrap" }}
+      >
         <Tooltip title="View Details">
-          <IconButton size="small" onClick={(e) => { e.stopPropagation(); setDetailsEmployee(emp); }}>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDetailsEmployee(emp);
+            }}
+          >
             <PersonRounded fontSize="small" />
           </IconButton>
         </Tooltip>
         {hasUpdate && isActive && !isSelf && (
           <Tooltip title="Edit Employee">
-            <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditEmployee(emp); }}>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditEmployee(emp);
+              }}
+            >
               <EditRounded fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
         {hasDeactivate && !isSelf && (
-          <Tooltip title={isActive ? 'Deactivate Employee' : 'Activate Employee'}>
+          <Tooltip
+            title={isActive ? "Deactivate Employee" : "Activate Employee"}
+          >
             <IconButton
               size="small"
-              color={isActive ? 'error' : 'success'}
-              onClick={(e) => { e.stopPropagation(); setDeactivateTarget(emp); }}
+              color={isActive ? "error" : "success"}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeactivateTarget(emp);
+              }}
             >
               <PowerSettingsNewRounded fontSize="small" />
             </IconButton>
@@ -743,46 +995,78 @@ const EmployeesPage = () => {
   };
 
   const invitationColumns = [
-    { key: 'name', label: 'NAME', minWidth: 160 },
-    { key: 'email', label: 'EMAIL', minWidth: 200 },
-    { key: 'position', label: 'POSITION', minWidth: 140 },
-    { key: 'invitedDate', label: 'INVITED DATE', minWidth: 120 },
-    { key: 'expires', label: 'EXPIRES', minWidth: 120 },
-    { key: 'status', label: 'STATUS', minWidth: 110 }
+    { key: "name", label: "NAME", minWidth: 160 },
+    { key: "email", label: "EMAIL", minWidth: 200 },
+    { key: "position", label: "POSITION", minWidth: 140 },
+    { key: "invitedDate", label: "INVITED DATE", minWidth: 120 },
+    { key: "expires", label: "EXPIRES", minWidth: 120 },
+    { key: "status", label: "STATUS", minWidth: 110 },
   ];
-  
+
   const renderInvitationCell = (inv, column) => {
     const effectiveStatus = getEffectiveStatus(inv);
-    const fullName = `${inv.firstName} ${inv.lastName || ''}`.trim();
-  
+    const fullName = `${inv.firstName} ${inv.lastName || ""}`.trim();
+
     switch (column.key) {
-      case 'name':
-        return <Typography variant="body2" fontWeight={600} sx={{ whiteSpace: 'nowrap' }}>{fullName}</Typography>;
-      case 'email':
-        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{inv.email}</Typography>;
-      case 'position':
-        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{inv.positionId?.name || '—'}</Typography>;
-      case 'invitedDate':
-        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{inv.createdAt ? formatDate(inv.createdAt) : '—'}</Typography>;
-      case 'expires':
-        return <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{inv.expiresAt ? formatDate(inv.expiresAt) : '—'}</Typography>;
-      case 'status':
+      case "name":
+        return (
+          <Typography
+            variant="body2"
+            fontWeight={600}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            {fullName}
+          </Typography>
+        );
+      case "email":
+        return (
+          <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+            {inv.email}
+          </Typography>
+        );
+      case "position":
+        return (
+          <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+            {inv.positionId?.name || "—"}
+          </Typography>
+        );
+      case "invitedDate":
+        return (
+          <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+            {inv.createdAt ? formatDate(inv.createdAt) : "—"}
+          </Typography>
+        );
+      case "expires":
+        return (
+          <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+            {inv.expiresAt ? formatDate(inv.expiresAt) : "—"}
+          </Typography>
+        );
+      case "status":
         return <StatusBadge status={effectiveStatus} />;
       default:
         return null;
     }
   };
-  
+
   const renderInvitationActions = (inv) => {
     const effectiveStatus = getEffectiveStatus(inv);
-    const isPending = effectiveStatus === 'pending';
+    const isPending = effectiveStatus === "pending";
     if (!hasCreate) return null;
 
-    const isBusy = (resendTarget?._id === inv._id && resending) || (cancelTarget?._id === inv._id && cancelling);
+    const isBusy =
+      (resendTarget?._id === inv._id && resending) ||
+      (cancelTarget?._id === inv._id && cancelling);
 
     return (
       <Box display="flex" justifyContent="flex-end" gap={0.5}>
-        <Tooltip title={isPending ? "Resend Invitation" : "Only pending invitations can be resent"}>
+        <Tooltip
+          title={
+            isPending
+              ? "Resend Invitation"
+              : "Only pending invitations can be resent"
+          }
+        >
           <span>
             <IconButton
               size="small"
@@ -797,7 +1081,13 @@ const EmployeesPage = () => {
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title={isPending ? "Cancel Invitation" : "Only pending invitations can be cancelled"}>
+        <Tooltip
+          title={
+            isPending
+              ? "Cancel Invitation"
+              : "Only pending invitations can be cancelled"
+          }
+        >
           <span>
             <IconButton
               size="small"
@@ -835,49 +1125,49 @@ const EmployeesPage = () => {
   return (
     <AppLayout>
       <PageHeader
-          title="Employees"
-          description="Manage your hospital's employee roster."
-          actions={
-            hasCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddRounded />}
-                onClick={() => setInviteOpen(true)}
-              >
-                Invite Employee
-              </Button>
-            )
-          }
-        />
+        title="Employees"
+        description="Manage your hospital's employee roster."
+        actions={
+          hasCreate && (
+            <Button
+              variant="contained"
+              startIcon={<AddRounded />}
+              onClick={() => setInviteOpen(true)}
+            >
+              Invite Employee
+            </Button>
+          )
+        }
+      />
 
-        {/* Summary StatCards */}
-        <KPIGrid>
-          <KPICard
-            title="Total Employees"
-            value={stats.total}
-            icon={GroupsRounded}
-          />
-          <KPICard
-            title="Active"
-            value={stats.active}
-            icon={CheckCircleOutlineRounded}
-          />
-          <KPICard
-            title="Inactive"
-            value={stats.inactive}
-            icon={PersonOffRounded}
-          />
-          <KPICard
-            title="Pending Invitations"
-            value={stats.pendingInvitations ?? pendingInvitationsCount}
-            icon={MarkEmailReadRounded}
-          />
-        </KPIGrid>
+      {/* Summary StatCards */}
+      <KPIGrid>
+        <KPICard
+          title="Total Employees"
+          value={stats.total}
+          icon={GroupsRounded}
+        />
+        <KPICard
+          title="Active"
+          value={stats.active}
+          icon={CheckCircleOutlineRounded}
+        />
+        <KPICard
+          title="Inactive"
+          value={stats.inactive}
+          icon={PersonOffRounded}
+        />
+        <KPICard
+          title="Pending Invitations"
+          value={stats.pendingInvitations ?? pendingInvitationsCount}
+          icon={MarkEmailReadRounded}
+        />
+      </KPIGrid>
 
       {/* Main Container Card */}
       <GlassCard sx={{ p: { xs: 2, sm: 3 } }}>
         {/* Tabs for Employees vs Invitations */}
-        <Box sx={{ borderBottom: '1px solid #E5E5E5', mb: 3 }}>
+        <Box sx={{ borderBottom: "1px solid #E5E5E5", mb: 3 }}>
           <Tabs
             value={tabIndex}
             onChange={(_, v) => setTabIndex(v)}
@@ -885,11 +1175,11 @@ const EmployeesPage = () => {
             indicatorColor="primary"
             sx={{
               minHeight: 40,
-              '& .MuiTab-root': {
+              "& .MuiTab-root": {
                 minHeight: 40,
-                textTransform: 'none',
+                textTransform: "none",
                 fontWeight: 600,
-                fontSize: '0.875rem',
+                fontSize: "0.875rem",
                 py: 1,
               },
             }}
@@ -912,9 +1202,9 @@ const EmployeesPage = () => {
           <>
             {/* Filter Row: Search + Role Filter + Status Filter */}
             <Stack
-              direction={{ xs: 'column', md: 'row' }}
+              direction={{ xs: "column", md: "row" }}
               spacing={2}
-              alignItems={{ xs: 'stretch', md: 'center' }}
+              alignItems={{ xs: "stretch", md: "center" }}
               justifyContent="space-between"
               sx={{ mb: 3 }}
             >
@@ -923,17 +1213,20 @@ const EmployeesPage = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 size="small"
-                sx={{ flex: 1, minWidth: { xs: '100%', sm: 260 } }}
+                sx={{ flex: 1, minWidth: { xs: "100%", sm: 260 } }}
                 slotProps={{
                   input: {
                     startAdornment: (
                       <InputAdornment position="start">
-                        <SearchRounded fontSize="small" sx={{ color: 'text.secondary' }} />
+                        <SearchRounded
+                          fontSize="small"
+                          sx={{ color: "text.secondary" }}
+                        />
                       </InputAdornment>
                     ),
                     endAdornment: search ? (
                       <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setSearch('')}>
+                        <IconButton size="small" onClick={() => setSearch("")}>
                           <CloseRounded fontSize="small" />
                         </IconButton>
                       </InputAdornment>
@@ -942,8 +1235,7 @@ const EmployeesPage = () => {
                 }}
               />
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                 <TextField
                   select
                   size="small"
@@ -969,11 +1261,11 @@ const EmployeesPage = () => {
                 title="No employees found"
                 description={
                   search || statusFilter || roleFilter
-                    ? 'No employees match your search or filter criteria.'
-                    : 'Start by inviting your first hospital employee.'
+                    ? "No employees match your search or filter criteria."
+                    : "Start by inviting your first hospital employee."
                 }
                 icon={GroupsRounded}
-                actionLabel={hasCreate ? 'Invite Employee' : undefined}
+                actionLabel={hasCreate ? "Invite Employee" : undefined}
                 onAction={hasCreate ? () => setInviteOpen(true) : undefined}
               />
             ) : (
@@ -993,16 +1285,20 @@ const EmployeesPage = () => {
           <>
             {/* Status Filter Header for Invitations */}
             <Stack
-              direction={{ xs: 'column', sm: 'row' }}
+              direction={{ xs: "column", sm: "row" }}
               spacing={2}
-              alignItems={{ xs: 'stretch', sm: 'center' }}
+              alignItems={{ xs: "stretch", sm: "center" }}
               justifyContent="space-between"
               sx={{ mb: 3 }}
             >
-              <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                {invitationStatusFilter === 'pending'
-                  ? `Showing ${filteredInvitations.length} pending employee invitation${filteredInvitations.length !== 1 ? 's' : ''}`
-                  : `Showing ${filteredInvitations.length} invitation${filteredInvitations.length !== 1 ? 's' : ''}`}
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                fontWeight={500}
+              >
+                {invitationStatusFilter === "pending"
+                  ? `Showing ${filteredInvitations.length} pending employee invitation${filteredInvitations.length !== 1 ? "s" : ""}`
+                  : `Showing ${filteredInvitations.length} invitation${filteredInvitations.length !== 1 ? "s" : ""}`}
               </Typography>
 
               <TextField
@@ -1024,12 +1320,12 @@ const EmployeesPage = () => {
               <EmptyState
                 title="No invitations found"
                 description={
-                  invitationStatusFilter === 'pending'
-                    ? 'There are currently no pending employee invitations.'
+                  invitationStatusFilter === "pending"
+                    ? "There are currently no pending employee invitations."
                     : `No invitations found for status "${invitationStatusFilter}".`
                 }
                 icon={EmailRounded}
-                actionLabel={hasCreate ? 'Invite Employee' : undefined}
+                actionLabel={hasCreate ? "Invite Employee" : undefined}
                 onAction={hasCreate ? () => setInviteOpen(true) : undefined}
               />
             ) : (
@@ -1049,7 +1345,10 @@ const EmployeesPage = () => {
       <InviteEmployeeModal
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
-        onSuccess={(msg) => { showSnack(msg); loadEmployees(); }}
+        onSuccess={(msg) => {
+          showSnack(msg);
+          loadEmployees();
+        }}
         positions={positions}
       />
 
@@ -1057,7 +1356,11 @@ const EmployeesPage = () => {
         open={Boolean(editEmployee)}
         employee={editEmployee}
         onClose={() => setEditEmployee(null)}
-        onSuccess={(msg) => { showSnack(msg); loadEmployees(); setEditEmployee(null); }}
+        onSuccess={(msg) => {
+          showSnack(msg);
+          loadEmployees();
+          setEditEmployee(null);
+        }}
         positions={positions}
       />
 
@@ -1069,16 +1372,24 @@ const EmployeesPage = () => {
 
       <ConfirmDialog
         open={Boolean(deactivateTarget)}
-        title={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate Employee?' : 'Activate Employee?'}
+        title={
+          deactivateTarget?.employmentStatus === "ACTIVE"
+            ? "Deactivate Employee?"
+            : "Activate Employee?"
+        }
         message={
-          deactivateTarget?.employmentStatus === 'ACTIVE'
+          deactivateTarget?.employmentStatus === "ACTIVE"
             ? `Are you sure you want to deactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}? Their login will also be disabled.`
             : `Are you sure you want to reactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}?`
         }
-        confirmText={deactivateTarget?.employmentStatus === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+        confirmText={
+          deactivateTarget?.employmentStatus === "ACTIVE"
+            ? "Deactivate"
+            : "Activate"
+        }
         cancelText="Cancel"
         loading={deactivating}
-        destructive={deactivateTarget?.employmentStatus === 'ACTIVE'}
+        destructive={deactivateTarget?.employmentStatus === "ACTIVE"}
         onConfirm={handleDeactivateConfirm}
         onCancel={() => setDeactivateTarget(null)}
       />
@@ -1086,7 +1397,9 @@ const EmployeesPage = () => {
       <ConfirmDialog
         open={Boolean(resendTarget)}
         title="Resend Invitation?"
-        message={resendTarget ? `Resend invitation to ${resendTarget.email}?` : ''}
+        message={
+          resendTarget ? `Resend invitation to ${resendTarget.email}?` : ""
+        }
         confirmText="Resend Invitation"
         cancelText="Cancel"
         loading={resending}
@@ -1097,7 +1410,11 @@ const EmployeesPage = () => {
       <ConfirmDialog
         open={Boolean(cancelTarget)}
         title="Cancel Invitation?"
-        message={cancelTarget ? `Cancel this invitation? The employee will no longer be able to use the current invitation link.` : ''}
+        message={
+          cancelTarget
+            ? `Cancel this invitation? The employee will no longer be able to use the current invitation link.`
+            : ""
+        }
         confirmText="Cancel Invitation"
         cancelText="Cancel"
         loading={cancelling}
@@ -1105,22 +1422,6 @@ const EmployeesPage = () => {
         onConfirm={handleCancelConfirm}
         onCancel={() => !cancelling && setCancelTarget(null)}
       />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          severity={snackbar.severity}
-          variant="filled"
-          onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </AppLayout>
   );
 };
