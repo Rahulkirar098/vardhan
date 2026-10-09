@@ -33,10 +33,10 @@ import {
 import employeeService from "../../services/employee.service";
 import positionService from "../../services/position.service";
 import auth from "../../services/auth.service";
-import AppLayout from "../../components/AppLayout";
+import AppLayout from "../../wrapper/AppLayout";
 import MainContentLoader from "../../components/common/MainContentLoader";
 import PageHeader from "../../components/common/PageHeader";
-import KPIGrid from "../../components/wrapper/KPIGrid";
+import KPIGrid from "../../wrapper/KPIGrid";
 import KPICard from "../../components/common/KPICard";
 import StatusBadge from "../../components/StatusBadge";
 import GlassCard from "../../components/GlassCard";

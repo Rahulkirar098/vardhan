@@ -25,7 +25,7 @@ import {
   SaveRounded,
 } from '@mui/icons-material';
 import auth from '../../services/auth.service';
-import AppLayout from '../../components/AppLayout';
+import AppLayout from '../../wrapper/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/common/PageHeader';
 import InitialsAvatar from '../../components/InitialsAvatar';

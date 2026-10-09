@@ -18,6 +18,7 @@ const StyledAppInput = styled(TextField)(({ theme }) => {
 
   return {
     '& .MuiOutlinedInput-root': {
+      height: '50px', // Increase input height
       borderRadius: theme.shape.borderRadius || 10,
       backgroundColor: theme.palette.background.paper || '#FFFFFF',
       fontSize: '0.875rem',
@@ -28,11 +29,11 @@ const StyledAppInput = styled(TextField)(({ theme }) => {
       },
 
       '&:hover fieldset': {
-        borderColor: colors.strongBlue || '#0284C7',
+        borderColor: colors.primary || '#252525',
       },
 
       '&.Mui-focused fieldset': {
-        borderColor: colors.strongBlue || '#0284C7',
+        borderColor: colors.primary || '#252525',
         borderWidth: '1.5px',
       },
 
@@ -51,7 +52,7 @@ const StyledAppInput = styled(TextField)(({ theme }) => {
       color: theme.palette.text.secondary || '#6B7280',
 
       '&.Mui-focused': {
-        color: colors.strongBlue || '#0284C7',
+        color: colors.primary || '#252525',
       },
 
       '&.Mui-error': {

@@ -5,7 +5,7 @@ import { AppButton } from '../../components/common';
 import { ArrowBackRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
-import AppLayout from '../../components/AppLayout';
+import AppLayout from '../../wrapper/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/common/PageHeader';
 import SectionCard from '../../components/SectionCard';

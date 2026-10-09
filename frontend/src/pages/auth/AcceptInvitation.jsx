@@ -14,7 +14,7 @@ import {
   LocalHospitalRounded,
 } from '@mui/icons-material';
 import employeeService from '../../services/employee.service';
-import AuthLayout from '../../components/AuthLayout';
+import AuthLayout from '../../wrapper/AuthLayout';
 import StatusBadge from '../../components/StatusBadge';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import { AppInput, AppButton } from '../../components/common';

@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
-import AuthLayout from '../../components/AuthLayout';
+import AuthLayout from '../../wrapper/AuthLayout';
 import { useSnackbar } from '../../theme/SnackbarProvider';
 import { AppInput, AppButton } from '../../components/common';
 

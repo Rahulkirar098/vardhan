@@ -1,8 +1,14 @@
-import { Box, useMediaQuery, useTheme } from '@mui/material';
+import { useMediaQuery, useTheme } from '@mui/material';
 import { useState, useEffect } from 'react';
-import AppNavbar, { NAVBAR_HEIGHT } from './Navbar';
-import AppSidebar, { SIDEBAR_WIDTH } from './Sidebar';
+import AppNavbar, { NAVBAR_HEIGHT } from '../components/Navbar';
+import AppSidebar, { SIDEBAR_WIDTH } from '../components/Sidebar';
 import auth from '../services/auth.service';
+import {
+  AppLayoutRoot,
+  AppLayoutBody,
+  AppLayoutMain,
+  AppLayoutContentWrapper,
+} from './styles/AppLayout.styles';
 
 const getCurrentRole = () => {
   const token = localStorage.getItem('token');
@@ -154,15 +160,7 @@ const AppLayout = ({ children, onLogout }) => {
   }, []);
 
   return (
-    <Box
-      sx={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        backgroundColor: theme.palette.background.default,
-      }}
-    >
+    <AppLayoutRoot>
       <AppNavbar
         userName={userProfile.name}
         userRole={userProfile.role}
@@ -171,14 +169,7 @@ const AppLayout = ({ children, onLogout }) => {
         onMenuClick={() => setMobileOpen(true)}
       />
 
-      <Box
-        sx={{
-          display: 'flex',
-          flex: 1,
-          minHeight: 0,
-          height: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
-        }}
-      >
+      <AppLayoutBody navbarHeight={NAVBAR_HEIGHT}>
         <AppSidebar
           user={userProfile}
           role={userProfile.role}
@@ -187,32 +178,13 @@ const AppLayout = ({ children, onLogout }) => {
           onLogout={onLogout}
         />
 
-        <Box
-          component="main"
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            height: '100%',
-            overflowY: 'auto',
-            p: { xs: 2.5, md: 4 },
-            width: { md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
-          }}
-        >
-          <Box
-            sx={{
-              width: '100%',
-              maxWidth: theme.custom?.sizing?.components?.pageMaxWidth || 1440,
-              mx: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: { xs: 3, md: 3.5 },
-            }}
-          >
+        <AppLayoutMain component="main" sidebarWidth={SIDEBAR_WIDTH}>
+          <AppLayoutContentWrapper>
             {children}
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+          </AppLayoutContentWrapper>
+        </AppLayoutMain>
+      </AppLayoutBody>
+    </AppLayoutRoot>
   );
 };
 

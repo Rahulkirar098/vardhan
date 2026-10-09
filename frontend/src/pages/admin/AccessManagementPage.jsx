@@ -22,10 +22,10 @@ import {
   PeopleOutlineRounded,
 } from "@mui/icons-material";
 import accessManagementService from "../../services/accessManagement.service";
-import AppLayout from "../../components/AppLayout";
+import AppLayout from "../../wrapper/AppLayout";
 import MainContentLoader from "../../components/common/MainContentLoader";
 import PageHeader from "../../components/common/PageHeader";
-import KPIGrid from "../../components/wrapper/KPIGrid";
+import KPIGrid from "../../wrapper/KPIGrid";
 import KPICard from "../../components/common/KPICard";
 import StatusBadge from "../../components/StatusBadge";
 import GlassCard from "../../components/GlassCard";
