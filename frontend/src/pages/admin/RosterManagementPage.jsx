@@ -1731,6 +1731,7 @@ export default function RosterManagementPage() {
                                       ? `${rawFirstName || ""} ${rawLastName || ""}`.trim() || emp?.name || "UNKNOWN STAFF"
                                       : (typeof ass.fullName === "string" ? ass.fullName : "UNKNOWN STAFF");
                                     const phone = typeof emp === "object" ? (emp?.phone || emp?.mobile || null) : null;
+                                    const avatarSrc = typeof emp === "object" ? (emp?.avatarUrl || emp?.avatar || emp?.profileImage || null) : null;
                                     const isCustomTime =
                                       ass.startTime !== col.startTime ||
                                       ass.endTime !== col.endTime;
@@ -1754,8 +1755,12 @@ export default function RosterManagementPage() {
                                           direction="row"
                                           justifyContent="space-between"
                                           alignItems="flex-start"
+                                          spacing={1}
                                         >
-                                          <Box
+                                          <Stack
+                                            direction="row"
+                                            spacing={1}
+                                            alignItems="flex-start"
                                             onClick={() =>
                                               canManage &&
                                               !activeRoster?.isHistorical &&
@@ -1768,81 +1773,96 @@ export default function RosterManagementPage() {
                                                   ? "pointer"
                                                   : "default",
                                               flexGrow: 1,
+                                              minWidth: 0,
                                             }}
                                           >
-                                            <Stack
-                                              direction="row"
-                                              spacing={0.5}
-                                              alignItems="center"
-                                            >
-                                              <Typography
-                                                variant="body2"
-                                                fontWeight="800"
-                                                sx={{ color: "#0F172A" }}
-                                              >
-                                                {fullName}
-                                              </Typography>
-                                              {ass.isOverride && (
-                                                <Chip
-                                                  label="Override"
-                                                  size="small"
-                                                  color="warning"
-                                                  sx={{
-                                                    height: 16,
-                                                    fontSize: "0.625rem",
-                                                    fontWeight: 700,
-                                                  }}
-                                                />
-                                              )}
-                                            </Stack>
-                                            {phone && String(phone).trim() && (
+                                            <InitialsAvatar
+                                              name={fullName}
+                                              src={avatarSrc}
+                                              size={32}
+                                              sx={{
+                                                bgcolor: "#252525",
+                                                color: "#FFFFFF",
+                                                mt: 0.25,
+                                              }}
+                                            />
+                                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                                               <Stack
                                                 direction="row"
                                                 spacing={0.5}
                                                 alignItems="center"
-                                                sx={{ mt: 0.25 }}
                                               >
-                                                <PhoneOutlined
-                                                  sx={{ fontSize: "0.75rem", color: "text.secondary" }}
-                                                />
+                                                <Typography
+                                                  variant="body2"
+                                                  fontWeight="800"
+                                                  noWrap
+                                                  sx={{ color: "#0F172A" }}
+                                                >
+                                                  {fullName}
+                                                </Typography>
+                                                {ass.isOverride && (
+                                                  <Chip
+                                                    label="Override"
+                                                    size="small"
+                                                    color="warning"
+                                                    sx={{
+                                                      height: 16,
+                                                      fontSize: "0.625rem",
+                                                      fontWeight: 700,
+                                                    }}
+                                                  />
+                                                )}
+                                              </Stack>
+                                              {phone && String(phone).trim() && (
+                                                <Stack
+                                                  direction="row"
+                                                  spacing={0.5}
+                                                  alignItems="center"
+                                                  sx={{ mt: 0.25 }}
+                                                >
+                                                  <PhoneOutlined
+                                                    sx={{ fontSize: "0.75rem", color: "text.secondary" }}
+                                                  />
+                                                  <Typography
+                                                    variant="caption"
+                                                    noWrap
+                                                    sx={{
+                                                      color: "text.secondary",
+                                                      fontWeight: 600,
+                                                      fontSize: "0.75rem",
+                                                      lineHeight: 1.2,
+                                                    }}
+                                                  >
+                                                    {String(phone).trim()}
+                                                  </Typography>
+                                                </Stack>
+                                              )}
+                                              {isCustomTime && (
                                                 <Typography
                                                   variant="caption"
+                                                  fontWeight="700"
+                                                  color="primary"
+                                                  sx={{ display: "block", mt: 0.25 }}
+                                                >
+                                                  {formatTime12h(ass.startTime)}{" "}
+                                                  TO {formatTime12h(ass.endTime)}
+                                                </Typography>
+                                              )}
+                                              {ass.notes && (
+                                                <Typography
+                                                  variant="caption"
+                                                  color="text.secondary"
                                                   sx={{
-                                                    color: "text.secondary",
-                                                    fontWeight: 600,
-                                                    fontSize: "0.75rem",
-                                                    lineHeight: 1.2,
+                                                    display: "block",
+                                                    fontStyle: "italic",
+                                                    mt: 0.25,
                                                   }}
                                                 >
-                                                  {String(phone).trim()}
+                                                  Note: {ass.notes}
                                                 </Typography>
-                                              </Stack>
-                                            )}
-                                            {isCustomTime && (
-                                              <Typography
-                                                variant="caption"
-                                                fontWeight="700"
-                                                color="primary"
-                                                sx={{ display: "block", mt: 0.25 }}
-                                              >
-                                                {formatTime12h(ass.startTime)}{" "}
-                                                TO {formatTime12h(ass.endTime)}
-                                              </Typography>
-                                            )}
-                                            {ass.notes && (
-                                              <Typography
-                                                variant="caption"
-                                                color="text.secondary"
-                                                sx={{
-                                                  display: "block",
-                                                  fontStyle: "italic",
-                                                  mt: 0.25,
-                                                }}
-                                              >
-                                                Note: {ass.notes}
-                                              </Typography>
-                                            )}
-                                          </Box>
+                                              )}
+                                            </Box>
+                                          </Stack>
 
                                           {canManage &&
                                             !activeRoster?.isHistorical && (
@@ -1852,7 +1872,7 @@ export default function RosterManagementPage() {
                                                 onClick={() =>
                                                   handleOpenRemoveDutyModal(ass)
                                                 }
-                                                sx={{ p: 0.25, ml: 0.5 }}
+                                                sx={{ p: 0.25, ml: 0.5, flexShrink: 0 }}
                                               >
                                                 <CloseRounded fontSize="small" />
                                               </IconButton>

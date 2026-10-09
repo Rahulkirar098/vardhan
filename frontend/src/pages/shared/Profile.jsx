@@ -642,6 +642,47 @@ const Profile = () => {
                   }}
                 />
               </Box>
+
+              {/* Gender input field */}
+              <Box>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: '#0F172A',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    display: 'block',
+                    mb: 0.85,
+                  }}
+                >
+                  Gender
+                </Typography>
+                <TextField
+                  value={
+                    profile?.gender
+                      ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)
+                      : '—'
+                  }
+                  disabled
+                  fullWidth
+                  size="small"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                      backgroundColor: '#FFFFFF',
+                      '& fieldset': {
+                        borderColor: '#E2E8F0',
+                      },
+                    },
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.925rem',
+                      fontWeight: 500,
+                      color: '#0F172A',
+                      py: 1.15,
+                    },
+                  }}
+                />
+              </Box>
             </Box>
 
             {/* Section 2: Dynamic Module access */}

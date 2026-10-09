@@ -11,12 +11,13 @@ const getInitials = (name) => {
   return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
 };
 
-const InitialsAvatar = ({ name, size = 40, sx = {} }) => (
+const InitialsAvatar = ({ name, src = null, size = 40, sx = {} }) => (
   <Avatar
+    src={src || undefined}
     sx={{
       width: size,
       height: size,
-      backgroundColor: '#0A0A0A',
+      backgroundColor: '#252525',
       color: '#FFFFFF',
       fontSize: Math.round(size * 0.38),
       fontWeight: 600,
@@ -24,7 +25,7 @@ const InitialsAvatar = ({ name, size = 40, sx = {} }) => (
       ...sx,
     }}
   >
-    {getInitials(name)}
+    {!src && getInitials(name)}
   </Avatar>
 );
 

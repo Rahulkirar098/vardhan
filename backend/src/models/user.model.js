@@ -22,6 +22,20 @@ const userSchema = new mongoose.Schema(
             default: null,
         },
 
+        gender: {
+            type: String,
+            enum: ["male", "female", "other"],
+            default: null,
+            lowercase: true,
+            trim: true,
+        },
+
+        avatarUrl: {
+            type: String,
+            default: null,
+            trim: true,
+        },
+
         password: {
             type: String,
             required: true,

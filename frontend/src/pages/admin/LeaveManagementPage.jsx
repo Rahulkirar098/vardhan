@@ -10,6 +10,7 @@ import {
   Stack,
   Tab,
   Tabs,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -410,10 +411,10 @@ const RejectLeaveModal = ({ open, leave, onClose, onSuccess }) => {
           </Typography>
         </Box>
 
-        <TextField
+        <AppInput
           label="Rejection Reason"
           multiline
-          rows={3}
+          rows={5}
           fullWidth
           required
           placeholder="Provide the reason for rejecting this request..."

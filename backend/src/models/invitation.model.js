@@ -21,6 +21,14 @@ const invitationSchema = new mongoose.Schema(
             default: null,
         },
 
+        gender: {
+            type: String,
+            enum: ["male", "female", "other"],
+            default: null,
+            lowercase: true,
+            trim: true,
+        },
+
         firstName: {
             type: String,
             required: true,

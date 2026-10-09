@@ -70,7 +70,7 @@ const getEmployee = async (req, res) => {
 
 const inviteEmployee = async (req, res) => {
     try {
-        const { firstName, lastName, email, phone, dateOfJoining, positionId, employeeId, role } = req.body;
+        const { firstName, lastName, email, phone, gender, dateOfJoining, positionId, employeeId, role } = req.body;
 
         if (!firstName || !String(firstName).trim()) {
             return res.status(400).json({ success: false, message: "First name is required" });
@@ -83,6 +83,12 @@ const inviteEmployee = async (req, res) => {
         }
         if (!employeeService.EMAIL_REGEX.test(String(email).trim())) {
             return res.status(400).json({ success: false, message: "Please enter a valid email address" });
+        }
+        if (gender && String(gender).trim()) {
+            const gVal = String(gender).trim().toLowerCase();
+            if (!["male", "female", "other"].includes(gVal)) {
+                return res.status(400).json({ success: false, message: "Gender must be male, female, or other" });
+            }
         }
         if (!positionId) {
             return res.status(400).json({ success: false, message: "Position is required" });
@@ -109,6 +115,7 @@ const inviteEmployee = async (req, res) => {
                 lastName,
                 email,
                 phone,
+                gender,
                 dateOfJoining,
                 positionId,
                 role,
@@ -279,7 +286,7 @@ const updateEmployee = async (req, res) => {
             return res.status(403).json({ success: false, message: "You cannot edit your own employee record." });
         }
 
-        const { firstName, lastName, email, phone, dateOfJoining, lastWorkingDay, positionId } = req.body;
+        const { firstName, lastName, email, phone, gender, dateOfJoining, lastWorkingDay, positionId } = req.body;
 
         if (email && !employeeService.EMAIL_REGEX.test(String(email).trim())) {
             return res.status(400).json({
@@ -288,13 +295,23 @@ const updateEmployee = async (req, res) => {
             });
         }
 
+        if (gender !== undefined && gender !== null && String(gender).trim() !== "") {
+            const gVal = String(gender).trim().toLowerCase();
+            if (!["male", "female", "other"].includes(gVal)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Gender must be male, female, or other",
+                });
+            }
+        }
+
         const employee = await employeeService.updateEmployee({
             employeeMongoId: id,
             hospitalId: req.user.hospitalId,
             updatedBy: req.user.id,
             currentUser: req.user,
             user: req.user,
-            updates: { firstName, lastName, email, phone, dateOfJoining, lastWorkingDay, positionId },
+            updates: { firstName, lastName, email, phone, gender, dateOfJoining, lastWorkingDay, positionId },
         });
 
         if (!employee) {

@@ -198,6 +198,7 @@ const createEmployee = async ({
     lastName,
     email,
     phone,
+    gender,
     dateOfJoining,
     lastWorkingDay,
     positionId,
@@ -231,6 +232,17 @@ const createEmployee = async ({
         }
     }
 
+    let parsedGender = null;
+    if (gender) {
+        const gStr = String(gender).trim().toLowerCase();
+        if (!["male", "female", "other"].includes(gStr)) {
+            const err = new Error("Gender must be male, female, or other.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+        parsedGender = gStr;
+    }
+
     let parsedLwd = null;
     if (lastWorkingDay) {
         parsedLwd = new Date(lastWorkingDay);
@@ -257,6 +269,7 @@ const createEmployee = async ({
         lastName: String(lastName).trim(),
         email: normalizedEmail,
         phone: phone ? String(phone).trim() : null,
+        gender: parsedGender,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
         lastWorkingDay: parsedLwd,
         positionId,
@@ -278,6 +291,7 @@ const inviteEmployee = async ({
     lastName,
     email,
     phone,
+    gender,
     dateOfJoining,
     positionId,
     role = "employee",
@@ -295,6 +309,17 @@ const inviteEmployee = async ({
         const err = new Error("Valid role is required (employee).");
         err.code = "VALIDATION_ERROR";
         throw err;
+    }
+
+    let parsedGender = null;
+    if (gender) {
+        const gStr = String(gender).trim().toLowerCase();
+        if (!["male", "female", "other"].includes(gStr)) {
+            const err = new Error("Gender must be male, female, or other.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+        parsedGender = gStr;
     }
 
     await validateNoActiveEmploymentOrInvitation(normalizedEmail);
@@ -322,6 +347,7 @@ const inviteEmployee = async ({
         lastName: String(lastName).trim(),
         email: normalizedEmail,
         phone: phone ? String(phone).trim() : null,
+        gender: parsedGender,
         dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
         positionId,
         role: "employee",
@@ -499,6 +525,7 @@ const acceptInvitation = async (rawToken, password) => {
         employee.lastName = invitation.lastName;
         employee.email = email;
         if (invitation.phone) employee.phone = invitation.phone;
+        if (invitation.gender) employee.gender = invitation.gender;
         if (invitation.positionId) {
             employee.positionId = invitation.positionId._id || invitation.positionId;
         }
@@ -526,6 +553,7 @@ const acceptInvitation = async (rawToken, password) => {
             lastName: invitation.lastName,
             email,
             phone: invitation.phone,
+            gender: invitation.gender,
             dateOfJoining: invitation.dateOfJoining,
             positionId: invitation.positionId?._id || invitation.positionId,
             employmentStatus: "ACTIVE",
@@ -537,6 +565,7 @@ const acceptInvitation = async (rawToken, password) => {
 
     // Back-link Employee to User
     user.employeeId = employee._id;
+    if (invitation.gender) user.gender = invitation.gender;
     await user.save();
 
     invitation.status = "accepted";
@@ -585,6 +614,7 @@ const updateEmployee = async ({
         "lastName",
         "email",
         "phone",
+        "gender",
         "dateOfJoining",
         "lastWorkingDay",
         "positionId",
@@ -614,6 +644,18 @@ const updateEmployee = async ({
                         }
                     }
                     employee.email = newEmail;
+                }
+            } else if (field === "gender") {
+                if (updates.gender === null || updates.gender === "" || updates.gender === "null") {
+                    employee.gender = null;
+                } else {
+                    const gStr = String(updates.gender).trim().toLowerCase();
+                    if (!["male", "female", "other"].includes(gStr)) {
+                        const err = new Error("Gender must be male, female, or other.");
+                        err.code = "VALIDATION_ERROR";
+                        throw err;
+                    }
+                    employee.gender = gStr;
                 }
             } else if (field === "dateOfJoining") {
                 employee.dateOfJoining = updates.dateOfJoining
@@ -675,7 +717,7 @@ const updateEmployee = async ({
     if (employee.userId && employee.email) {
         await User.updateOne(
             { _id: employee.userId },
-            { email: employee.email, name: `${employee.firstName} ${employee.lastName}`.trim() }
+            { email: employee.email, name: `${employee.firstName} ${employee.lastName}`.trim(), gender: employee.gender }
         );
     }
 

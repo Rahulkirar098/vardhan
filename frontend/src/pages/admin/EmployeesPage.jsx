@@ -68,6 +68,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
     lastName: "",
     email: "",
     phone: "",
+    gender: "",
     positionId: "",
     dateOfJoining: "",
     employeeId: "",
@@ -81,6 +82,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
       lastName: "",
       email: "",
       phone: "",
+      gender: "",
       positionId: "",
       dateOfJoining: "",
       employeeId: "",
@@ -131,6 +133,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
+        gender: form.gender || undefined,
         positionId: form.positionId,
         dateOfJoining: form.dateOfJoining || undefined,
         employeeId: form.employeeId.trim() || undefined,
@@ -220,6 +223,20 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
             placeholder="Select Position"
             options={positions.map((p) => ({ value: p._id, label: p.name }))}
           />
+          <AppSelect
+            label="Gender (optional)"
+            name="gender"
+            value={form.gender}
+            onChange={handleChange}
+            fullWidth
+            placeholder="Select Gender"
+            options={[
+              { value: "", label: "Unspecified" },
+              { value: "male", label: "Male" },
+              { value: "female", label: "Female" },
+              { value: "other", label: "Other" },
+            ]}
+          />
         </Stack>
         <AppInput
           label="Date of Joining (optional)"
@@ -248,6 +265,7 @@ const EditEmployeeModal = ({
     lastName: "",
     email: "",
     phone: "",
+    gender: "",
     positionId: "",
     dateOfJoining: "",
     lastWorkingDay: "",
@@ -264,6 +282,7 @@ const EditEmployeeModal = ({
         lastName: employee.lastName || "",
         email: employee.email || "",
         phone: employee.phone || "",
+        gender: employee.gender || "",
         positionId: employee.positionId?._id || employee.positionId || "",
         dateOfJoining: employee.dateOfJoining
           ? getTodayDateStr(employee.dateOfJoining)
@@ -313,6 +332,7 @@ const EditEmployeeModal = ({
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
+        gender: form.gender ? form.gender : null,
         dateOfJoining: form.dateOfJoining || undefined,
         lastWorkingDay: form.lastWorkingDay ? form.lastWorkingDay : null,
       };
@@ -426,6 +446,22 @@ const EditEmployeeModal = ({
             onChange={handleChange}
             fullWidth
           />
+          <AppSelect
+            label="Gender"
+            name="gender"
+            value={form.gender}
+            onChange={handleChange}
+            fullWidth
+            placeholder="Select Gender"
+            options={[
+              { value: "", label: "Unspecified" },
+              { value: "male", label: "Male" },
+              { value: "female", label: "Female" },
+              { value: "other", label: "Other" },
+            ]}
+          />
+        </Stack>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <Stack
             direction="row"
             spacing={1}
@@ -487,6 +523,7 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
         <Stack direction="row" spacing={2} alignItems="center">
           <InitialsAvatar
             name={fullName}
+            src={employee.avatarUrl || employee.avatar || employee.profileImage || null}
             sx={{ width: 56, height: 56, fontSize: "1.25rem" }}
           />
           <Box>
@@ -505,6 +542,12 @@ const EmployeeDetailsModal = ({ open, employee, onClose }) => {
           { label: "Employee ID", value: employee.employeeId },
           { label: "Email", value: employee.email },
           { label: "Phone", value: employee.phone || "—" },
+          {
+            label: "Gender",
+            value: employee.gender
+              ? employee.gender.charAt(0).toUpperCase() + employee.gender.slice(1)
+              : "—",
+          },
           { label: "Position", value: employee.positionId?.name || "—" },
           {
             label: "Date of Joining",
@@ -786,6 +829,7 @@ const EmployeesPage = () => {
     { key: "employee", label: "EMPLOYEE", minWidth: 220 },
     { key: "employeeId", label: "EMPLOYEE ID", minWidth: 120 },
     { key: "position", label: "POSITION", minWidth: 140 },
+    { key: "gender", label: "GENDER", minWidth: 100 },
     { key: "role", label: "ROLE", minWidth: 110 },
     { key: "joined", label: "JOINED", minWidth: 120 },
     { key: "lwd", label: "LAST WORKING DAY", minWidth: 140 },
@@ -806,7 +850,11 @@ const EmployeesPage = () => {
             alignItems="center"
             sx={{ minWidth: 200 }}
           >
-            <InitialsAvatar name={fullName} size={32} />
+            <InitialsAvatar
+              name={fullName}
+              src={emp.avatarUrl || emp.avatar || emp.profileImage || null}
+              size={32}
+            />
             <Box sx={{ minWidth: 0 }}>
               <Typography
                 variant="body2"
@@ -842,6 +890,15 @@ const EmployeesPage = () => {
         return (
           <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
             {emp.positionId?.name || "—"}
+          </Typography>
+        );
+      case "gender":
+        return (
+          <Typography
+            variant="body2"
+            sx={{ textTransform: "capitalize", whiteSpace: "nowrap" }}
+          >
+            {emp.gender || "—"}
           </Typography>
         );
       case "role":

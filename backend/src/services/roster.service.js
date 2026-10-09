@@ -128,7 +128,7 @@ const getRosterById = async ({ rosterId, hospitalId, userId, isManager }) => {
     const assignments = await RosterAssignment.find({ rosterId: roster._id, hospitalId })
         .populate({
             path: "employeeId",
-            select: "employeeId firstName lastName email phone positionId employmentStatus",
+            select: "employeeId firstName lastName email phone gender avatarUrl positionId employmentStatus",
             populate: { path: "positionId", select: "name" },
         })
         .sort({ date: 1, startTime: 1 })
@@ -772,7 +772,7 @@ const addAssignment = async ({
     const populatedAssignment = await RosterAssignment.findById(assignment._id)
         .populate({
             path: "employeeId",
-            select: "employeeId firstName lastName email phone positionId employmentStatus",
+            select: "employeeId firstName lastName email phone gender avatarUrl positionId employmentStatus",
             populate: { path: "positionId", select: "name" },
         })
         .lean();
@@ -1064,7 +1064,7 @@ const addBulkRangeAssignments = async ({
         ? await RosterAssignment.find({ _id: { $in: createdAssignments.map((a) => a._id) } })
             .populate({
                 path: "employeeId",
-                select: "employeeId firstName lastName email phone positionId employmentStatus",
+                select: "employeeId firstName lastName email phone gender avatarUrl positionId employmentStatus",
                 populate: { path: "positionId", select: "name" },
             })
             .lean()
@@ -1258,7 +1258,7 @@ const updateAssignment = async ({
     return RosterAssignment.findById(assignment._id)
         .populate({
             path: "employeeId",
-            select: "employeeId firstName lastName email phone positionId employmentStatus",
+            select: "employeeId firstName lastName email phone gender avatarUrl positionId employmentStatus",
             populate: { path: "positionId", select: "name" },
         })
         .lean();
