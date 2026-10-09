@@ -188,7 +188,7 @@ const ScheduleEditor = ({ value, onChange }) => {
                                         size="small"
                                         value={startTime}
                                         onChange={(e) => handleTimeChange('startTime', e.target.value)}
-                                        inputProps={{ step: 300 }}
+                                        slotProps={{ htmlInput: { step: 300 } }}
                                         sx={{ width: 130, '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.8125rem' } }}
                                     />
                                     <Typography variant="caption" color="text.secondary">to</Typography>
@@ -197,7 +197,7 @@ const ScheduleEditor = ({ value, onChange }) => {
                                         size="small"
                                         value={endTime}
                                         onChange={(e) => handleTimeChange('endTime', e.target.value)}
-                                        inputProps={{ step: 300 }}
+                                        slotProps={{ htmlInput: { step: 300 } }}
                                         sx={{ width: 130, '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.8125rem' } }}
                                     />
                                 </Stack>
@@ -416,7 +416,7 @@ const PositionsPage = () => {
                 return <Typography variant="caption" color="text.secondary">None</Typography>;
             }
             return (
-                <Box display="flex" gap={0.5} flexWrap="wrap">
+                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {mods.map(m => (
                         <Chip
                             key={m}
@@ -439,7 +439,7 @@ const PositionsPage = () => {
     const renderActions = (pos) => {
         if (!canUpdate) return null;
         return (
-            <Box display="flex" justifyContent="flex-end" gap={1}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                 <Tooltip title="Edit Position">
                     <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenEdit(pos); }}>
                         <EditRounded fontSize="small" />

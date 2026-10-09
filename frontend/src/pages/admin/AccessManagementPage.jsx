@@ -15,7 +15,7 @@ import {
   TextField,
   Tooltip,
   Typography,
-} from '@mui/material';
+} from "@mui/material";
 import {
   CloseRounded,
   SearchRounded,
@@ -23,136 +23,293 @@ import {
   VpnKeyRounded,
   CheckCircleOutlineRounded,
   PeopleOutlineRounded,
-} from '@mui/icons-material';
-import accessManagementService from '../../services/accessManagement.service';
-import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/common/PageHeader';
-import KPIGrid from '../../components/wrapper/KPIGrid';
-import KPICard from '../../components/common/KPICard';
-import StatusBadge from '../../components/StatusBadge';
-import GlassCard from '../../components/GlassCard';
-import Modal from '../../components/Modal';
-import EmptyState from '../../components/EmptyState';
-import ErrorState from '../../components/ErrorState';
-import { useSnackbar } from '../../components/common/SnackbarProvider';
-import InitialsAvatar from '../../components/InitialsAvatar';
-import DataTable from '../../components/DataTable';
-import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+} from "@mui/icons-material";
+import accessManagementService from "../../services/accessManagement.service";
+import AppLayout from "../../components/AppLayout";
+import MainContentLoader from "../../components/common/MainContentLoader";
+import PageHeader from "../../components/common/PageHeader";
+import KPIGrid from "../../components/wrapper/KPIGrid";
+import KPICard from "../../components/common/KPICard";
+import StatusBadge from "../../components/StatusBadge";
+import GlassCard from "../../components/GlassCard";
+import Modal from "../../components/Modal";
+import EmptyState from "../../components/EmptyState";
+import ErrorState from "../../components/ErrorState";
+import { useSnackbar } from "../../components/common/SnackbarProvider";
+import InitialsAvatar from "../../components/InitialsAvatar";
+import DataTable from "../../components/DataTable";
+import { hasPermission, PERMISSIONS } from "../../utils/permissions";
+import { useState, useCallback, useEffect } from "react";
 
 const PERMISSION_GROUPS = [
   {
-    title: 'Hospital Structure',
-    description: 'Permissions for inspecting and configuring floors and rooms.',
+    title: "Hospital Structure",
+    description: "Permissions for inspecting and configuring floors and rooms.",
     permissions: [
-      { key: 'structure.view', label: 'View Floors & Rooms', description: 'Inspect floors, rooms, and structural layout' },
-      { key: 'structure.create', label: 'Create Floors & Rooms', description: 'Add new floors and rooms' },
-      { key: 'structure.update', label: 'Edit Floors & Rooms', description: 'Update room and floor metadata' },
-      { key: 'structure.delete', label: 'Delete / Deactivate Floors & Rooms', description: 'Deactivate rooms and floors safely' },
+      {
+        key: "structure.view",
+        label: "View Floors & Rooms",
+        description: "Inspect floors, rooms, and structural layout",
+      },
+      {
+        key: "structure.create",
+        label: "Create Floors & Rooms",
+        description: "Add new floors and rooms",
+      },
+      {
+        key: "structure.update",
+        label: "Edit Floors & Rooms",
+        description: "Update room and floor metadata",
+      },
+      {
+        key: "structure.delete",
+        label: "Delete / Deactivate Floors & Rooms",
+        description: "Deactivate rooms and floors safely",
+      },
     ],
   },
   {
-    title: 'Workforce & Employees',
-    description: 'Permissions for managing employee rosters and invitations.',
+    title: "Workforce & Employees",
+    description: "Permissions for managing employee rosters and invitations.",
     permissions: [
-      { key: 'employee.view', label: 'View Employees', description: 'View hospital workforce and employee records' },
-      { key: 'employee.create', label: 'Invite Employees', description: 'Send onboarding invitations to new staff and HR' },
-      { key: 'employee.update', label: 'Edit Employee Details', description: 'Edit basic employee profile data' },
-      { key: 'employee.position.update', label: 'Change Position', description: 'Assign or change an employee’s position' },
-      { key: 'employee.delete', label: 'Deactivate / Reactivate Employees', description: 'Deactivate or reactivate workforce accounts' },
+      {
+        key: "employee.view",
+        label: "View Employees",
+        description: "View hospital workforce and employee records",
+      },
+      {
+        key: "employee.create",
+        label: "Invite Employees",
+        description: "Send onboarding invitations to new staff and HR",
+      },
+      {
+        key: "employee.update",
+        label: "Edit Employee Details",
+        description: "Edit basic employee profile data",
+      },
+      {
+        key: "employee.position.update",
+        label: "Change Position",
+        description: "Assign or change an employee’s position",
+      },
+      {
+        key: "employee.delete",
+        label: "Deactivate / Reactivate Employees",
+        description: "Deactivate or reactivate workforce accounts",
+      },
     ],
   },
   {
-    title: 'Hospital Information',
-    description: 'Permissions for hospital profile management.',
+    title: "Hospital Information",
+    description: "Permissions for hospital profile management.",
     permissions: [
-      { key: 'hospital.view', label: 'View Hospital Profile', description: 'Inspect hospital profile information' },
-      { key: 'hospital.update', label: 'Edit Hospital Profile', description: 'Update hospital metadata and settings' },
+      {
+        key: "hospital.view",
+        label: "View Hospital Profile",
+        description: "Inspect hospital profile information",
+      },
+      {
+        key: "hospital.update",
+        label: "Edit Hospital Profile",
+        description: "Update hospital metadata and settings",
+      },
     ],
   },
   {
-    title: 'Positions',
-    description: 'Permissions for configuring designations and default onboarding modules.',
+    title: "Positions",
+    description:
+      "Permissions for configuring designations and default onboarding modules.",
     permissions: [
-      { key: 'position.view', label: 'View Positions', description: 'Inspect position master catalog' },
-      { key: 'position.create', label: 'Create Positions', description: 'Add new job positions' },
-      { key: 'position.update', label: 'Edit / Deactivate Positions', description: 'Update position details and status' },
-      { key: 'position.schedule.manage', label: 'Manage Position Schedules', description: 'Configure working days for normal employment positions' },
+      {
+        key: "position.view",
+        label: "View Positions",
+        description: "Inspect position master catalog",
+      },
+      {
+        key: "position.create",
+        label: "Create Positions",
+        description: "Add new job positions",
+      },
+      {
+        key: "position.update",
+        label: "Edit / Deactivate Positions",
+        description: "Update position details and status",
+      },
+      {
+        key: "position.schedule.manage",
+        label: "Manage Position Schedules",
+        description: "Configure working days for normal employment positions",
+      },
     ],
   },
   {
-    title: 'Leave Management',
-    description: 'Self-service capabilities are default for active employees. Management permissions are Admin-controlled.',
+    title: "Leave Management",
+    description:
+      "Self-service capabilities are default for active employees. Management permissions are Admin-controlled.",
     subsections: [
       {
-        title: 'SELF SERVICE',
-        subtitle: 'Default capabilities active for all active employees',
+        title: "SELF SERVICE",
+        subtitle: "Default capabilities active for all active employees",
         isDefaultGroup: true,
         permissions: [
-          { key: 'leave.apply', label: 'Apply Leave — Default', description: 'Submit leave applications for self', isDefault: true },
-          { key: 'leave.view_own', label: 'View Own Leaves — Default', description: 'View personal leave history and status', isDefault: true },
-          { key: 'leave.cancel_own', label: 'Cancel Own Leave — Default', description: 'Cancel own pending leave requests', isDefault: true },
+          {
+            key: "leave.apply",
+            label: "Apply Leave — Default",
+            description: "Submit leave applications for self",
+            isDefault: true,
+          },
+          {
+            key: "leave.view_own",
+            label: "View Own Leaves — Default",
+            description: "View personal leave history and status",
+            isDefault: true,
+          },
+          {
+            key: "leave.cancel_own",
+            label: "Cancel Own Leave — Default",
+            description: "Cancel own pending leave requests",
+            isDefault: true,
+          },
         ],
       },
       {
-        title: 'WORKFORCE',
-        subtitle: 'Admin-controlled permissions for workforce leave governance',
+        title: "WORKFORCE",
+        subtitle: "Admin-controlled permissions for workforce leave governance",
         isDefaultGroup: false,
         permissions: [
-          { key: 'leave.view_workforce', label: "View Who's On Leave", description: 'View leave requests across hospital workforce', isDefault: false },
-          { key: 'leave.approve', label: 'Approve Leave', description: 'Approve pending leave requests', isDefault: false },
-          { key: 'leave.reject', label: 'Reject Leave', description: 'Reject pending leave requests', isDefault: false },
-          { key: 'leave.manage', label: 'Manage Leaves', description: 'Broader management and cancellation of hospital leaves', isDefault: false },
+          {
+            key: "leave.view_workforce",
+            label: "View Who's On Leave",
+            description: "View leave requests across hospital workforce",
+            isDefault: false,
+          },
+          {
+            key: "leave.approve",
+            label: "Approve Leave",
+            description: "Approve pending leave requests",
+            isDefault: false,
+          },
+          {
+            key: "leave.reject",
+            label: "Reject Leave",
+            description: "Reject pending leave requests",
+            isDefault: false,
+          },
+          {
+            key: "leave.manage",
+            label: "Manage Leaves",
+            description:
+              "Broader management and cancellation of hospital leaves",
+            isDefault: false,
+          },
         ],
       },
     ],
   },
   {
-    title: 'Attendance & Regularization',
-    description: 'Self-service capabilities are default for active employees. Management permissions are Admin-controlled.',
+    title: "Attendance & Regularization",
+    description:
+      "Self-service capabilities are default for active employees. Management permissions are Admin-controlled.",
     subsections: [
       {
-        title: 'SELF SERVICE',
-        subtitle: 'Default capabilities active for all active employees',
+        title: "SELF SERVICE",
+        subtitle: "Default capabilities active for all active employees",
         isDefaultGroup: true,
         permissions: [
-          { key: 'attendance.view_own', label: 'Mark Attendance & View Own Logs — Default', description: 'Check-in/out and view own attendance logs', isDefault: true },
+          {
+            key: "attendance.view_own",
+            label: "Mark Attendance & View Own Logs — Default",
+            description: "Check-in/out and view own attendance logs",
+            isDefault: true,
+          },
         ],
       },
       {
-        title: 'MANAGEMENT',
-        subtitle: 'Admin-controlled permissions for workforce attendance & regularization governance',
+        title: "MANAGEMENT",
+        subtitle:
+          "Admin-controlled permissions for workforce attendance & regularization governance",
         isDefaultGroup: false,
         permissions: [
-          { key: 'attendance.view', label: 'View Workforce Attendance', description: 'View attendance records across hospital workforce', isDefault: false },
-          { key: 'attendance.regularization.view', label: 'View Regularization Requests', description: 'View regularization requests across workforce', isDefault: false },
-          { key: 'attendance.regularization.approve', label: 'Approve Regularization Requests', description: 'Approve workforce regularization requests', isDefault: false },
-          { key: 'attendance.regularization.reject', label: 'Reject Regularization Requests', description: 'Reject workforce regularization requests', isDefault: false },
-          { key: 'attendance.regularization.manage', label: 'Manage Regularizations', description: 'Broader management of hospital regularization requests', isDefault: false },
-          { key: 'attendance.manage', label: 'Manage Attendance', description: 'Full management of hospital workforce attendance & regularizations', isDefault: false },
+          {
+            key: "attendance.view",
+            label: "View Workforce Attendance",
+            description: "View attendance records across hospital workforce",
+            isDefault: false,
+          },
+          {
+            key: "attendance.regularization.view",
+            label: "View Regularization Requests",
+            description: "View regularization requests across workforce",
+            isDefault: false,
+          },
+          {
+            key: "attendance.regularization.approve",
+            label: "Approve Regularization Requests",
+            description: "Approve workforce regularization requests",
+            isDefault: false,
+          },
+          {
+            key: "attendance.regularization.reject",
+            label: "Reject Regularization Requests",
+            description: "Reject workforce regularization requests",
+            isDefault: false,
+          },
+          {
+            key: "attendance.regularization.manage",
+            label: "Manage Regularizations",
+            description:
+              "Broader management of hospital regularization requests",
+            isDefault: false,
+          },
+          {
+            key: "attendance.manage",
+            label: "Manage Attendance",
+            description:
+              "Full management of hospital workforce attendance & regularizations",
+            isDefault: false,
+          },
         ],
       },
     ],
   },
   {
-    title: 'Roster',
-    description: 'Self-service capabilities are default for active employees. Management permissions are Admin-controlled.',
+    title: "Roster",
+    description:
+      "Self-service capabilities are default for active employees. Management permissions are Admin-controlled.",
     subsections: [
       {
-        title: 'SELF SERVICE',
-        subtitle: 'Default capabilities active for all active employees',
+        title: "SELF SERVICE",
+        subtitle: "Default capabilities active for all active employees",
         isDefaultGroup: true,
         permissions: [
-          { key: 'roster.view_own', label: 'View Own Roster — Default', description: 'View personal published duty assignments', isDefault: true },
+          {
+            key: "roster.view_own",
+            label: "View Own Roster — Default",
+            description: "View personal published duty assignments",
+            isDefault: true,
+          },
         ],
       },
       {
-        title: 'MANAGEMENT',
-        subtitle: 'Admin-controlled permissions for workforce duty roster governance',
+        title: "MANAGEMENT",
+        subtitle:
+          "Admin-controlled permissions for workforce duty roster governance",
         isDefaultGroup: false,
         permissions: [
-          { key: 'roster.view', label: 'View Workforce Roster', description: 'View duty rosters and templates across hospital workforce', isDefault: false },
-          { key: 'roster.manage', label: 'Manage Roster', description: 'Create templates, draft rosters, assign duty shifts, and publish rosters', isDefault: false },
+          {
+            key: "roster.view",
+            label: "View Workforce Roster",
+            description:
+              "View duty rosters and templates across hospital workforce",
+            isDefault: false,
+          },
+          {
+            key: "roster.manage",
+            label: "Manage Roster",
+            description:
+              "Create templates, draft rosters, assign duty shifts, and publish rosters",
+            isDefault: false,
+          },
         ],
       },
     ],
@@ -160,33 +317,37 @@ const PERMISSION_GROUPS = [
 ];
 
 const MODULE_OPTIONS = [
-  { key: 'hrms', label: 'HRMS Module', description: 'Employee management, Roster, Attendance, and Leave tracking' },
+  {
+    key: "hrms",
+    label: "HRMS Module",
+    description: "Employee management, Roster, Attendance, and Leave tracking",
+  },
 ];
 
 const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [selectedModules, setSelectedModules] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (open && user) {
       setSelectedPermissions(user.permissions || []);
-      setSelectedModules(user.modules || ['core']);
-      setError('');
+      setSelectedModules(user.modules || ["core"]);
+      setError("");
       setSubmitting(false);
     }
   }, [open, user]);
 
   const togglePermission = (key) => {
     setSelectedPermissions((prev) =>
-      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]
+      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key],
     );
   };
 
   const toggleModule = (key) => {
     setSelectedModules((prev) =>
-      prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key]
+      prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key],
     );
   };
 
@@ -201,7 +362,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    setError('');
+    setError("");
     try {
       setSubmitting(true);
       await accessManagementService.updateUserAccess(user.id, {
@@ -211,7 +372,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
       onSuccess(`Access updated successfully for ${user.name}`);
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to update user access.');
+      setError(err?.response?.data?.message || "Failed to update user access.");
     } finally {
       setSubmitting(false);
     }
@@ -234,7 +395,10 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
     >
       <Stack spacing={3}>
         {/* User Summary Card */}
-        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: '#fbfcfd' }}>
+        <Paper
+          variant="outlined"
+          sx={{ p: 2, borderRadius: 2, bgcolor: "#fbfcfd" }}
+        >
           <Stack direction="row" spacing={2} alignItems="center">
             <InitialsAvatar name={user.name} sx={{ width: 44, height: 44 }} />
             <Box sx={{ flex: 1 }}>
@@ -242,13 +406,17 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                 {user.name}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {user.email} • {user.positionName || 'No Position'}
+                {user.email} • {user.positionName || "No Position"}
               </Typography>
             </Box>
             <Chip
               label="Employee"
               size="small"
-              sx={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem' }}
+              sx={{
+                fontWeight: 600,
+                textTransform: "uppercase",
+                fontSize: "0.75rem",
+              }}
             />
           </Stack>
         </Paper>
@@ -258,8 +426,13 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
           <Typography variant="subtitle2" fontWeight={700} gutterBottom>
             Module Access
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
-            Grant this user access to business modules. Core Platform is automatically active.
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mb: 1.5, display: "block" }}
+          >
+            Grant this user access to business modules. Core Platform is
+            automatically active.
           </Typography>
           <Stack spacing={1}>
             {MODULE_OPTIONS.map((mod) => {
@@ -272,10 +445,15 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                   sx={{
                     p: 1.5,
                     borderRadius: 2,
-                    cursor: 'pointer',
-                    borderColor: isChecked ? 'primary.main' : 'divider',
-                    bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
-                    transition: 'all 0.15s ease-in-out',
+                    cursor: "pointer",
+                    borderColor: isChecked ? "primary.main" : "divider",
+                    bgcolor: isChecked
+                      ? (t) =>
+                          t.palette.mode === "dark"
+                            ? "rgba(14, 165, 233, 0.08)"
+                            : "#f0f9ff"
+                      : "transparent",
+                    transition: "all 0.15s ease-in-out",
                   }}
                 >
                   <FormControlLabel
@@ -289,13 +467,19 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                     }
                     label={
                       <Box sx={{ ml: 0.5 }}>
-                        <Typography variant="body2" fontWeight={600} color="text.primary">
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color="text.primary"
+                        >
                           {mod.label}
                         </Typography>
-                        <FormHelperText sx={{ m: 0 }}>{mod.description}</FormHelperText>
+                        <FormHelperText sx={{ m: 0 }}>
+                          {mod.description}
+                        </FormHelperText>
                       </Box>
                     }
-                    sx={{ width: '100%', m: 0 }}
+                    sx={{ width: "100%", m: 0 }}
                   />
                 </Paper>
               );
@@ -310,7 +494,11 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
           <Typography variant="subtitle2" fontWeight={700} gutterBottom>
             System Permissions
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mb: 2, display: "block" }}
+          >
             Grant explicit granular permissions to this account.
           </Typography>
 
@@ -318,32 +506,91 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
             {PERMISSION_GROUPS.map((group) => {
               if (group.subsections) {
                 return (
-                  <Box key={group.title} sx={{ border: '1px solid #E2E8F0', borderRadius: 2, p: 2, bgcolor: '#FAFAFA' }}>
-                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
+                  <Box
+                    key={group.title}
+                    sx={{
+                      border: "1px solid #E2E8F0",
+                      borderRadius: 2,
+                      p: 2,
+                      bgcolor: "#FAFAFA",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={700}
+                      color="text.primary"
+                    >
                       {group.title}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 2 }}
+                    >
                       {group.description}
                     </Typography>
 
                     <Stack spacing={2}>
                       {group.subsections.map((sub) => {
                         const subKeys = sub.permissions.map((p) => p.key);
-                        const allSelected = subKeys.every((k) => selectedPermissions.includes(k));
+                        const allSelected = subKeys.every((k) =>
+                          selectedPermissions.includes(k),
+                        );
 
                         return (
-                          <Box key={sub.title} sx={{ bgcolor: '#FFFFFF', p: 1.5, borderRadius: 1.5, border: '1px solid #EAEAEA' }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                          <Box
+                            key={sub.title}
+                            sx={{
+                              bgcolor: "#FFFFFF",
+                              p: 1.5,
+                              borderRadius: 1.5,
+                              border: "1px solid #EAEAEA",
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              justifyContent="space-between"
+                              alignItems="center"
+                              mb={1}
+                            >
                               <Box>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                  <Typography variant="caption" fontWeight={700} sx={{ letterSpacing: 0.5, color: sub.isDefaultGroup ? '#059669' : '#0F172A', textTransform: 'uppercase' }}>
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  alignItems="center"
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    fontWeight={700}
+                                    sx={{
+                                      letterSpacing: 0.5,
+                                      color: sub.isDefaultGroup
+                                        ? "#059669"
+                                        : "#0F172A",
+                                      textTransform: "uppercase",
+                                    }}
+                                  >
                                     {sub.title}
                                   </Typography>
                                   {sub.isDefaultGroup && (
-                                    <Chip label="Default Active" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#ECFDF5', color: '#059669' }} />
+                                    <Chip
+                                      label="Default Active"
+                                      size="small"
+                                      sx={{
+                                        height: 18,
+                                        fontSize: "0.65rem",
+                                        fontWeight: 700,
+                                        bgcolor: "#ECFDF5",
+                                        color: "#059669",
+                                      }}
+                                    />
                                   )}
                                 </Stack>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.72rem' }}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ fontSize: "0.72rem" }}
+                                >
                                   {sub.subtitle}
                                 </Typography>
                               </Box>
@@ -352,9 +599,13 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                                   <Button
                                     size="small"
                                     variant="text"
-                                    onClick={() => selectAllPermissionsInGroup(sub.permissions)}
+                                    onClick={() =>
+                                      selectAllPermissionsInGroup(
+                                        sub.permissions,
+                                      )
+                                    }
                                     disabled={allSelected}
-                                    sx={{ fontSize: '0.75rem', py: 0 }}
+                                    sx={{ fontSize: "0.75rem", py: 0 }}
                                   >
                                     Select All
                                   </Button>
@@ -362,8 +613,10 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                                     size="small"
                                     variant="text"
                                     color="inherit"
-                                    onClick={() => clearPermissionsInGroup(sub.permissions)}
-                                    sx={{ fontSize: '0.75rem', py: 0 }}
+                                    onClick={() =>
+                                      clearPermissionsInGroup(sub.permissions)
+                                    }
+                                    sx={{ fontSize: "0.75rem", py: 0 }}
                                   >
                                     Clear
                                   </Button>
@@ -373,7 +626,9 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
 
                             <FormGroup sx={{ gap: 1 }}>
                               {sub.permissions.map((option) => {
-                                const isChecked = option.isDefault ? true : selectedPermissions.includes(option.key);
+                                const isChecked = option.isDefault
+                                  ? true
+                                  : selectedPermissions.includes(option.key);
 
                                 if (option.isDefault) {
                                   return (
@@ -383,23 +638,52 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                                       sx={{
                                         p: 1.25,
                                         borderRadius: 1.5,
-                                        borderColor: '#A7F3D0',
-                                        bgcolor: '#F0FDF4',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
+                                        borderColor: "#A7F3D0",
+                                        bgcolor: "#F0FDF4",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
                                       }}
                                     >
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <CheckCircleOutlineRounded sx={{ color: '#059669', fontSize: 20 }} />
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 1,
+                                        }}
+                                      >
+                                        <CheckCircleOutlineRounded
+                                          sx={{
+                                            color: "#059669",
+                                            fontSize: 20,
+                                          }}
+                                        />
                                         <Box>
-                                          <Typography variant="body2" fontWeight={600} color="#065F46">
+                                          <Typography
+                                            variant="body2"
+                                            fontWeight={600}
+                                            color="#065F46"
+                                          >
                                             {option.label}
                                           </Typography>
-                                          <FormHelperText sx={{ m: 0, color: '#047857' }}>{option.description}</FormHelperText>
+                                          <FormHelperText
+                                            sx={{ m: 0, color: "#047857" }}
+                                          >
+                                            {option.description}
+                                          </FormHelperText>
                                         </Box>
                                       </Box>
-                                      <Chip label="Default" size="small" sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#D1FAE5', color: '#065F46' }} />
+                                      <Chip
+                                        label="Default"
+                                        size="small"
+                                        sx={{
+                                          height: 20,
+                                          fontSize: "0.7rem",
+                                          fontWeight: 700,
+                                          bgcolor: "#D1FAE5",
+                                          color: "#065F46",
+                                        }}
+                                      />
                                     </Paper>
                                   );
                                 }
@@ -412,29 +696,44 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                                     sx={{
                                       p: 1.25,
                                       borderRadius: 1.5,
-                                      cursor: 'pointer',
-                                      borderColor: isChecked ? 'primary.main' : 'divider',
-                                      bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
-                                      transition: 'all 0.15s ease-in-out',
+                                      cursor: "pointer",
+                                      borderColor: isChecked
+                                        ? "primary.main"
+                                        : "divider",
+                                      bgcolor: isChecked
+                                        ? (t) =>
+                                            t.palette.mode === "dark"
+                                              ? "rgba(14, 165, 233, 0.08)"
+                                              : "#f0f9ff"
+                                        : "transparent",
+                                      transition: "all 0.15s ease-in-out",
                                     }}
                                   >
                                     <FormControlLabel
                                       control={
                                         <Checkbox
                                           checked={isChecked}
-                                          onChange={() => togglePermission(option.key)}
+                                          onChange={() =>
+                                            togglePermission(option.key)
+                                          }
                                           onClick={(e) => e.stopPropagation()}
                                         />
                                       }
                                       label={
                                         <Box sx={{ ml: 0.5 }}>
-                                          <Typography variant="body2" fontWeight={600} color="text.primary">
+                                          <Typography
+                                            variant="body2"
+                                            fontWeight={600}
+                                            color="text.primary"
+                                          >
                                             {option.label}
                                           </Typography>
-                                          <FormHelperText sx={{ m: 0 }}>{option.description}</FormHelperText>
+                                          <FormHelperText sx={{ m: 0 }}>
+                                            {option.description}
+                                          </FormHelperText>
                                         </Box>
                                       }
-                                      sx={{ width: '100%', m: 0 }}
+                                      sx={{ width: "100%", m: 0 }}
                                     />
                                   </Paper>
                                 );
@@ -449,10 +748,17 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
               }
 
               const groupKeys = group.permissions.map((p) => p.key);
-              const allSelected = groupKeys.every((k) => selectedPermissions.includes(k));
+              const allSelected = groupKeys.every((k) =>
+                selectedPermissions.includes(k),
+              );
               return (
                 <Box key={group.title}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={1}
+                  >
                     <Typography variant="body2" fontWeight={700}>
                       {group.title}
                     </Typography>
@@ -460,7 +766,9 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                       <Button
                         size="small"
                         variant="text"
-                        onClick={() => selectAllPermissionsInGroup(group.permissions)}
+                        onClick={() =>
+                          selectAllPermissionsInGroup(group.permissions)
+                        }
                         disabled={allSelected}
                       >
                         Select All
@@ -469,7 +777,9 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                         size="small"
                         variant="text"
                         color="inherit"
-                        onClick={() => clearPermissionsInGroup(group.permissions)}
+                        onClick={() =>
+                          clearPermissionsInGroup(group.permissions)
+                        }
                       >
                         Clear
                       </Button>
@@ -477,7 +787,9 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                   </Stack>
                   <FormGroup sx={{ gap: 1 }}>
                     {group.permissions.map((option) => {
-                      const isChecked = selectedPermissions.includes(option.key);
+                      const isChecked = selectedPermissions.includes(
+                        option.key,
+                      );
                       return (
                         <Paper
                           key={option.key}
@@ -486,10 +798,15 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                           sx={{
                             p: 1.5,
                             borderRadius: 2,
-                            cursor: 'pointer',
-                            borderColor: isChecked ? 'primary.main' : 'divider',
-                            bgcolor: isChecked ? (t) => (t.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.08)' : '#f0f9ff') : 'transparent',
-                            transition: 'all 0.15s ease-in-out',
+                            cursor: "pointer",
+                            borderColor: isChecked ? "primary.main" : "divider",
+                            bgcolor: isChecked
+                              ? (t) =>
+                                  t.palette.mode === "dark"
+                                    ? "rgba(14, 165, 233, 0.08)"
+                                    : "#f0f9ff"
+                              : "transparent",
+                            transition: "all 0.15s ease-in-out",
                           }}
                         >
                           <FormControlLabel
@@ -502,13 +819,19 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                             }
                             label={
                               <Box sx={{ ml: 0.5 }}>
-                                <Typography variant="body2" fontWeight={600} color="text.primary">
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={600}
+                                  color="text.primary"
+                                >
                                   {option.label}
                                 </Typography>
-                                <FormHelperText sx={{ m: 0 }}>{option.description}</FormHelperText>
+                                <FormHelperText sx={{ m: 0 }}>
+                                  {option.description}
+                                </FormHelperText>
                               </Box>
                             }
-                            sx={{ width: '100%', m: 0 }}
+                            sx={{ width: "100%", m: 0 }}
                           />
                         </Paper>
                       );
@@ -527,20 +850,22 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
 const AccessManagementPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const { showSnackbar: showSnack } = useSnackbar();
 
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
       const res = await accessManagementService.listWorkforceUsers();
       setUsers(res?.data?.data || []);
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to load workforce access list.');
+      setError(
+        err?.response?.data?.message || "Failed to load workforce access list.",
+      );
     } finally {
       setLoading(false);
     }
@@ -555,7 +880,8 @@ const AccessManagementPage = () => {
       !search ||
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()) ||
-      (u.positionName && u.positionName.toLowerCase().includes(search.toLowerCase()));
+      (u.positionName &&
+        u.positionName.toLowerCase().includes(search.toLowerCase()));
 
     const matchesRole = !roleFilter || u.role === roleFilter;
     return matchesSearch && matchesRole;
@@ -563,22 +889,22 @@ const AccessManagementPage = () => {
 
   const stats = {
     total: users.length,
-    hrms: users.filter((u) => u.modules?.includes('hrms')).length,
-    active: users.filter((u) => u.status === 'active').length,
+    hrms: users.filter((u) => u.modules?.includes("hrms")).length,
+    active: users.filter((u) => u.status === "active").length,
   };
 
   const columns = [
-    { key: 'user', label: 'USER' },
-    { key: 'role', label: 'ROLE' },
-    { key: 'position', label: 'POSITION' },
-    { key: 'modules', label: 'MODULES' },
-    { key: 'permissions', label: 'PERMISSIONS' },
-    { key: 'status', label: 'STATUS' },
+    { key: "user", label: "USER" },
+    { key: "role", label: "ROLE" },
+    { key: "position", label: "POSITION" },
+    { key: "modules", label: "MODULES" },
+    { key: "permissions", label: "PERMISSIONS" },
+    { key: "status", label: "STATUS" },
   ];
 
   const renderCell = (u, column) => {
     switch (column.key) {
-      case 'user':
+      case "user":
         return (
           <Stack direction="row" spacing={1.5} alignItems="center">
             <InitialsAvatar name={u.name} size={32} />
@@ -592,46 +918,50 @@ const AccessManagementPage = () => {
             </Box>
           </Stack>
         );
-      case 'role':
+      case "role":
         return (
           <Chip
             label="Employee"
             size="small"
             variant="outlined"
             sx={{
-              fontSize: '0.75rem',
+              fontSize: "0.75rem",
               height: 22,
               fontWeight: 600,
-              backgroundColor: 'transparent',
-              borderColor: '#E5E5E5',
-              color: '#0A0A0A',
+              backgroundColor: "transparent",
+              borderColor: "#E5E5E5",
+              color: "#0A0A0A",
             }}
           />
         );
-      case 'position':
-        return <Typography variant="body2">{u.positionName || '—'}</Typography>;
-      case 'modules':
+      case "position":
+        return <Typography variant="body2">{u.positionName || "—"}</Typography>;
+      case "modules":
         return (
-          <Box display="flex" gap={0.5} flexWrap="wrap">
-            {(u.modules || ['core']).map((m) => (
+          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+            {(u.modules || ["core"]).map((m) => (
               <Chip
                 key={m}
                 label={m.toUpperCase()}
                 size="small"
                 variant="outlined"
-                sx={{ fontSize: '0.7rem', height: 20 }}
+                sx={{ fontSize: "0.7rem", height: 20 }}
               />
             ))}
           </Box>
         );
-      case 'permissions':
+      case "permissions":
         return (
           <Typography variant="body2" fontWeight={500}>
-            {u.permissions?.length ? `${u.permissions.length} granted` : 'Default only'}
+            {u.permissions?.length
+              ? `${u.permissions.length} granted`
+              : "Default only"}
           </Typography>
         );
-      case 'status':
-        return <StatusBadge status={u.status === 'active' ? 'active' : 'inactive'} />;
+      case "status":
+        return (
+          <StatusBadge status={u.status === "active" ? "active" : "inactive"} />
+        );
       default:
         return null;
     }
@@ -642,7 +972,7 @@ const AccessManagementPage = () => {
   const renderActions = (u) => {
     if (!canManage) return null;
     return (
-      <Box display="flex" justifyContent="flex-end">
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
         <Button
           size="small"
           variant="outlined"
@@ -651,7 +981,7 @@ const AccessManagementPage = () => {
             e.stopPropagation();
             setSelectedUser(u);
           }}
-          sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 1.5 }}
+          sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5 }}
         >
           Manage
         </Button>
@@ -678,35 +1008,35 @@ const AccessManagementPage = () => {
   return (
     <AppLayout>
       <PageHeader
-          title="Access Management"
-          description="Configure module access and system permissions for hospital workforce."
-        />
+        title="Access Management"
+        description="Configure module access and system permissions for hospital workforce."
+      />
 
-        {/* Summary Cards */}
-        <KPIGrid>
-          <KPICard
-            title="Total Workforce Users"
-            value={stats.total}
-            icon={PeopleOutlineRounded}
-          />
-          <KPICard
-            title="HRMS Module Enabled"
-            value={stats.hrms}
-            icon={SecurityRounded}
-          />
-          <KPICard
-            title="Active Accounts"
-            value={stats.active}
-            icon={CheckCircleOutlineRounded}
-          />
-        </KPIGrid>
+      {/* Summary Cards */}
+      <KPIGrid>
+        <KPICard
+          title="Total Workforce Users"
+          value={stats.total}
+          icon={PeopleOutlineRounded}
+        />
+        <KPICard
+          title="HRMS Module Enabled"
+          value={stats.hrms}
+          icon={SecurityRounded}
+        />
+        <KPICard
+          title="Active Accounts"
+          value={stats.active}
+          icon={CheckCircleOutlineRounded}
+        />
+      </KPIGrid>
 
       {/* Main Container Card */}
       <GlassCard sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack
-          direction={{ xs: 'column', sm: 'row' }}
+          direction={{ xs: "column", sm: "row" }}
           spacing={2}
-          alignItems={{ xs: 'stretch', sm: 'center' }}
+          alignItems={{ xs: "stretch", sm: "center" }}
           justifyContent="space-between"
           sx={{ mb: 3 }}
         >
@@ -715,17 +1045,20 @@ const AccessManagementPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             size="small"
-            sx={{ flex: 1, minWidth: { xs: '100%', sm: 280 } }}
+            sx={{ flex: 1, minWidth: { xs: "100%", sm: 280 } }}
             slotProps={{
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchRounded fontSize="small" sx={{ color: 'text.secondary' }} />
+                    <SearchRounded
+                      fontSize="small"
+                      sx={{ color: "text.secondary" }}
+                    />
                   </InputAdornment>
                 ),
                 endAdornment: search ? (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearch('')}>
+                    <IconButton size="small" onClick={() => setSearch("")}>
                       <CloseRounded fontSize="small" />
                     </IconButton>
                   </InputAdornment>
@@ -733,7 +1066,6 @@ const AccessManagementPage = () => {
               },
             }}
           />
-
         </Stack>
 
         {filteredUsers.length === 0 ? (
@@ -741,8 +1073,8 @@ const AccessManagementPage = () => {
             title="No workforce users found"
             description={
               search || roleFilter
-                ? 'No users match your search or filter criteria.'
-                : 'There are currently no workforce users assigned to this hospital.'
+                ? "No users match your search or filter criteria."
+                : "There are currently no workforce users assigned to this hospital."
             }
             icon={PeopleOutlineRounded}
           />

@@ -1059,7 +1059,7 @@ const EmployeesPage = () => {
       (cancelTarget?._id === inv._id && cancelling);
 
     return (
-      <Box display="flex" justifyContent="flex-end" gap={0.5}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
         <Tooltip
           title={
             isPending

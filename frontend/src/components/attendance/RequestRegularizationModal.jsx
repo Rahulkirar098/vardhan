@@ -118,7 +118,7 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
               fullWidth
               required
               InputLabelProps={{ shrink: true }}
-              inputProps={{ max: todayStr }}
+              slotProps={{ htmlInput: { max: todayStr } }}
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />

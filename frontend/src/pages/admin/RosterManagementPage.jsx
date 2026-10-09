@@ -1084,7 +1084,7 @@ export default function RosterManagementPage() {
                 {/* SELECT ACTIVE ROSTER DROPDOWN FOR MULTIPLE ACTIVE ROSTERS */}
                 {activePublishedRosters.length > 0 && !activeRoster.isHistorical && (
                   <Paper sx={{ p: 1.5, px: 2, mb: 2.5, borderRadius: 2, border: '1px solid #CBD5E1', bgcolor: '#F8FAFC' }}>
-                    <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap' }}>
                       <Typography variant="caption" color="text.secondary" fontWeight="800" sx={{ letterSpacing: 0.5 }}>
                         SELECT ACTIVE ROSTER:
                       </Typography>
@@ -1714,7 +1714,7 @@ export default function RosterManagementPage() {
         {/* ─── TAB 5: MY ROSTER (Employee Personal Schedule with Current / History) ─── */}
         {activeTab === 'my-roster' && (
           <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
               <Box>
                 <Typography variant="h6" fontWeight="bold">
                   My Duty Assignments

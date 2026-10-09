@@ -74,7 +74,6 @@ const Modal = forwardRef(
         fullWidth={fullWidth}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        disableEscapeKeyDown={submitting}
         slotProps={{
           backdrop: {
             onClick: handleBackdropClick,
