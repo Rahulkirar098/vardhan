@@ -2,13 +2,13 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
   AppBar,
   Box,
-  Button,
   Container,
   Grid,
   Stack,
   Toolbar,
   Typography,
 } from '@mui/material';
+import { AppButton } from '../../components/common';
 import {
   ArrowForwardRounded,
   GroupRounded,
@@ -84,12 +84,12 @@ const Landing = () => {
           </Box>
 
           <Stack direction="row" spacing={1.5}>
-            <Button component={RouterLink} to="/login" variant="text">
+            <AppButton component={RouterLink} to="/login" variant="text">
               Sign In
-            </Button>
-            <Button component={RouterLink} to="/register" variant="contained">
+            </AppButton>
+            <AppButton component={RouterLink} to="/register" variant="primary">
               Get Started
-            </Button>
+            </AppButton>
           </Stack>
         </Toolbar>
       </AppBar>
@@ -134,18 +134,18 @@ const Landing = () => {
               </Typography>
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <Button
+                <AppButton
                   component={RouterLink}
                   to="/register"
-                  variant="contained"
+                  variant="primary"
                   size="large"
                   endIcon={<ArrowForwardRounded fontSize="small" />}
                 >
                   Get Started
-                </Button>
-                <Button component={RouterLink} to="/login" variant="outlined" size="large" color="inherit">
+                </AppButton>
+                <AppButton component={RouterLink} to="/login" variant="outlined" size="large">
                   Sign In
-                </Button>
+                </AppButton>
               </Stack>
             </Stack>
           </Grid>

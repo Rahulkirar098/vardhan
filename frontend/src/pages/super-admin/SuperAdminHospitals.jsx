@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Stack, Typography } from '@mui/material';
+import { AppInput, AppButton } from '../../components/common';
 import { LocalHospitalRounded, SearchRounded, VisibilityRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
@@ -162,21 +163,12 @@ const Hospitals = () => {
         </KPIGrid>
 
         <Box sx={{ maxWidth: 420 }}>
-          <TextField
-            fullWidth
+          <AppInput
+            type="search"
             size="small"
             placeholder="Search hospitals, codes or admin"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded fontSize="small" sx={{ color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
-              },
-            }}
           />
         </Box>
 
@@ -205,14 +197,14 @@ const Hospitals = () => {
                 : 'Hospitals created by Admins will appear here.'
             }
             renderActions={(row) => (
-              <Button
+              <AppButton
                 size="small"
-                variant="outlined"
+                variant="secondary"
                 startIcon={<VisibilityRounded fontSize="small" />}
                 onClick={() => navigate(`/super-admin/hospitals/${row?.id || row?._id}`)}
               >
                 View
-              </Button>
+              </AppButton>
             )}
           />
         </Stack>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, MenuItem, Stack, TextField } from '@mui/material';
+import { Box, Stack } from '@mui/material';
+import { AppInput, AppSelect, AppButton } from '../../components/common';
 import { AddBusinessRounded, EditRounded, LocalHospitalRounded, GroupRounded, CheckCircleOutlineRounded } from '@mui/icons-material';
 import hospitalService from '../../services/hospital.service';
 import auth from '../../services/auth.service';
@@ -119,39 +120,33 @@ const CreateHospitalModal = ({ open, onClose, onSuccess, resetKey = 0 }) => {
     >
       <Stack spacing={2.5} sx={{ pt: 0.5 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="Hospital Name" name="name" value={form.name} onChange={handleChange} required />
-          <TextField label="Hospital Code" name="code" value={form.code} onChange={handleChange} required />
+          <AppInput label="Hospital Name" name="name" value={form.name} onChange={handleChange} required />
+          <AppInput label="Hospital Code" name="code" value={form.code} onChange={handleChange} required />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="Registration Number" name="registrationNumber" value={form.registrationNumber} onChange={handleChange} />
-          <TextField
-            select
+          <AppInput label="Registration Number" name="registrationNumber" value={form.registrationNumber} onChange={handleChange} />
+          <AppSelect
             label="Hospital Timezone"
             name="timezone"
             value={form.timezone || 'Asia/Kolkata'}
             onChange={handleChange}
+            options={TIMEZONE_OPTIONS}
             required
-          >
-            {TIMEZONE_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="Email" type="email" name="email" value={form.email} onChange={handleChange} />
-          <TextField label="Website" name="website" value={form.website} onChange={handleChange} />
+          <AppInput label="Email" type="email" name="email" value={form.email} onChange={handleChange} />
+          <AppInput label="Website" name="website" value={form.website} onChange={handleChange} />
         </Stack>
-        <TextField label="Address Line 1" name="addressLine1" value={form.addressLine1} onChange={handleChange} multiline minRows={2} />
-        <TextField label="Address Line 2" name="addressLine2" value={form.addressLine2} onChange={handleChange} />
+        <AppInput label="Address Line 1" name="addressLine1" value={form.addressLine1} onChange={handleChange} multiline minRows={2} />
+        <AppInput label="Address Line 2" name="addressLine2" value={form.addressLine2} onChange={handleChange} />
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="City" name="city" value={form.city} onChange={handleChange} required />
-          <TextField label="State" name="state" value={form.state} onChange={handleChange} required />
+          <AppInput label="City" name="city" value={form.city} onChange={handleChange} required />
+          <AppInput label="State" name="state" value={form.state} onChange={handleChange} required />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="Country" name="country" value={form.country} onChange={handleChange} />
-          <TextField label="Pincode" name="pincode" value={form.pincode} onChange={handleChange} />
+          <AppInput label="Country" name="country" value={form.country} onChange={handleChange} />
+          <AppInput label="Pincode" name="pincode" value={form.pincode} onChange={handleChange} />
         </Stack>
       </Stack>
     </Modal>
@@ -243,39 +238,33 @@ const EditHospitalModal = ({ open, onClose, onSuccess, hospital, resetKey = 0 })
     >
       <Stack spacing={2.5} sx={{ pt: 0.5 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="Hospital Name" name="name" value={form.name || ''} onChange={handleChange} required />
-          <TextField label="Hospital Code" name="code" value={form.code || ''} onChange={handleChange} required />
+          <AppInput label="Hospital Name" name="name" value={form.name || ''} onChange={handleChange} required />
+          <AppInput label="Hospital Code" name="code" value={form.code || ''} onChange={handleChange} required />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="Registration Number" name="registrationNumber" value={form.registrationNumber || ''} onChange={handleChange} />
-          <TextField
-            select
+          <AppInput label="Registration Number" name="registrationNumber" value={form.registrationNumber || ''} onChange={handleChange} />
+          <AppSelect
             label="Hospital Timezone"
             name="timezone"
             value={form.timezone || 'Asia/Kolkata'}
             onChange={handleChange}
+            options={TIMEZONE_OPTIONS}
             required
-          >
-            {TIMEZONE_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="Email" type="email" name="email" value={form.email || ''} onChange={handleChange} />
-          <TextField label="Website" name="website" value={form.website || ''} onChange={handleChange} />
+          <AppInput label="Email" type="email" name="email" value={form.email || ''} onChange={handleChange} />
+          <AppInput label="Website" name="website" value={form.website || ''} onChange={handleChange} />
         </Stack>
-        <TextField label="Address Line 1" name="addressLine1" value={form.addressLine1 || ''} onChange={handleChange} multiline minRows={2} />
-        <TextField label="Address Line 2" name="addressLine2" value={form.addressLine2 || ''} onChange={handleChange} />
+        <AppInput label="Address Line 1" name="addressLine1" value={form.addressLine1 || ''} onChange={handleChange} multiline minRows={2} />
+        <AppInput label="Address Line 2" name="addressLine2" value={form.addressLine2 || ''} onChange={handleChange} />
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="City" name="city" value={form.city || ''} onChange={handleChange} />
-          <TextField label="State" name="state" value={form.state || ''} onChange={handleChange} />
+          <AppInput label="City" name="city" value={form.city || ''} onChange={handleChange} />
+          <AppInput label="State" name="state" value={form.state || ''} onChange={handleChange} />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <TextField label="Country" name="country" value={form.country || 'India'} onChange={handleChange} />
-          <TextField label="Pincode" name="pincode" value={form.pincode || ''} onChange={handleChange} />
+          <AppInput label="Country" name="country" value={form.country || 'India'} onChange={handleChange} />
+          <AppInput label="Pincode" name="pincode" value={form.pincode || ''} onChange={handleChange} />
         </Stack>
       </Stack>
     </Modal>
@@ -354,9 +343,9 @@ const Hospital = () => {
             description="Manage your hospital profile and information."
             actions={
               hospital && hasPermission(PERMISSIONS.HOSPITAL_UPDATE) ? (
-                <Button variant="outlined" startIcon={<EditRounded />} onClick={() => setEditOpen(true)}>
+                <AppButton variant="secondary" startIcon={<EditRounded />} onClick={() => setEditOpen(true)}>
                   Edit Hospital
-                </Button>
+                </AppButton>
               ) : null
             }
           />

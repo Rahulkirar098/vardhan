@@ -3,14 +3,13 @@ import { Link } from 'react-router-dom';
 import {
   Alert,
   Box,
-  CircularProgress,
   Divider,
   Stack,
   Typography,
 } from '@mui/material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
-import { StyledButton, StyledTextField } from '../../components/styled';
+import { AppInput, AppButton } from '../../components/common';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -64,7 +63,7 @@ const ForgotPassword = () => {
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
-            <StyledTextField
+            <AppInput
               label="Email"
               name="email"
               type="email"
@@ -74,9 +73,9 @@ const ForgotPassword = () => {
               required
             />
 
-            <StyledButton type="submit" variantType="primary" size="large" disabled={loading}>
-              {loading ? <CircularProgress size={22} color="inherit" /> : 'Send Reset Link'}
-            </StyledButton>
+            <AppButton type="submit" variant="primary" size="large" loading={loading} fullWidth>
+              Send Reset Link
+            </AppButton>
           </Stack>
         </Box>
 

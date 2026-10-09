@@ -14,14 +14,12 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
 import { useSnackbar } from '../../theme/SnackbarProvider';
-import { StyledButton, StyledTextField } from '../../components/styled';
+import { AppInput, AppButton } from '../../components/common';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const { token } = useParams();
   const [form, setForm] = useState({ password: '', confirmPassword: '' });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { showSnackbar } = useSnackbar();
@@ -78,65 +76,29 @@ const ResetPassword = () => {
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
-            <StyledTextField
+            <AppInput
               label="New Password"
               name="password"
-              type={showPassword ? 'text' : 'password'}
+              type="password"
               value={form.password}
               onChange={handleChange}
               autoComplete="new-password"
               required
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        type="button"
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        onClick={() => setShowPassword((prev) => !prev)}
-                        onMouseDown={(event) => event.preventDefault()}
-                        edge="end"
-                        size="small"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                },
-              }}
             />
 
-            <StyledTextField
+            <AppInput
               label="Confirm New Password"
               name="confirmPassword"
-              type={showConfirmPassword ? 'text' : 'password'}
+              type="password"
               value={form.confirmPassword}
               onChange={handleChange}
               autoComplete="new-password"
               required
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        type="button"
-                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                        onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        onMouseDown={(event) => event.preventDefault()}
-                        edge="end"
-                        size="small"
-                      >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                },
-              }}
             />
 
-            <StyledButton type="submit" variantType="primary" size="large" disabled={loading}>
-              {loading ? <CircularProgress size={22} color="inherit" /> : 'Reset Password'}
-            </StyledButton>
+            <AppButton type="submit" variant="primary" size="large" loading={loading} fullWidth>
+              Reset Password
+            </AppButton>
           </Stack>
         </Box>
 

@@ -3,17 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Alert,
   Box,
-  CircularProgress,
   Divider,
-  IconButton,
-  InputAdornment,
   Stack,
   Typography,
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
-import { StyledButton, StyledTextField } from '../../components/styled';
+import { AppInput, AppButton } from '../../components/common';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,7 +17,6 @@ const Login = () => {
     email: '',
     password: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -98,7 +93,7 @@ const Login = () => {
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
-            <StyledTextField
+            <AppInput
               label="Email"
               name="email"
               type="email"
@@ -109,46 +104,28 @@ const Login = () => {
             />
 
             <Box>
-              <StyledTextField
+              <AppInput
                 label="Password"
                 name="password"
-                type={showPassword ? 'text' : 'password'}
+                type="password"
                 value={form.password}
                 onChange={handleChange}
                 autoComplete="current-password"
                 required
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          type="button"
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
-                          onClick={() => setShowPassword((prev) => !prev)}
-                          onMouseDown={(event) => event.preventDefault()}
-                          edge="end"
-                          size="small"
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
               />
               <Box sx={{ textAlign: 'right', mt: 1.25 }}>
                 <Link
                   to="/forgot-password"
-                  style={{ fontSize: '0.875rem', color: '#62748E', fontWeight: 600 }}
+                  style={{ fontSize: '0.875rem', color: '#6B7280', fontWeight: 600 }}
                 >
                   Forgot password?
                 </Link>
               </Box>
             </Box>
 
-            <StyledButton type="submit" variantType="primary" size="large" disabled={loading}>
-              {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign In'}
-            </StyledButton>
+            <AppButton type="submit" variant="primary" size="large" loading={loading} fullWidth>
+              Sign In
+            </AppButton>
           </Stack>
         </Box>
 

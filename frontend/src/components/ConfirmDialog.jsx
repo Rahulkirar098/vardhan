@@ -1,14 +1,13 @@
 import {
   Box,
-  Button,
-  CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Typography,
 } from '@mui/material';
 import WarningRounded from '@mui/icons-material/WarningRounded';
+import { StyledDialog } from './styled';
+import { AppButton } from './common';
 
 const ConfirmDialog = ({
   open,
@@ -49,7 +48,7 @@ const ConfirmDialog = ({
   };
 
   return (
-    <Dialog
+    <StyledDialog
       open={open}
       onClose={handleClose}
       maxWidth="xs"
@@ -75,8 +74,8 @@ const ConfirmDialog = ({
             width: 32,
             height: 32,
             borderRadius: '8px',
-            backgroundColor: isDanger ? '#FDECEC' : '#F5F5F5',
-            color: isDanger ? '#B42318' : '#0A0A0A',
+            backgroundColor: isDanger ? '#FEF2F2' : '#F3F4F6',
+            color: isDanger ? '#DF2225' : '#252525',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -97,25 +96,22 @@ const ConfirmDialog = ({
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-        <Button
+        <AppButton
           onClick={effectiveOnClose}
           disabled={isSubmitting}
-          variant="outlined"
-          color="inherit"
+          variant="secondary"
         >
           {effectiveCancelLabel}
-        </Button>
-        <Button
+        </AppButton>
+        <AppButton
           onClick={onConfirm}
-          disabled={isSubmitting}
-          variant="contained"
-          color={isDanger ? 'error' : 'primary'}
-          startIcon={isSubmitting ? <CircularProgress size={15} color="inherit" /> : undefined}
+          loading={isSubmitting}
+          variant={isDanger ? 'danger' : 'primary'}
         >
-          {isSubmitting ? 'Working…' : effectiveConfirmLabel}
-        </Button>
+          {effectiveConfirmLabel}
+        </AppButton>
       </DialogActions>
-    </Dialog>
+    </StyledDialog>
   );
 };
 

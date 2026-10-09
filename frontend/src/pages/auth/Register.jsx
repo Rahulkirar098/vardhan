@@ -14,7 +14,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
 import { useSnackbar } from '../../theme/SnackbarProvider';
-import { StyledButton, StyledTextField } from '../../components/styled';
+import { AppInput, AppButton } from '../../components/common';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -25,8 +25,6 @@ const Register = () => {
     password: '',
     confirmPassword: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { showSnackbar } = useSnackbar();
@@ -86,70 +84,34 @@ const Register = () => {
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
-            <StyledTextField label="Full Name" name="name" value={form.name} onChange={handleChange} required />
-            <StyledTextField label="Email" name="email" type="email" value={form.email} onChange={handleChange} autoComplete="email" required />
-            <StyledTextField label="Phone" name="phone" value={form.phone} onChange={handleChange} autoComplete="tel" />
+            <AppInput label="Full Name" name="name" value={form.name} onChange={handleChange} required />
+            <AppInput label="Email" name="email" type="email" value={form.email} onChange={handleChange} autoComplete="email" required />
+            <AppInput label="Phone" name="phone" value={form.phone} onChange={handleChange} autoComplete="tel" />
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
-              <StyledTextField
+              <AppInput
                 label="Password"
                 name="password"
-                type={showPassword ? 'text' : 'password'}
+                type="password"
                 value={form.password}
                 onChange={handleChange}
                 autoComplete="new-password"
                 required
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          type="button"
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
-                          onClick={() => setShowPassword((prev) => !prev)}
-                          onMouseDown={(event) => event.preventDefault()}
-                          edge="end"
-                          size="small"
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
               />
-              <StyledTextField
+              <AppInput
                 label="Confirm Password"
                 name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
+                type="password"
                 value={form.confirmPassword}
                 onChange={handleChange}
                 autoComplete="new-password"
                 required
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          type="button"
-                          aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                          onClick={() => setShowConfirmPassword((prev) => !prev)}
-                          onMouseDown={(event) => event.preventDefault()}
-                          edge="end"
-                          size="small"
-                        >
-                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
               />
             </Stack>
 
-            <StyledButton type="submit" variantType="primary" size="large" disabled={loading}>
-              {loading ? <CircularProgress size={22} color="inherit" /> : 'Create Account'}
-            </StyledButton>
+            <AppButton type="submit" variant="primary" size="large" loading={loading} fullWidth>
+              Create Account
+            </AppButton>
           </Stack>
         </Box>
 

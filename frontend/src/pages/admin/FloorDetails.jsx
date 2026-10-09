@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
-  Button,
   Grid,
   IconButton,
   ListItemIcon,
@@ -10,9 +9,9 @@ import {
   Menu,
   MenuItem,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
+import { AppInput, AppButton } from "../../components/common";
 import {
   AddRounded,
   ArrowBackRounded,
@@ -123,7 +122,7 @@ const RoomFormModal = ({
       startIcon={isEdit ? EditRounded : AddRounded}
     >
       <Stack spacing={2.5}>
-        <TextField
+        <AppInput
           label="Room Name"
           name="name"
           value={form.name}
@@ -133,7 +132,7 @@ const RoomFormModal = ({
           helperText="Enter any generic space or ward name (free text)"
           fullWidth
         />
-        <TextField
+        <AppInput
           label="Code"
           name="code"
           value={form.code}
@@ -141,7 +140,7 @@ const RoomFormModal = ({
           placeholder="e.g. NICU-01, ICU-01, R201"
           fullWidth
         />
-        <TextField
+        <AppInput
           label="Description"
           name="description"
           value={form.description}
@@ -284,24 +283,14 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
 
       <Box sx={{ pt: 2, mt: "auto", display: "flex", gap: 1 }}>
         {hasPermission(PERMISSIONS.STRUCTURE_UPDATE) && (
-          <Button
-            size="small"
+          <AppButton
             variant="outlined"
             startIcon={<EditRounded />}
             onClick={() => onEdit(room)}
-            sx={{
-              flex: 1,
-              color: "#0A0A0A",
-              borderColor: "#E5E5E5",
-              fontWeight: 600,
-              "&:hover": {
-                backgroundColor: "#F5F5F5",
-                borderColor: "#0A0A0A",
-              },
-            }}
+            sx={{ flex: 1 }}
           >
             Edit
-          </Button>
+          </AppButton>
         )}
       </Box>
     </GlassCard>
@@ -404,20 +393,19 @@ const FloorDetails = () => {
     <AppLayout onLogout={handleLogout}>
       <PageHeader
         breadcrumb={
-          <Button
+          <AppButton
             variant="text"
             startIcon={<ArrowBackRounded />}
             onClick={() => navigate("/structure")}
             sx={{
               color: "text.secondary",
-              fontWeight: 600,
               px: 0,
               minWidth: 0,
               mb: -0.5,
             }}
           >
             Back to Structure
-          </Button>
+          </AppButton>
         }
         title={floor?.name || "Floor Details"}
         description={
@@ -427,14 +415,13 @@ const FloorDetails = () => {
         }
         actions={
           hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
-            <Button
-              variant="contained"
+            <AppButton
+              variant="primary"
               startIcon={<AddRounded />}
               onClick={handleOpenCreate}
-              sx={{ fontWeight: 600 }}
             >
               Add Room
-            </Button>
+            </AppButton>
           ) : null
         }
       />

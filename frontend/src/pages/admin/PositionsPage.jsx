@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import {
   Box,
-  Button,
-  Checkbox,
   Chip,
   FormControlLabel,
   FormGroup,
   IconButton,
   Paper,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
+import { AppInput, AppCheckbox, AppButton } from "../../components/common";
 import {
   AddRounded,
   EditRounded,
@@ -224,11 +222,9 @@ const ScheduleEditor = ({ value, onChange }) => {
             >
               <FormControlLabel
                 control={
-                  <Checkbox
+                  <AppCheckbox
                     checked={isWorking}
                     onChange={handleToggle}
-                    size="small"
-                    color="primary"
                   />
                 }
                 label={
@@ -246,7 +242,7 @@ const ScheduleEditor = ({ value, onChange }) => {
 
               {isWorking ? (
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <TextField
+                  <AppInput
                     type="time"
                     size="small"
                     value={startTime}
@@ -266,7 +262,7 @@ const ScheduleEditor = ({ value, onChange }) => {
                   <Typography variant="caption" color="text.secondary">
                     to
                   </Typography>
-                  <TextField
+                  <AppInput
                     type="time"
                     size="small"
                     value={endTime}
@@ -626,13 +622,13 @@ const PositionsPage = () => {
         description="Manage employee positions and designations across the hospital."
         actions={
           canCreate ? (
-            <Button
-              variant="contained"
+            <AppButton
+              variant="primary"
               startIcon={<AddRounded />}
               onClick={handleOpenAdd}
             >
               Add Position
-            </Button>
+            </AppButton>
           ) : null
         }
       />
@@ -685,10 +681,9 @@ const PositionsPage = () => {
         disableSubmit={!formData.name.trim()}
       >
         <Stack spacing={2.5}>
-          <TextField
+          <AppInput
             fullWidth
             label="Position Name"
-            variant="outlined"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="e.g. Senior Cardiologist, HR Manager"
@@ -731,11 +726,10 @@ const PositionsPage = () => {
                       transition: "all 0.15s ease-in-out",
                     }}
                   >
-                    <Checkbox
+                    <AppCheckbox
                       checked={isChecked}
                       onChange={() => toggleModuleSelection(mod.key)}
                       onClick={(e) => e.stopPropagation()}
-                      color="primary"
                     />
                     <Box>
                       <Typography
@@ -775,11 +769,10 @@ const PositionsPage = () => {
               transition: "all 0.15s ease-in-out",
             }}
           >
-            <Checkbox
+            <AppCheckbox
               checked={Boolean(formData.rosterEligible)}
               onChange={(e) => handleToggleRosterEligible(e.target.checked)}
               onClick={(e) => e.stopPropagation()}
-              color="primary"
             />
             <Box>
               <Typography variant="body2" fontWeight={600} color="text.primary">
@@ -874,10 +867,9 @@ const PositionsPage = () => {
         disableSubmit={!formData.name.trim()}
       >
         <Stack spacing={2.5}>
-          <TextField
+          <AppInput
             fullWidth
             label="Position Name"
-            variant="outlined"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             autoFocus
@@ -919,11 +911,10 @@ const PositionsPage = () => {
                       transition: "all 0.15s ease-in-out",
                     }}
                   >
-                    <Checkbox
+                    <AppCheckbox
                       checked={isChecked}
                       onChange={() => toggleModuleSelection(mod.key)}
                       onClick={(e) => e.stopPropagation()}
-                      color="primary"
                     />
                     <Box>
                       <Typography
@@ -963,11 +954,10 @@ const PositionsPage = () => {
               transition: "all 0.15s ease-in-out",
             }}
           >
-            <Checkbox
+            <AppCheckbox
               checked={Boolean(formData.rosterEligible)}
               onChange={(e) => handleToggleRosterEligible(e.target.checked)}
               onClick={(e) => e.stopPropagation()}
-              color="primary"
             />
             <Box>
               <Typography variant="body2" fontWeight={600} color="text.primary">

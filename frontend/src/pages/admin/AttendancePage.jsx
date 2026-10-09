@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Button,
   CircularProgress,
   IconButton,
   Paper,
   Stack,
   Tab,
   Tabs,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
+import { AppInput, AppButton } from '../../components/common';
 import {
   AccessTimeRounded,
   AddRounded,
@@ -456,27 +455,14 @@ const AttendancePage = () => {
       render: (row) => {
         if (row.status === 'PENDING') {
           return (
-            <Button
+            <AppButton
               size="small"
               variant="outlined"
+              color="danger"
               onClick={() => setCancellingRequest(row)}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                borderRadius: '8px',
-                borderColor: '#E2E8F0',
-                color: '#DC2626',
-                py: 0.25,
-                px: 1.5,
-                '&:hover': {
-                  borderColor: '#FECACA',
-                  backgroundColor: '#FEF2F2',
-                },
-              }}
             >
               Cancel
-            </Button>
+            </AppButton>
           );
         }
         return (
@@ -668,23 +654,15 @@ const AttendancePage = () => {
           title="Attendance"
           description="Track your daily attendance and working history."
           actions={
-            <Button
+            <AppButton
               variant="outlined"
               size="small"
               startIcon={<RefreshRounded />}
               onClick={loadData}
               disabled={loading}
-              sx={{
-                borderRadius: '8px',
-                textTransform: 'none',
-                fontWeight: 600,
-                borderColor: '#E2E8F0',
-                color: '#0F172A',
-                '&:hover': { borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
-              }}
             >
               Refresh
-            </Button>
+            </AppButton>
           }
         />
 
@@ -799,50 +777,28 @@ const AttendancePage = () => {
 
               if (hasCheckIn && !hasCheckOut) {
                 return (
-                  <Button
-                    variant="contained"
+                  <AppButton
+                    variant="primary"
                     startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <LogoutRounded />}
                     onClick={handleCheckOut}
-                    disabled={submitting || loading}
-                    sx={{
-                      backgroundColor: '#D97706',
-                      color: '#FFFFFF',
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      fontSize: '0.9rem',
-                      px: 3,
-                      py: 1,
-                      borderRadius: '10px',
-                      boxShadow: '0 2px 8px rgba(217,119,6,0.25)',
-                      '&:hover': { backgroundColor: '#B45309' },
-                    }}
+                    loading={submitting}
+                    disabled={loading}
                   >
                     Check Out
-                  </Button>
+                  </AppButton>
                 );
               }
 
               return (
-                <Button
-                  variant="contained"
+                <AppButton
+                  variant="primary"
                   startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <LoginRounded />}
                   onClick={handleCheckIn}
-                  disabled={submitting || loading}
-                  sx={{
-                    backgroundColor: '#0F172A',
-                    color: '#FFFFFF',
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    px: 3,
-                    py: 1,
-                    borderRadius: '10px',
-                    boxShadow: '0 2px 8px rgba(15,23,42,0.2)',
-                    '&:hover': { backgroundColor: '#1E293B' },
-                  }}
+                  loading={submitting}
+                  disabled={loading}
                 >
                   Check In
-                </Button>
+                </AppButton>
               );
             })()}
           </Box>
@@ -1003,25 +959,13 @@ const AttendancePage = () => {
                 </Typography>
               </Box>
 
-              <Button
-                variant="contained"
+              <AppButton
+                variant="primary"
                 startIcon={<AddRounded />}
                 onClick={() => setIsRegularizationModalOpen(true)}
-                sx={{
-                  backgroundColor: '#0F172A',
-                  color: '#FFFFFF',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  px: 2.5,
-                  py: 1,
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(15,23,42,0.2)',
-                  '&:hover': { backgroundColor: '#1E293B' },
-                }}
               >
-                + Request Regularization
-              </Button>
+                Request Regularization
+              </AppButton>
             </Paper>
 
             <DataTable
@@ -1413,9 +1357,9 @@ const AttendancePage = () => {
             {viewingRequest.status === 'PENDING' && (
               <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ pt: 1 }}>
                 {canRejectRegularization && (
-                  <Button
+                  <AppButton
                     variant="outlined"
-                    color="error"
+                    color="danger"
                     size="small"
                     onClick={() => {
                       const req = viewingRequest;
@@ -1424,12 +1368,11 @@ const AttendancePage = () => {
                     }}
                   >
                     Reject
-                  </Button>
+                  </AppButton>
                 )}
                 {canApproveRegularization && (
-                  <Button
-                    variant="contained"
-                    color="success"
+                  <AppButton
+                    variant="primary"
                     size="small"
                     onClick={() => {
                       const id = viewingRequest._id;
@@ -1438,7 +1381,7 @@ const AttendancePage = () => {
                     }}
                   >
                     Approve
-                  </Button>
+                  </AppButton>
                 )}
               </Stack>
             )}
@@ -1461,11 +1404,11 @@ const AttendancePage = () => {
           setRejectReason('');
         }}
       >
-        <TextField
+        <AppInput
           fullWidth
           size="small"
           multiline
-          rows={3}
+          minRows={3}
           placeholder="Reason for rejection (optional)"
           value={rejectReason}
           onChange={(e) => setRejectReason(e.target.value)}

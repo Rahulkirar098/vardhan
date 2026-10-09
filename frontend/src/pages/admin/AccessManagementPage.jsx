@@ -1,7 +1,5 @@
 import {
   Box,
-  Button,
-  Checkbox,
   Chip,
   Divider,
   FormControlLabel,
@@ -9,13 +7,12 @@ import {
   FormHelperText,
   IconButton,
   InputAdornment,
-  MenuItem,
   Paper,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
+import { AppInput, AppCheckbox, AppButton } from "../../components/common";
 import {
   CloseRounded,
   SearchRounded,
@@ -458,11 +455,10 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                 >
                   <FormControlLabel
                     control={
-                      <Checkbox
+                      <AppCheckbox
                         checked={isChecked}
                         onChange={() => toggleModule(mod.key)}
                         onClick={(e) => e.stopPropagation()}
-                        color="primary"
                       />
                     }
                     label={
@@ -596,7 +592,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                               </Box>
                               {!sub.isDefaultGroup && (
                                 <Stack direction="row" spacing={1}>
-                                  <Button
+                                  <AppButton
                                     size="small"
                                     variant="text"
                                     onClick={() =>
@@ -608,8 +604,8 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                                     sx={{ fontSize: "0.75rem", py: 0 }}
                                   >
                                     Select All
-                                  </Button>
-                                  <Button
+                                  </AppButton>
+                                  <AppButton
                                     size="small"
                                     variant="text"
                                     color="inherit"
@@ -619,7 +615,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                                     sx={{ fontSize: "0.75rem", py: 0 }}
                                   >
                                     Clear
-                                  </Button>
+                                  </AppButton>
                                 </Stack>
                               )}
                             </Stack>
@@ -711,7 +707,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                                   >
                                     <FormControlLabel
                                       control={
-                                        <Checkbox
+                                        <AppCheckbox
                                           checked={isChecked}
                                           onChange={() =>
                                             togglePermission(option.key)
@@ -763,7 +759,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                       {group.title}
                     </Typography>
                     <Stack direction="row" spacing={1}>
-                      <Button
+                      <AppButton
                         size="small"
                         variant="text"
                         onClick={() =>
@@ -772,8 +768,8 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                         disabled={allSelected}
                       >
                         Select All
-                      </Button>
-                      <Button
+                      </AppButton>
+                      <AppButton
                         size="small"
                         variant="text"
                         color="inherit"
@@ -782,7 +778,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                         }
                       >
                         Clear
-                      </Button>
+                      </AppButton>
                     </Stack>
                   </Stack>
                   <FormGroup sx={{ gap: 1 }}>
@@ -811,7 +807,7 @@ const ManageAccessModal = ({ open, user, onClose, onSuccess }) => {
                         >
                           <FormControlLabel
                             control={
-                              <Checkbox
+                              <AppCheckbox
                                 checked={isChecked}
                                 onChange={() => togglePermission(option.key)}
                                 onClick={(e) => e.stopPropagation()}
@@ -973,7 +969,7 @@ const AccessManagementPage = () => {
     if (!canManage) return null;
     return (
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button
+        <AppButton
           size="small"
           variant="outlined"
           startIcon={<VpnKeyRounded fontSize="small" />}
@@ -981,10 +977,9 @@ const AccessManagementPage = () => {
             e.stopPropagation();
             setSelectedUser(u);
           }}
-          sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5 }}
         >
           Manage
-        </Button>
+        </AppButton>
       </Box>
     );
   };
@@ -1040,31 +1035,20 @@ const AccessManagementPage = () => {
           justifyContent="space-between"
           sx={{ mb: 3 }}
         >
-          <TextField
+          <AppInput
             placeholder="Search by name, email, or position..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             size="small"
             sx={{ flex: 1, minWidth: { xs: "100%", sm: 280 } }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded
-                      fontSize="small"
-                      sx={{ color: "text.secondary" }}
-                    />
-                  </InputAdornment>
-                ),
-                endAdornment: search ? (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearch("")}>
-                      <CloseRounded fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              },
-            }}
+            startIcon={<SearchRounded fontSize="small" />}
+            endIcon={
+              search ? (
+                <IconButton size="small" onClick={() => setSearch("")}>
+                  <CloseRounded fontSize="small" />
+                </IconButton>
+              ) : null
+            }
           />
         </Stack>
 

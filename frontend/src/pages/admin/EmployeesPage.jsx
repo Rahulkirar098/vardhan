@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Box,
-  Button,
-  Checkbox,
   Chip,
   Divider,
   FormControlLabel,
@@ -10,15 +8,14 @@ import {
   FormHelperText,
   IconButton,
   InputAdornment,
-  MenuItem,
   Paper,
   Stack,
   Tab,
   Tabs,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
+import { AppInput, AppSelect, AppButton } from "../../components/common";
 import {
   AddRounded,
   CheckCircleOutlineRounded,
@@ -164,7 +161,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
     >
       <Stack spacing={2.5}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
+          <AppInput
             label="First Name"
             name="firstName"
             value={form.firstName}
@@ -174,7 +171,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
             placeholder="e.g. Rahul"
             autoFocus
           />
-          <TextField
+          <AppInput
             label="Last Name"
             name="lastName"
             value={form.lastName}
@@ -184,7 +181,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
             placeholder="e.g. Sharma"
           />
         </Stack>
-        <TextField
+        <AppInput
           label="Email Address"
           name="email"
           type="email"
@@ -195,7 +192,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
           placeholder="e.g. rahul.sharma@hospital.com"
         />
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
+          <AppInput
             label="Phone (optional)"
             name="phone"
             value={form.phone}
@@ -203,7 +200,7 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
             fullWidth
             placeholder="+91 98765 43210"
           />
-          <TextField
+          <AppInput
             label="Employee ID (optional)"
             name="employeeId"
             value={form.employeeId}
@@ -213,47 +210,18 @@ const InviteEmployeeModal = ({ open, onClose, onSuccess, positions = [] }) => {
           />
         </Stack>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
-            select
+          <AppSelect
             label="Position *"
             name="positionId"
             value={form.positionId}
             onChange={handleChange}
             required
             fullWidth
-            slotProps={{
-              inputLabel: { shrink: true },
-              select: {
-                displayEmpty: true,
-                renderValue: (selected) => {
-                  if (!selected) {
-                    return (
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        color="text.secondary"
-                      >
-                        Select Position
-                      </Typography>
-                    );
-                  }
-                  const found = positions.find((p) => p._id === selected);
-                  return found ? found.name : selected;
-                },
-              },
-            }}
-          >
-            <MenuItem value="">
-              <em>Select Position</em>
-            </MenuItem>
-            {positions.map((p) => (
-              <MenuItem key={p._id} value={p._id}>
-                {p.name}
-              </MenuItem>
-            ))}
-          </TextField>
+            placeholder="Select Position"
+            options={positions.map((p) => ({ value: p._id, label: p.name }))}
+          />
         </Stack>
-        <TextField
+        <AppInput
           label="Date of Joining (optional)"
           name="dateOfJoining"
           type="date"
@@ -379,7 +347,7 @@ const EditEmployeeModal = ({
     >
       <Stack spacing={2.5}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
+          <AppInput
             label="First Name"
             name="firstName"
             value={form.firstName}
@@ -388,7 +356,7 @@ const EditEmployeeModal = ({
             fullWidth
             autoFocus
           />
-          <TextField
+          <AppInput
             label="Last Name"
             name="lastName"
             value={form.lastName}
@@ -397,7 +365,7 @@ const EditEmployeeModal = ({
             fullWidth
           />
         </Stack>
-        <TextField
+        <AppInput
           label="Email Address"
           name="email"
           type="email"
@@ -407,7 +375,7 @@ const EditEmployeeModal = ({
           fullWidth
         />
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
+          <AppInput
             label="Phone"
             name="phone"
             value={form.phone}
@@ -415,38 +383,28 @@ const EditEmployeeModal = ({
             fullWidth
           />
           {hasPositionUpdate ? (
-            <TextField
-              select
+            <AppSelect
               label="Position"
               name="positionId"
               value={form.positionId}
               onChange={handleChange}
               fullWidth
-              slotProps={{
-                inputLabel: { shrink: true },
-                select: { displayEmpty: true },
-              }}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {employee?.positionId?._id &&
-                !positions.some((p) => p._id === employee.positionId?._id) && (
-                  <MenuItem
-                    key={employee.positionId._id}
-                    value={employee.positionId._id}
-                  >
-                    {employee.positionId.name} (Current)
-                  </MenuItem>
-                )}
-              {positions.map((p) => (
-                <MenuItem key={p._id} value={p._id}>
-                  {p.name}
-                </MenuItem>
-              ))}
-            </TextField>
+              options={[
+                { value: "", label: "None" },
+                ...(employee?.positionId?._id &&
+                !positions.some((p) => p._id === employee.positionId?._id)
+                  ? [
+                      {
+                        value: employee.positionId._id,
+                        label: `${employee.positionId.name} (Current)`,
+                      },
+                    ]
+                  : []),
+                ...positions.map((p) => ({ value: p._id, label: p.name })),
+              ]}
+            />
           ) : (
-            <TextField
+            <AppInput
               label="Position"
               name="positionId"
               value={
@@ -460,14 +418,13 @@ const EditEmployeeModal = ({
           )}
         </Stack>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
+          <AppInput
             label="Date of Joining"
             name="dateOfJoining"
             type="date"
             value={form.dateOfJoining}
             onChange={handleChange}
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
           />
           <Stack
             direction="row"
@@ -475,14 +432,13 @@ const EditEmployeeModal = ({
             alignItems="center"
             sx={{ flex: 1 }}
           >
-            <TextField
+            <AppInput
               label="Last Working Day (LWD)"
               name="lastWorkingDay"
               type="date"
               value={form.lastWorkingDay}
               onChange={handleChange}
               fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
               helperText={
                 form.lastWorkingDay
                   ? "Inclusive employment end date"
@@ -490,7 +446,7 @@ const EditEmployeeModal = ({
               }
             />
             {form.lastWorkingDay && (
-              <Button
+              <AppButton
                 variant="outlined"
                 color="secondary"
                 size="small"
@@ -498,14 +454,13 @@ const EditEmployeeModal = ({
                   setForm((prev) => ({ ...prev, lastWorkingDay: "" }))
                 }
                 sx={{
-                  textTransform: "none",
                   minWidth: 70,
                   height: 40,
                   mt: -2.5,
                 }}
               >
                 Clear
-              </Button>
+              </AppButton>
             )}
           </Stack>
         </Stack>
@@ -1127,13 +1082,13 @@ const EmployeesPage = () => {
         description="Manage your hospital's employee roster."
         actions={
           hasCreate && (
-            <Button
-              variant="contained"
+            <AppButton
+              variant="primary"
               startIcon={<AddRounded />}
               onClick={() => setInviteOpen(true)}
             >
               Invite Employee
-            </Button>
+            </AppButton>
           )
         }
       />
@@ -1206,50 +1161,34 @@ const EmployeesPage = () => {
               justifyContent="space-between"
               sx={{ mb: 3 }}
             >
-              <TextField
+              <AppInput
                 placeholder="Search employees..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 size="small"
                 sx={{ flex: 1, minWidth: { xs: "100%", sm: 260 } }}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchRounded
-                          fontSize="small"
-                          sx={{ color: "text.secondary" }}
-                        />
-                      </InputAdornment>
-                    ),
-                    endAdornment: search ? (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setSearch("")}>
-                          <CloseRounded fontSize="small" />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                  },
-                }}
+                startIcon={<SearchRounded fontSize="small" />}
+                endIcon={
+                  search ? (
+                    <IconButton size="small" onClick={() => setSearch("")}>
+                      <CloseRounded fontSize="small" />
+                    </IconButton>
+                  ) : null
+                }
               />
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                <TextField
-                  select
+                <AppSelect
                   size="small"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   sx={{ minWidth: 150 }}
-                  slotProps={{
-                    select: {
-                      displayEmpty: true,
-                    },
-                  }}
-                >
-                  <MenuItem value="">All Status</MenuItem>
-                  <MenuItem value="ACTIVE">Active</MenuItem>
-                  <MenuItem value="INACTIVE">Inactive</MenuItem>
-                </TextField>
+                  options={[
+                    { value: "", label: "All Status" },
+                    { value: "ACTIVE", label: "Active" },
+                    { value: "INACTIVE", label: "Inactive" },
+                  ]}
+                />
               </Stack>
             </Stack>
 

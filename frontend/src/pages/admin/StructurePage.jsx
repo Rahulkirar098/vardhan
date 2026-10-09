@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Button,
   Grid,
   IconButton,
   ListItemIcon,
@@ -10,9 +9,9 @@ import {
   Menu,
   MenuItem,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
+import { AppInput, AppButton } from "../../components/common";
 import {
   AddRounded,
   ArrowForwardRounded,
@@ -131,7 +130,7 @@ const FloorFormModal = ({ open, onClose, onSuccess, editFloor = null }) => {
       startIcon={isEdit ? EditRounded : AddRounded}
     >
       <Stack spacing={2.5}>
-        <TextField
+        <AppInput
           label="Floor Name"
           name="name"
           value={form.name}
@@ -140,7 +139,7 @@ const FloorFormModal = ({ open, onClose, onSuccess, editFloor = null }) => {
           placeholder="e.g. Ground Floor, 2nd Floor"
           fullWidth
         />
-        <TextField
+        <AppInput
           label="Floor Number"
           name="floorNumber"
           type="number"
@@ -151,7 +150,7 @@ const FloorFormModal = ({ open, onClose, onSuccess, editFloor = null }) => {
           helperText="Numeric representation (e.g. 0 for Ground Floor, -1 for Basement)"
           fullWidth
         />
-        <TextField
+        <AppInput
           label="Code"
           name="code"
           value={form.code}
@@ -159,7 +158,7 @@ const FloorFormModal = ({ open, onClose, onSuccess, editFloor = null }) => {
           placeholder="e.g. GF, F1, F2"
           fullWidth
         />
-        <TextField
+        <AppInput
           label="Description"
           name="description"
           value={form.description}
@@ -342,26 +341,14 @@ const FloorCard = ({ floor, onEdit, onDeactivate, onViewRooms }) => {
         </Stack>
       </Box>
 
-      <Button
-        variant="outlined"
+      <AppButton
+        variant="secondary"
         fullWidth
         endIcon={<ArrowForwardRounded />}
         onClick={() => onViewRooms(floor._id)}
-        sx={{
-          borderRadius: "8px",
-          fontWeight: 600,
-          color: "#0A0A0A",
-          borderColor: "#E5E5E5",
-          backgroundColor: "#FAFAFA",
-          "&:hover": {
-            backgroundColor: "#0A0A0A",
-            color: "#FFFFFF",
-            borderColor: "#0A0A0A",
-          },
-        }}
       >
         View Rooms
-      </Button>
+      </AppButton>
     </GlassCard>
   );
 };
@@ -471,14 +458,13 @@ const StructurePage = () => {
         description="Manage hospital floors and rooms"
         actions={
           hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
-            <Button
-              variant="contained"
+            <AppButton
+              variant="primary"
               startIcon={<AddRounded />}
               onClick={handleOpenCreate}
-              sx={{ fontWeight: 600 }}
             >
               Add Floor
-            </Button>
+            </AppButton>
           ) : null
         }
       />

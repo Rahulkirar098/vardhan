@@ -2,9 +2,6 @@ import { forwardRef } from 'react';
 import {
   Alert,
   Box,
-  Button,
-  CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -13,6 +10,8 @@ import {
   Typography,
 } from '@mui/material';
 import CloseRounded from '@mui/icons-material/CloseRounded';
+import { StyledDialog } from './styled';
+import { AppButton } from './common';
 
 const Modal = forwardRef(
   (
@@ -67,7 +66,7 @@ const Modal = forwardRef(
     };
 
     return (
-      <Dialog
+      <StyledDialog
         open={open}
         onClose={handleClose}
         maxWidth={maxWidth}
@@ -99,7 +98,7 @@ const Modal = forwardRef(
                     width: 42,
                     height: 42,
                     borderRadius: '10px',
-                    backgroundColor: '#000000',
+                    backgroundColor: '#252525',
                     color: '#FFFFFF',
                     flexShrink: 0,
                   }}
@@ -145,30 +144,31 @@ const Modal = forwardRef(
               {actions !== undefined ? (
                 actions
               ) : hideSubmit ? (
-                <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
+                <AppButton onClick={onClose} disabled={submitting} variant="secondary">
                   {closeLabel || 'Close'}
-                </Button>
+                </AppButton>
               ) : (
                 <>
                   {!hideCancel && (
-                    <Button onClick={onClose} disabled={submitting} variant="outlined" color="inherit">
+                    <AppButton onClick={onClose} disabled={submitting} variant="secondary">
                       {cancelLabel}
-                    </Button>
+                    </AppButton>
                   )}
-                  <Button
+                  <AppButton
                     type="submit"
-                    variant="contained"
-                    disabled={submitting || disableSubmit}
-                    startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : SubmitIcon ? <SubmitIcon /> : null}
+                    variant="primary"
+                    loading={submitting}
+                    disabled={disableSubmit}
+                    startIcon={SubmitIcon ? <SubmitIcon /> : null}
                   >
                     {submitting ? submittingLabel : submitLabel}
-                  </Button>
+                  </AppButton>
                 </>
               )}
             </DialogActions>
           )}
         </Box>
-      </Dialog>
+      </StyledDialog>
     );
   }
 );

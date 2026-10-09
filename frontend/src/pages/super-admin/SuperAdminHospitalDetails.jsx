@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert, Box, Button, Stack } from '@mui/material';
+import { Alert, Box, Stack } from '@mui/material';
+import { AppButton } from '../../components/common';
 import { ArrowBackRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
@@ -71,15 +72,15 @@ const HospitalDetails = () => {
         <>
           <PageHeader
             breadcrumb={
-              <Button
+              <AppButton
                 variant="text"
                 size="small"
                 startIcon={<ArrowBackRounded fontSize="small" />}
                 onClick={() => navigate('/super-admin/dashboard')}
-                sx={{ px: 0, mb: -0.5, color: 'text.secondary' }}
+                sx={{ px: 0, mb: -0.5 }}
               >
                 Back to Hospitals
-              </Button>
+              </AppButton>
             }
             title={hospital.name}
             description={`Hospital Code · ${hospital.code || 'N/A'}`}

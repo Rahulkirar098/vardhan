@@ -1,23 +1,19 @@
 import {
   Alert,
   Box,
-  Button,
   Chip,
   FormControl,
   Grid,
   IconButton,
   InputAdornment,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
   Stack,
   Tab,
   Tabs,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
+import { AppInput, AppSelect, AppButton } from "../../components/common";
 import {
   AddRounded,
   CalendarMonthRounded,
@@ -195,31 +191,23 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
         )}
 
         {/* Leave Type */}
-        <FormControl fullWidth required>
-          <InputLabel id="leave-type-select-label">Leave Type</InputLabel>
-          <Select
-            labelId="leave-type-select-label"
-            value={leaveType}
-            label="Leave Type"
-            onChange={(e) => setLeaveType(e.target.value)}
-          >
-            {LEAVE_TYPES.map((t) => (
-              <MenuItem key={t.key} value={t.key}>
-                {t.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <AppSelect
+          label="Leave Type *"
+          value={leaveType}
+          onChange={(e) => setLeaveType(e.target.value)}
+          required
+          fullWidth
+          options={LEAVE_TYPES.map((t) => ({ value: t.key, label: t.label }))}
+        />
 
         {/* Start Date & End Date (Always visible) */}
         <Grid container spacing={2}>
           <Grid xs={12} sm={6}>
-            <TextField
+            <AppInput
               label="Start Date"
               type="date"
               fullWidth
               required
-              InputLabelProps={{ shrink: true }}
               slotProps={{ htmlInput: { min: todayStr } }}
               value={startDate}
               onChange={(e) => {
@@ -232,12 +220,11 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
             />
           </Grid>
           <Grid xs={12} sm={6}>
-            <TextField
+            <AppInput
               label="End Date"
               type="date"
               fullWidth
               required
-              InputLabelProps={{ shrink: true }}
               slotProps={{ htmlInput: { min: startDate || todayStr } }}
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -248,39 +235,33 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
         {/* Day Type Dropdown */}
         <Grid container spacing={2}>
           <Grid xs={12} sm={dayType === "HALF_DAY" ? 6 : 12}>
-            <FormControl fullWidth required>
-              <InputLabel id="day-type-select-label">Day Type</InputLabel>
-              <Select
-                labelId="day-type-select-label"
-                value={dayType}
-                label="Day Type"
-                onChange={(e) => setDayType(e.target.value)}
-              >
-                <MenuItem value="FULL_DAY">Full Day</MenuItem>
-                <MenuItem value="HALF_DAY">Half Day</MenuItem>
-              </Select>
-            </FormControl>
+            <AppSelect
+              label="Day Type *"
+              value={dayType}
+              onChange={(e) => setDayType(e.target.value)}
+              required
+              fullWidth
+              options={[
+                { value: "FULL_DAY", label: "Full Day" },
+                { value: "HALF_DAY", label: "Half Day" },
+              ]}
+            />
           </Grid>
 
           {/* Half Day Session Dropdown (only visible when Day Type is Half Day) */}
           {dayType === "HALF_DAY" && (
             <Grid xs={12} sm={6}>
-              <FormControl fullWidth required>
-                <InputLabel id="half-day-session-label">
-                  Half Day Session
-                </InputLabel>
-                <Select
-                  labelId="half-day-session-label"
-                  value={halfDaySession}
-                  label="Half Day Session"
-                  onChange={(e) => setHalfDaySession(e.target.value)}
-                >
-                  <MenuItem value="FIRST_HALF">First Half (Morning)</MenuItem>
-                  <MenuItem value="SECOND_HALF">
-                    Second Half (Afternoon)
-                  </MenuItem>
-                </Select>
-              </FormControl>
+              <AppSelect
+                label="Half Day Session *"
+                value={halfDaySession}
+                onChange={(e) => setHalfDaySession(e.target.value)}
+                required
+                fullWidth
+                options={[
+                  { value: "FIRST_HALF", label: "First Half (Morning)" },
+                  { value: "SECOND_HALF", label: "Second Half (Afternoon)" },
+                ]}
+              />
             </Grid>
           )}
         </Grid>
@@ -331,10 +312,10 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
         </Box>
 
         {/* Reason for Leave */}
-        <TextField
+        <AppInput
           label="Reason for Leave"
           multiline
-          rows={3}
+          minRows={3}
           fullWidth
           required
           placeholder="Enter reason for leave..."
@@ -1348,19 +1329,13 @@ const LeaveManagementPage = () => {
         description="Review employee leave applications, authorize workforce requests, and manage personal leave history."
         actions={
           canApply && (
-            <Button
-              variant="contained"
+            <AppButton
+              variant="primary"
               startIcon={<AddRounded />}
               onClick={() => setIsApplyOpen(true)}
-              sx={{
-                backgroundColor: "#000000",
-                color: "#FFFFFF",
-                fontWeight: 600,
-                "&:hover": { backgroundColor: "#222222" },
-              }}
             >
               Apply Leave
-            </Button>
+            </AppButton>
           )
         }
       />
@@ -1446,54 +1421,40 @@ const LeaveManagementPage = () => {
             <Box sx={{ p: 2.5, borderBottom: "1px solid #F1F5F9" }}>
               <Grid container spacing={2} alignItems="center">
                 <Grid xs={12} sm={6} md={4}>
-                  <TextField
+                  <AppInput
                     fullWidth
                     size="small"
                     placeholder="Search by employee name or ID..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchRounded
-                            fontSize="small"
-                            sx={{ color: "text.secondary" }}
-                          />
-                        </InputAdornment>
-                      ),
-                      endAdornment: search && (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={() => setSearch("")}
-                          >
-                            <CloseRounded fontSize="small" />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
+                    startIcon={<SearchRounded fontSize="small" />}
+                    endIcon={
+                      search ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearch("")}
+                        >
+                          <CloseRounded fontSize="small" />
+                        </IconButton>
+                      ) : null
+                    }
                   />
                 </Grid>
 
                 <Grid xs={12} sm={6} md={3}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="type-filter-select-label">
-                      Leave Type
-                    </InputLabel>
-                    <Select
-                      labelId="type-filter-select-label"
-                      value={typeFilter}
-                      label="Leave Type"
-                      onChange={(e) => setTypeFilter(e.target.value)}
-                    >
-                      <MenuItem value="">All Leave Types</MenuItem>
-                      {LEAVE_TYPES.map((t) => (
-                        <MenuItem key={t.key} value={t.key}>
-                          {t.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <AppSelect
+                    size="small"
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    fullWidth
+                    options={[
+                      { value: "", label: "All Leave Types" },
+                      ...LEAVE_TYPES.map((t) => ({
+                        value: t.key,
+                        label: t.label,
+                      })),
+                    ]}
+                  />
                 </Grid>
               </Grid>
             </Box>
@@ -1521,18 +1482,14 @@ const LeaveManagementPage = () => {
                   }
                   action={
                     canApply && (
-                      <Button
-                        variant="contained"
+                      <AppButton
+                        variant="primary"
                         startIcon={<AddRounded />}
                         onClick={() => setIsApplyOpen(true)}
-                        sx={{
-                          mt: 1,
-                          backgroundColor: "#000000",
-                          "&:hover": { backgroundColor: "#222222" },
-                        }}
+                        sx={{ mt: 1 }}
                       >
                         Apply for Leave
-                      </Button>
+                      </AppButton>
                     )
                   }
                 />

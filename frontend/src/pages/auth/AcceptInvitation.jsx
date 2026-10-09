@@ -17,7 +17,7 @@ import employeeService from '../../services/employee.service';
 import AuthLayout from '../../components/AuthLayout';
 import StatusBadge from '../../components/StatusBadge';
 import MainContentLoader from '../../components/common/MainContentLoader';
-import { StyledButton, StyledTextField } from '../../components/styled';
+import { AppInput, AppButton } from '../../components/common';
 
 const AcceptInvitation = () => {
   const { token } = useParams();
@@ -121,15 +121,15 @@ const AcceptInvitation = () => {
               <strong>{invitation?.hospitalName || 'your hospital'}</strong>.
               You can now sign in using your email and password.
             </Typography>
-            <StyledButton
-              variantType="primary"
+            <AppButton
+              variant="primary"
               fullWidth
               component={Link}
               to="/login"
               size="large"
             >
               Go to Login
-            </StyledButton>
+            </AppButton>
           </Box>
         </Stack>
       </AuthLayout>
@@ -243,7 +243,7 @@ const AcceptInvitation = () => {
           </Box>
         )}
 
-        <StyledTextField
+        <AppInput
           label="Create Login Password *"
           type="password"
           placeholder="At least 6 characters"
@@ -254,19 +254,16 @@ const AcceptInvitation = () => {
           autoFocus
         />
 
-        <StyledButton
-          variantType="primary"
+        <AppButton
+          variant="primary"
           size="large"
           onClick={handleAccept}
-          disabled={submitting || !password}
+          loading={submitting}
+          disabled={!password}
           fullWidth
         >
-          {submitting ? (
-            <CircularProgress size={22} color="inherit" />
-          ) : (
-            'Complete Onboarding & Activate'
-          )}
-        </StyledButton>
+          Complete Onboarding & Activate
+        </AppButton>
       </Stack>
     </AuthLayout>
   );
