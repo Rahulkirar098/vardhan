@@ -35,7 +35,7 @@ import GlassCard from "../../components/GlassCard";
 import Modal from "../../components/Modal";
 import EmptyState from "../../components/EmptyState";
 import ErrorState from "../../components/ErrorState";
-import { useSnackbar } from "../../components/common/SnackbarProvider";
+import { useSnackbar } from "../../theme/SnackbarProvider";
 import InitialsAvatar from "../../components/InitialsAvatar";
 import DataTable from "../../components/DataTable";
 import { hasPermission, PERMISSIONS } from "../../utils/permissions";

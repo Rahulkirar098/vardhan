@@ -47,7 +47,7 @@ import { UnifiedCalendar } from "../../components/calendar";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import EmptyState from "../../components/EmptyState";
 import ErrorState from "../../components/ErrorState";
-import { useSnackbar } from "../../components/common/SnackbarProvider";
+import { useSnackbar } from "../../theme/SnackbarProvider";
 import InitialsAvatar from "../../components/InitialsAvatar";
 import { leaveService } from "../../services/leave.service";
 import { hasPermission, PERMISSIONS } from "../../utils/permissions";
@@ -57,7 +57,7 @@ import {
   getTodayDateStr,
   parseLocalDateStr,
 } from "../../utils/dateUtils";
-import { useMemo, useState, useEffect ,useCallback} from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 
 const LEAVE_TYPES = [
   { key: "CASUAL", label: "Casual Leave", color: "#0284C7" },

@@ -46,7 +46,7 @@ import { UnifiedCalendar } from '../../components/calendar';
 import attendanceService from '../../services/attendance.service';
 import leaveService from '../../services/leave.service';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
-import { useSnackbar } from '../../components/common/SnackbarProvider';
+import { useSnackbar } from '../../theme/SnackbarProvider';
 
 import {
   formatDate,

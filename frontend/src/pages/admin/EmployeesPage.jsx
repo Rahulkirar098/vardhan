@@ -48,7 +48,7 @@ import { getTodayDateStr } from "../../utils/dateUtils";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import EmptyState from "../../components/EmptyState";
 import ErrorState from "../../components/ErrorState";
-import { useSnackbar } from "../../components/common/SnackbarProvider";
+import { useSnackbar } from "../../theme/SnackbarProvider";
 import InitialsAvatar from "../../components/InitialsAvatar";
 import DataTable from "../../components/DataTable";
 import { hasPermission, PERMISSIONS } from "../../utils/permissions";
@@ -711,13 +711,11 @@ const EmployeesPage = () => {
           role: roleFilter || undefined,
         }),
         employeeService.listInvitations().catch(() => ({ data: { data: [] } })),
-        employeeService
-          .getEmployeeStats()
-          .catch(() => ({
-            data: {
-              data: { total: 0, active: 0, inactive: 0, pendingInvitations: 0 },
-            },
-          })),
+        employeeService.getEmployeeStats().catch(() => ({
+          data: {
+            data: { total: 0, active: 0, inactive: 0, pendingInvitations: 0 },
+          },
+        })),
         positionService
           .getPositions({ status: "active" })
           .catch(() => ({ data: [] })),
@@ -1059,7 +1057,7 @@ const EmployeesPage = () => {
       (cancelTarget?._id === inv._id && cancelling);
 
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
         <Tooltip
           title={
             isPending

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -12,7 +12,7 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
+} from "@mui/material";
 import {
   AddRounded,
   ArrowForwardRounded,
@@ -21,48 +21,51 @@ import {
   LayersRounded,
   MeetingRoomRounded,
   MoreVertRounded,
-} from '@mui/icons-material';
-import structureService from '../../services/structure.service';
-import auth from '../../services/auth.service';
-import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/common/PageHeader';
-import KPIGrid from '../../components/wrapper/KPIGrid';
-import KPICard from '../../components/common/KPICard';
-import StatusBadge from '../../components/StatusBadge';
-import GlassCard from '../../components/GlassCard';
-import Modal from '../../components/Modal';
-import ConfirmDialog from '../../components/ConfirmDialog';
-import EmptyState from '../../components/EmptyState';
-import ErrorState from '../../components/ErrorState';
-import { useSnackbar } from '../../components/common/SnackbarProvider';
-import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+} from "@mui/icons-material";
+import structureService from "../../services/structure.service";
+import auth from "../../services/auth.service";
+import AppLayout from "../../components/AppLayout";
+import MainContentLoader from "../../components/common/MainContentLoader";
+import PageHeader from "../../components/common/PageHeader";
+import KPIGrid from "../../components/wrapper/KPIGrid";
+import KPICard from "../../components/common/KPICard";
+import StatusBadge from "../../components/StatusBadge";
+import GlassCard from "../../components/GlassCard";
+import Modal from "../../components/Modal";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import EmptyState from "../../components/EmptyState";
+import ErrorState from "../../components/ErrorState";
+import { useSnackbar } from "../../theme/SnackbarProvider";
+import { hasPermission, PERMISSIONS } from "../../utils/permissions";
 
 const initialFloorForm = {
-  name: '',
-  floorNumber: '',
-  code: '',
-  description: '',
+  name: "",
+  floorNumber: "",
+  code: "",
+  description: "",
 };
 
 const FloorFormModal = ({ open, onClose, onSuccess, editFloor = null }) => {
   const [form, setForm] = useState(initialFloorForm);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (open) {
       if (editFloor) {
         setForm({
-          name: editFloor.name || '',
-          floorNumber: editFloor.floorNumber !== undefined ? String(editFloor.floorNumber) : '',
-          code: editFloor.code || '',
-          description: editFloor.description || '',
+          name: editFloor.name || "",
+          floorNumber:
+            editFloor.floorNumber !== undefined
+              ? String(editFloor.floorNumber)
+              : "",
+          code: editFloor.code || "",
+          description: editFloor.description || "",
         });
       } else {
         setForm(initialFloorForm);
       }
-      setError('');
+      setError("");
       setSubmitting(false);
     }
   }, [open, editFloor]);
@@ -73,15 +76,15 @@ const FloorFormModal = ({ open, onClose, onSuccess, editFloor = null }) => {
   };
 
   const handleSubmit = async () => {
-    setError('');
+    setError("");
 
     if (!form.name.trim()) {
-      setError('Floor name is required.');
+      setError("Floor name is required.");
       return;
     }
 
-    if (form.floorNumber === '' || isNaN(Number(form.floorNumber))) {
-      setError('A valid floor number is required.');
+    if (form.floorNumber === "" || isNaN(Number(form.floorNumber))) {
+      setError("A valid floor number is required.");
       return;
     }
 
@@ -96,13 +99,13 @@ const FloorFormModal = ({ open, onClose, onSuccess, editFloor = null }) => {
 
       if (editFloor) {
         await structureService.updateFloor(editFloor._id, payload);
-        onSuccess('Floor updated successfully.');
+        onSuccess("Floor updated successfully.");
       } else {
         await structureService.createFloor(payload);
-        onSuccess('Floor created successfully.');
+        onSuccess("Floor created successfully.");
       }
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to save floor.');
+      setError(err?.response?.data?.message || "Unable to save floor.");
     } finally {
       setSubmitting(false);
     }
@@ -114,14 +117,14 @@ const FloorFormModal = ({ open, onClose, onSuccess, editFloor = null }) => {
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit Floor' : 'Add Floor'}
+      title={isEdit ? "Edit Floor" : "Add Floor"}
       description={
         isEdit
-          ? 'Update the floor details for your hospital.'
-          : 'Define a new floor level for your hospital structure.'
+          ? "Update the floor details for your hospital."
+          : "Define a new floor level for your hospital structure."
       }
-      submitLabel={isEdit ? 'Save Changes' : 'Add Floor'}
-      submittingLabel={isEdit ? 'Saving...' : 'Adding...'}
+      submitLabel={isEdit ? "Save Changes" : "Add Floor"}
+      submittingLabel={isEdit ? "Saving..." : "Adding..."}
       onSubmit={handleSubmit}
       submitting={submitting}
       error={error}
@@ -188,37 +191,55 @@ const FloorCard = ({ floor, onEdit, onDeactivate, onViewRooms }) => {
     <GlassCard
       sx={{
         p: 2.5,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        height: '100%',
-        position: 'relative',
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        height: "100%",
+        position: "relative",
       }}
     >
       <Box>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 1.5,
+          }}
+        >
           <Box sx={{ minWidth: 0, pr: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, lineHeight: 1.3 }} noWrap>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, fontSize: 18, lineHeight: 1.3 }}
+              noWrap
+            >
               {floor.name}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: "center", mt: 0.5 }}
+            >
+              <Typography
+                variant="caption"
+                sx={{ color: "text.secondary", fontWeight: 600 }}
+              >
                 Floor {floor.floorNumber}
               </Typography>
               {floor.code && (
                 <>
-                  <Typography variant="caption" sx={{ color: '#D4D4D4' }}>
+                  <Typography variant="caption" sx={{ color: "#D4D4D4" }}>
                     •
                   </Typography>
                   <Typography
                     variant="caption"
                     sx={{
-                      backgroundColor: '#F5F5F5',
+                      backgroundColor: "#F5F5F5",
                       px: 0.75,
                       py: 0.25,
-                      borderRadius: '4px',
+                      borderRadius: "4px",
                       fontWeight: 600,
-                      color: 'text.secondary',
+                      color: "text.secondary",
                     }}
                   >
                     {floor.code}
@@ -228,50 +249,55 @@ const FloorCard = ({ floor, onEdit, onDeactivate, onViewRooms }) => {
             </Stack>
           </Box>
 
-          {(hasPermission(PERMISSIONS.STRUCTURE_UPDATE) || hasPermission(PERMISSIONS.STRUCTURE_DELETE)) && (
-          <>
-            <IconButton size="small" onClick={handleMenuClick} aria-label="Floor actions">
-              <MoreVertRounded fontSize="small" />
-            </IconButton>
+          {(hasPermission(PERMISSIONS.STRUCTURE_UPDATE) ||
+            hasPermission(PERMISSIONS.STRUCTURE_DELETE)) && (
+            <>
+              <IconButton
+                size="small"
+                onClick={handleMenuClick}
+                aria-label="Floor actions"
+              >
+                <MoreVertRounded fontSize="small" />
+              </IconButton>
 
-            <Menu
-              anchorEl={anchorEl}
-              open={menuOpen}
-              onClose={handleMenuClose}
-              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-            >
-              {hasPermission(PERMISSIONS.STRUCTURE_UPDATE) && (
-                <MenuItem
-                  onClick={() => {
-                    handleMenuClose();
-                    onEdit(floor);
-                  }}
-                >
-                  <ListItemIcon>
-                    <EditRounded fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText primary="Edit Floor" />
-                </MenuItem>
-              )}
-              {hasPermission(PERMISSIONS.STRUCTURE_DELETE) && (
-                <MenuItem
-                  onClick={() => {
-                    handleMenuClose();
-                    onDeactivate(floor);
-                  }}
-                  sx={{ color: 'error.main' }}
-                >
-                  <ListItemIcon sx={{ color: 'inherit' }}>
-                    <DeleteOutlineRounded fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText primary="Deactivate Floor" />
-                </MenuItem>
-              )}
-            </Menu>
-          </>
-        )}
-      </Stack>
+              <Menu
+                anchorEl={anchorEl}
+                open={menuOpen}
+                onClose={handleMenuClose}
+                transformOrigin={{ horizontal: "right", vertical: "top" }}
+                anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+              >
+                {hasPermission(PERMISSIONS.STRUCTURE_UPDATE) && (
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose();
+                      onEdit(floor);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <EditRounded fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Edit Floor" />
+                  </MenuItem>
+                )}
+                {hasPermission(PERMISSIONS.STRUCTURE_DELETE) && (
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose();
+                      onDeactivate(floor);
+                    }}
+                    sx={{ color: "error.main" }}
+                  >
+                    <ListItemIcon sx={{ color: "inherit" }}>
+                      <DeleteOutlineRounded fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Deactivate Floor" />
+                  </MenuItem>
+                )}
+              </Menu>
+            </>
+          )}
+        </Stack>
 
         {floor.description && (
           <Typography
@@ -279,10 +305,10 @@ const FloorCard = ({ floor, onEdit, onDeactivate, onViewRooms }) => {
             color="text.secondary"
             sx={{
               mb: 2,
-              display: '-webkit-box',
+              display: "-webkit-box",
               WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
               minHeight: 40,
             }}
           >
@@ -290,20 +316,28 @@ const FloorCard = ({ floor, onEdit, onDeactivate, onViewRooms }) => {
           </Typography>
         )}
 
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 2.5 }}>
-          <StatusBadge status={floor.status || (floor.isActive ? 'active' : 'inactive')} />
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: "center", mb: 2.5 }}
+        >
+          <StatusBadge
+            status={floor.status || (floor.isActive ? "active" : "inactive")}
+          />
           <Typography
             variant="caption"
             sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
+              display: "inline-flex",
+              alignItems: "center",
               gap: 0.5,
-              color: 'text.secondary',
+              color: "text.secondary",
               fontWeight: 600,
             }}
           >
             <MeetingRoomRounded sx={{ fontSize: 15 }} />
-            {floor.roomCount !== undefined ? `${floor.roomCount} Rooms` : '0 Rooms'}
+            {floor.roomCount !== undefined
+              ? `${floor.roomCount} Rooms`
+              : "0 Rooms"}
           </Typography>
         </Stack>
       </Box>
@@ -314,15 +348,15 @@ const FloorCard = ({ floor, onEdit, onDeactivate, onViewRooms }) => {
         endIcon={<ArrowForwardRounded />}
         onClick={() => onViewRooms(floor._id)}
         sx={{
-          borderRadius: '8px',
+          borderRadius: "8px",
           fontWeight: 600,
-          color: '#0A0A0A',
-          borderColor: '#E5E5E5',
-          backgroundColor: '#FAFAFA',
-          '&:hover': {
-            backgroundColor: '#0A0A0A',
-            color: '#FFFFFF',
-            borderColor: '#0A0A0A',
+          color: "#0A0A0A",
+          borderColor: "#E5E5E5",
+          backgroundColor: "#FAFAFA",
+          "&:hover": {
+            backgroundColor: "#0A0A0A",
+            color: "#FFFFFF",
+            borderColor: "#0A0A0A",
           },
         }}
       >
@@ -336,11 +370,14 @@ const StructurePage = () => {
   const navigate = useNavigate();
   const [floors, setFloors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const { showSnackbar } = useSnackbar();
   const setToastMessage = (msg) => {
     if (!msg) return;
-    const severity = msg.includes('Cannot') || msg.includes('Unable') || msg.includes('Failed') ? 'error' : 'success';
+    const severity =
+      msg.includes("Cannot") || msg.includes("Unable") || msg.includes("Failed")
+        ? "error"
+        : "success";
     showSnackbar(msg, severity);
   };
 
@@ -355,9 +392,11 @@ const StructurePage = () => {
       setLoading(true);
       const res = await structureService.getFloors();
       setFloors(res?.data?.data || []);
-      setError('');
+      setError("");
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to load hospital structure.');
+      setError(
+        err?.response?.data?.message || "Unable to load hospital structure.",
+      );
     } finally {
       setLoading(false);
     }
@@ -369,18 +408,18 @@ const StructurePage = () => {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (token) {
         await auth.logout();
       }
     } catch (e) {
-      console.error('Logout error:', e);
+      console.error("Logout error:", e);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userEmail');
-      navigate('/login');
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      navigate("/login");
     }
   };
 
@@ -412,12 +451,13 @@ const StructurePage = () => {
     try {
       setDeactivating(true);
       await structureService.deactivateFloor(deactivateTarget._id);
-      setToastMessage('Floor deactivated successfully.');
+      setToastMessage("Floor deactivated successfully.");
       setDeactivateTarget(null);
       await fetchFloors();
     } catch (err) {
       setToastMessage(
-        err?.response?.data?.message || 'Cannot deactivate this floor while it has active rooms.'
+        err?.response?.data?.message ||
+          "Cannot deactivate this floor while it has active rooms.",
       );
     } finally {
       setDeactivating(false);
@@ -427,84 +467,99 @@ const StructurePage = () => {
   return (
     <AppLayout onLogout={handleLogout}>
       <PageHeader
-          title="Hospital Structure"
-          description="Manage hospital floors and rooms"
-          actions={
-            hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
-              <Button
-                variant="contained"
-                startIcon={<AddRounded />}
-                onClick={handleOpenCreate}
-                sx={{ fontWeight: 600 }}
-              >
-                Add Floor
-              </Button>
-            ) : null
-          }
+        title="Hospital Structure"
+        description="Manage hospital floors and rooms"
+        actions={
+          hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
+            <Button
+              variant="contained"
+              startIcon={<AddRounded />}
+              onClick={handleOpenCreate}
+              sx={{ fontWeight: 600 }}
+            >
+              Add Floor
+            </Button>
+          ) : null
+        }
+      />
+
+      {error && <ErrorState message={error} onRetry={fetchFloors} />}
+
+      {/* Summary Stats */}
+      <KPIGrid>
+        <KPICard
+          title="Total Floors"
+          value={stats.totalFloors}
+          hint="Active hospital levels"
+          icon={LayersRounded}
         />
+        <KPICard
+          title="Total Rooms"
+          value={stats.totalRooms}
+          hint="Generic spaces across floors"
+          icon={MeetingRoomRounded}
+        />
+        <KPICard
+          title="Active Rooms"
+          value={stats.activeRooms}
+          hint="Currently operational rooms"
+          icon={MeetingRoomRounded}
+        />
+      </KPIGrid>
 
-        {error && <ErrorState message={error} onRetry={fetchFloors} />}
+      {/* Floor List */}
+      <Box>
+        <Stack
+          direction="row"
+          sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
+            Hospital Floors
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ fontWeight: 600 }}
+          >
+            {loading ? "…" : `${floors.length} total`}
+          </Typography>
+        </Stack>
 
-        {/* Summary Stats */}
-        <KPIGrid>
-          <KPICard
-            title="Total Floors"
-            value={stats.totalFloors}
-            hint="Active hospital levels"
-            icon={LayersRounded}
-          />
-          <KPICard
-            title="Total Rooms"
-            value={stats.totalRooms}
-            hint="Generic spaces across floors"
-            icon={MeetingRoomRounded}
-          />
-          <KPICard
-            title="Active Rooms"
-            value={stats.activeRooms}
-            hint="Currently operational rooms"
-            icon={MeetingRoomRounded}
-          />
-        </KPIGrid>
-
-        {/* Floor List */}
-        <Box>
-          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
-              Hospital Floors
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-              {loading ? '…' : `${floors.length} total`}
-            </Typography>
-          </Stack>
-
-          {loading ? (
-            <MainContentLoader />
-          ) : floors.length === 0 ? (
-            <GlassCard sx={{ p: 3 }}>
-              <EmptyState
-                icon={LayersRounded}
-                title="No floors added yet"
-                description="Create your first floor to start organizing the hospital."
-                actionLabel={hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? "+ Add Floor" : null}
-                onAction={hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? handleOpenCreate : null}
-              />
-            </GlassCard>
-          ) : (
-            <Grid container spacing={2.5}>
-              {floors.map((floor) => (
-                <Grid xs={12} sm={6} md={4} key={floor._id}>
-                  <FloorCard
-                    floor={floor}
-                    onEdit={handleOpenEdit}
-                    onDeactivate={handleOpenDeactivate}
-                    onViewRooms={(id) => navigate(`/structure/${id}`)}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          )}
-        </Box>
+        {loading ? (
+          <MainContentLoader />
+        ) : floors.length === 0 ? (
+          <GlassCard sx={{ p: 3 }}>
+            <EmptyState
+              icon={LayersRounded}
+              title="No floors added yet"
+              description="Create your first floor to start organizing the hospital."
+              actionLabel={
+                hasPermission(PERMISSIONS.STRUCTURE_CREATE)
+                  ? "+ Add Floor"
+                  : null
+              }
+              onAction={
+                hasPermission(PERMISSIONS.STRUCTURE_CREATE)
+                  ? handleOpenCreate
+                  : null
+              }
+            />
+          </GlassCard>
+        ) : (
+          <Grid container spacing={2.5}>
+            {floors.map((floor) => (
+              <Grid xs={12} sm={6} md={4} key={floor._id}>
+                <FloorCard
+                  floor={floor}
+                  onEdit={handleOpenEdit}
+                  onDeactivate={handleOpenDeactivate}
+                  onViewRooms={(id) => navigate(`/structure/${id}`)}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Box>
 
       {/* Add / Edit Floor Modal */}
       <FloorFormModal

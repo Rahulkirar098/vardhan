@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Button,
@@ -12,7 +12,7 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
+} from "@mui/material";
 import {
   AddRounded,
   ArrowBackRounded,
@@ -20,44 +20,50 @@ import {
   EditRounded,
   MeetingRoomRounded,
   MoreVertRounded,
-} from '@mui/icons-material';
-import structureService from '../../services/structure.service';
-import auth from '../../services/auth.service';
-import AppLayout from '../../components/AppLayout';
-import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/common/PageHeader';
-import StatusBadge from '../../components/StatusBadge';
-import GlassCard from '../../components/GlassCard';
-import Modal from '../../components/Modal';
-import ConfirmDialog from '../../components/ConfirmDialog';
-import EmptyState from '../../components/EmptyState';
-import ErrorState from '../../components/ErrorState';
-import { useSnackbar } from '../../components/common/SnackbarProvider';
-import { hasPermission, PERMISSIONS } from '../../utils/permissions';
+} from "@mui/icons-material";
+import structureService from "../../services/structure.service";
+import auth from "../../services/auth.service";
+import AppLayout from "../../components/AppLayout";
+import MainContentLoader from "../../components/common/MainContentLoader";
+import PageHeader from "../../components/common/PageHeader";
+import StatusBadge from "../../components/StatusBadge";
+import GlassCard from "../../components/GlassCard";
+import Modal from "../../components/Modal";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import EmptyState from "../../components/EmptyState";
+import ErrorState from "../../components/ErrorState";
+import { useSnackbar } from "../../theme/SnackbarProvider";
+import { hasPermission, PERMISSIONS } from "../../utils/permissions";
 
 const initialRoomForm = {
-  name: '',
-  code: '',
-  description: '',
+  name: "",
+  code: "",
+  description: "",
 };
 
-const RoomFormModal = ({ open, onClose, onSuccess, floorId, editRoom = null }) => {
+const RoomFormModal = ({
+  open,
+  onClose,
+  onSuccess,
+  floorId,
+  editRoom = null,
+}) => {
   const [form, setForm] = useState(initialRoomForm);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (open) {
       if (editRoom) {
         setForm({
-          name: editRoom.name || '',
-          code: editRoom.code || '',
-          description: editRoom.description || '',
+          name: editRoom.name || "",
+          code: editRoom.code || "",
+          description: editRoom.description || "",
         });
       } else {
         setForm(initialRoomForm);
       }
-      setError('');
+      setError("");
       setSubmitting(false);
     }
   }, [open, editRoom]);
@@ -68,10 +74,10 @@ const RoomFormModal = ({ open, onClose, onSuccess, floorId, editRoom = null }) =
   };
 
   const handleSubmit = async () => {
-    setError('');
+    setError("");
 
     if (!form.name.trim()) {
-      setError('Room name is required.');
+      setError("Room name is required.");
       return;
     }
 
@@ -85,13 +91,13 @@ const RoomFormModal = ({ open, onClose, onSuccess, floorId, editRoom = null }) =
 
       if (editRoom) {
         await structureService.updateRoom(floorId, editRoom._id, payload);
-        onSuccess('Room updated successfully.');
+        onSuccess("Room updated successfully.");
       } else {
         await structureService.createRoom(floorId, payload);
-        onSuccess('Room created successfully.');
+        onSuccess("Room created successfully.");
       }
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to save room.');
+      setError(err?.response?.data?.message || "Unable to save room.");
     } finally {
       setSubmitting(false);
     }
@@ -103,14 +109,14 @@ const RoomFormModal = ({ open, onClose, onSuccess, floorId, editRoom = null }) =
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit Room' : 'Add Room'}
+      title={isEdit ? "Edit Room" : "Add Room"}
       description={
         isEdit
-          ? 'Update the room or ward space details.'
-          : 'Create a generic admin-named space on this floor (e.g. NICU, ICU, Emergency, Room 201).'
+          ? "Update the room or ward space details."
+          : "Create a generic admin-named space on this floor (e.g. NICU, ICU, Emergency, Room 201)."
       }
-      submitLabel={isEdit ? 'Save Changes' : 'Add Room'}
-      submittingLabel={isEdit ? 'Saving...' : 'Adding...'}
+      submitLabel={isEdit ? "Save Changes" : "Add Room"}
+      submittingLabel={isEdit ? "Saving..." : "Adding..."}
       onSubmit={handleSubmit}
       submitting={submitting}
       error={error}
@@ -167,29 +173,49 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
     <GlassCard
       sx={{
         p: 2.5,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        height: '100%',
-        position: 'relative',
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        height: "100%",
+        position: "relative",
       }}
     >
       <Box>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 1.5,
+          }}
+        >
           <Box sx={{ minWidth: 0, pr: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, lineHeight: 1.3 }} noWrap>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, fontSize: 18, lineHeight: 1.3 }}
+              noWrap
+            >
               {room.name}
             </Typography>
             {room.code && (
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block', mt: 0.5 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontWeight: 600, display: "block", mt: 0.5 }}
+              >
                 Code: {room.code}
               </Typography>
             )}
           </Box>
 
-          {(hasPermission(PERMISSIONS.STRUCTURE_UPDATE) || hasPermission(PERMISSIONS.STRUCTURE_DELETE)) && (
+          {(hasPermission(PERMISSIONS.STRUCTURE_UPDATE) ||
+            hasPermission(PERMISSIONS.STRUCTURE_DELETE)) && (
             <>
-              <IconButton size="small" onClick={handleMenuClick} aria-label="Room actions">
+              <IconButton
+                size="small"
+                onClick={handleMenuClick}
+                aria-label="Room actions"
+              >
                 <MoreVertRounded fontSize="small" />
               </IconButton>
 
@@ -197,8 +223,8 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
                 anchorEl={anchorEl}
                 open={menuOpen}
                 onClose={handleMenuClose}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                transformOrigin={{ horizontal: "right", vertical: "top" }}
+                anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
               >
                 {hasPermission(PERMISSIONS.STRUCTURE_UPDATE) && (
                   <MenuItem
@@ -219,9 +245,9 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
                       handleMenuClose();
                       onDeactivate(room);
                     }}
-                    sx={{ color: 'error.main' }}
+                    sx={{ color: "error.main" }}
                   >
-                    <ListItemIcon sx={{ color: 'inherit' }}>
+                    <ListItemIcon sx={{ color: "inherit" }}>
                       <DeleteOutlineRounded fontSize="small" />
                     </ListItemIcon>
                     <ListItemText primary="Deactivate Room" />
@@ -238,10 +264,10 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
             color="text.secondary"
             sx={{
               mb: 2,
-              display: '-webkit-box',
+              display: "-webkit-box",
               WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
               minHeight: 40,
             }}
           >
@@ -249,12 +275,14 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
           </Typography>
         )}
 
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 1 }}>
-          <StatusBadge status={room.status || (room.isActive ? 'active' : 'inactive')} />
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", mt: 1 }}>
+          <StatusBadge
+            status={room.status || (room.isActive ? "active" : "inactive")}
+          />
         </Stack>
       </Box>
 
-      <Box sx={{ pt: 2, mt: 'auto', display: 'flex', gap: 1 }}>
+      <Box sx={{ pt: 2, mt: "auto", display: "flex", gap: 1 }}>
         {hasPermission(PERMISSIONS.STRUCTURE_UPDATE) && (
           <Button
             size="small"
@@ -263,12 +291,12 @@ const RoomCard = ({ room, onEdit, onDeactivate }) => {
             onClick={() => onEdit(room)}
             sx={{
               flex: 1,
-              color: '#0A0A0A',
-              borderColor: '#E5E5E5',
+              color: "#0A0A0A",
+              borderColor: "#E5E5E5",
               fontWeight: 600,
-              '&:hover': {
-                backgroundColor: '#F5F5F5',
-                borderColor: '#0A0A0A',
+              "&:hover": {
+                backgroundColor: "#F5F5F5",
+                borderColor: "#0A0A0A",
               },
             }}
           >
@@ -286,11 +314,12 @@ const FloorDetails = () => {
   const [floor, setFloor] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const { showSnackbar } = useSnackbar();
   const setToastMessage = (msg) => {
     if (!msg) return;
-    const severity = msg.includes('Unable') || msg.includes('Failed') ? 'error' : 'success';
+    const severity =
+      msg.includes("Unable") || msg.includes("Failed") ? "error" : "success";
     showSnackbar(msg, severity);
   };
 
@@ -310,9 +339,9 @@ const FloorDetails = () => {
       ]);
       setFloor(floorRes?.data?.data || null);
       setRooms(roomsRes?.data?.data || []);
-      setError('');
+      setError("");
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to load floor rooms.');
+      setError(err?.response?.data?.message || "Unable to load floor rooms.");
     } finally {
       setLoading(false);
     }
@@ -324,18 +353,18 @@ const FloorDetails = () => {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (token) {
         await auth.logout();
       }
     } catch (e) {
-      console.error('Logout error:', e);
+      console.error("Logout error:", e);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userEmail');
-      navigate('/login');
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      navigate("/login");
     }
   };
 
@@ -359,11 +388,13 @@ const FloorDetails = () => {
     try {
       setDeactivating(true);
       await structureService.deactivateRoom(floorId, deactivateTarget._id);
-      setToastMessage('Room deactivated successfully.');
+      setToastMessage("Room deactivated successfully.");
       setDeactivateTarget(null);
       await fetchData();
     } catch (err) {
-      setToastMessage(err?.response?.data?.message || 'Unable to deactivate room.');
+      setToastMessage(
+        err?.response?.data?.message || "Unable to deactivate room.",
+      );
     } finally {
       setDeactivating(false);
     }
@@ -371,76 +402,97 @@ const FloorDetails = () => {
 
   return (
     <AppLayout onLogout={handleLogout}>
-        <PageHeader
-          breadcrumb={
+      <PageHeader
+        breadcrumb={
+          <Button
+            variant="text"
+            startIcon={<ArrowBackRounded />}
+            onClick={() => navigate("/structure")}
+            sx={{
+              color: "text.secondary",
+              fontWeight: 600,
+              px: 0,
+              minWidth: 0,
+              mb: -0.5,
+            }}
+          >
+            Back to Structure
+          </Button>
+        }
+        title={floor?.name || "Floor Details"}
+        description={
+          floor
+            ? `Floor ${floor.floorNumber}${floor.code ? ` • Code: ${floor.code}` : ""}`
+            : "Manage rooms and spaces"
+        }
+        actions={
+          hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
             <Button
-              variant="text"
-              startIcon={<ArrowBackRounded />}
-              onClick={() => navigate('/structure')}
-              sx={{ color: 'text.secondary', fontWeight: 600, px: 0, minWidth: 0, mb: -0.5 }}
+              variant="contained"
+              startIcon={<AddRounded />}
+              onClick={handleOpenCreate}
+              sx={{ fontWeight: 600 }}
             >
-              Back to Structure
+              Add Room
             </Button>
-          }
-          title={floor?.name || 'Floor Details'}
-          description={
-            floor
-              ? `Floor ${floor.floorNumber}${floor.code ? ` • Code: ${floor.code}` : ''}`
-              : 'Manage rooms and spaces'
-          }
-          actions={
-            hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? (
-              <Button
-                variant="contained"
-                startIcon={<AddRounded />}
-                onClick={handleOpenCreate}
-                sx={{ fontWeight: 600 }}
-              >
-                Add Room
-              </Button>
-            ) : null
-          }
-        />
+          ) : null
+        }
+      />
 
-        {error && <ErrorState message={error} onRetry={fetchData} />}
+      {error && <ErrorState message={error} onRetry={fetchData} />}
 
-        {/* Room List Grid */}
-        <Box>
-          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
-              Rooms & Spaces
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-              {loading ? '…' : `${rooms.length} active`}
-            </Typography>
-          </Stack>
+      {/* Room List Grid */}
+      <Box>
+        <Stack
+          direction="row"
+          sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>
+            Rooms & Spaces
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ fontWeight: 600 }}
+          >
+            {loading ? "…" : `${rooms.length} active`}
+          </Typography>
+        </Stack>
 
-          {loading ? (
-            <MainContentLoader />
-          ) : rooms.length === 0 ? (
-            <GlassCard sx={{ p: 3 }}>
-              <EmptyState
-                icon={MeetingRoomRounded}
-                title="No rooms added yet"
-                description="Add a room to this floor to start organizing the hospital."
-                actionLabel={hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? "+ Add Room" : null}
-                onAction={hasPermission(PERMISSIONS.STRUCTURE_CREATE) ? handleOpenCreate : null}
-              />
-            </GlassCard>
-          ) : (
-            <Grid container spacing={2.5}>
-              {rooms.map((room) => (
-                <Grid xs={12} sm={6} md={4} key={room._id}>
-                  <RoomCard
-                    room={room}
-                    onEdit={handleOpenEdit}
-                    onDeactivate={handleOpenDeactivate}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          )}
-        </Box>
+        {loading ? (
+          <MainContentLoader />
+        ) : rooms.length === 0 ? (
+          <GlassCard sx={{ p: 3 }}>
+            <EmptyState
+              icon={MeetingRoomRounded}
+              title="No rooms added yet"
+              description="Add a room to this floor to start organizing the hospital."
+              actionLabel={
+                hasPermission(PERMISSIONS.STRUCTURE_CREATE)
+                  ? "+ Add Room"
+                  : null
+              }
+              onAction={
+                hasPermission(PERMISSIONS.STRUCTURE_CREATE)
+                  ? handleOpenCreate
+                  : null
+              }
+            />
+          </GlassCard>
+        ) : (
+          <Grid container spacing={2.5}>
+            {rooms.map((room) => (
+              <Grid xs={12} sm={6} md={4} key={room._id}>
+                <RoomCard
+                  room={room}
+                  onEdit={handleOpenEdit}
+                  onDeactivate={handleOpenDeactivate}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Box>
 
       {/* Add / Edit Room Modal */}
       <RoomFormModal

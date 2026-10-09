@@ -15,7 +15,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
-import { useSnackbar } from '../../components/common/SnackbarProvider';
+import { useSnackbar } from '../../theme/SnackbarProvider';
 
 const Register = () => {
   const navigate = useNavigate();

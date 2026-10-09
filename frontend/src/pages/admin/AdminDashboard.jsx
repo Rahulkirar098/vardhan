@@ -39,7 +39,7 @@ import PageHeader from '../../components/common/PageHeader';
 import KPIGrid from '../../components/wrapper/KPIGrid';
 import KPICard from '../../components/common/KPICard';
 import KPICardWithAction from '../../components/common/KPICardWithAction';
-import { useSnackbar } from '../../components/common/SnackbarProvider';
+import { useSnackbar } from '../../theme/SnackbarProvider';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 import { formatTime12h as format12h, getTodayDateStr } from '../../utils/dateUtils';
 

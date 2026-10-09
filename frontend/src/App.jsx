@@ -1,8 +1,8 @@
 import { BrowserRouter } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import AppRoutes from './routes';
-import theme from './theme/theme';
-import { SnackbarProvider } from './components/common/SnackbarProvider';
+import theme from './theme/ThemeProvider';
+import { SnackbarProvider } from './theme/SnackbarProvider';
 
 function App() {
   return (
