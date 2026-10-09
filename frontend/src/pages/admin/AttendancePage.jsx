@@ -128,7 +128,16 @@ const AttendancePage = () => {
       setTodayAttendance(todayRes?.data || null);
       setMyHistory(Array.isArray(myRes?.data) ? myRes.data : []);
       setStats(statsRes?.data || { present: 0, halfDay: 0, absent: 0, workingDays: 0 });
-      setMyLeaves(Array.isArray(leavesRes?.data) ? leavesRes.data : []);
+      const extractedLeaves = Array.isArray(leavesRes?.data?.leaves)
+        ? leavesRes.data.leaves
+        : Array.isArray(leavesRes?.data)
+        ? leavesRes.data
+        : Array.isArray(leavesRes?.leaves)
+        ? leavesRes.leaves
+        : Array.isArray(leavesRes)
+        ? leavesRes
+        : [];
+      setMyLeaves(extractedLeaves);
       setMyRegularizations(Array.isArray(regRes) ? regRes : []);
 
       if (canViewWorkforce) {
@@ -210,7 +219,7 @@ const AttendancePage = () => {
 
     // Approved leaves
     myLeaves.forEach((l) => {
-      if (l.status === 'cancelled') return;
+      if (l.status !== 'approved') return;
       events.push({
         ...l,
         type: 'leave',
@@ -228,9 +237,9 @@ const AttendancePage = () => {
   const selectedDateLeave = useMemo(() => {
     return (
       myLeaves.find((l) => {
-        if (l.status === 'cancelled') return false;
-        const start = l.startDate?.split('T')[0];
-        const end = l.endDate?.split('T')[0];
+        if (l.status !== 'approved') return false;
+        const start = typeof l.startDate === 'string' ? l.startDate.split('T')[0] : '';
+        const end = typeof l.endDate === 'string' ? l.endDate.split('T')[0] : start;
         return selectedDateStr >= start && selectedDateStr <= end;
       }) || null
     );
