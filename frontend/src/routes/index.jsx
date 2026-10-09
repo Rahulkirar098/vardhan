@@ -1,10 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import Landing from '../pages/Auth/Landing';
+import Landing from '../pages/auth/Landing';
 import Login from '../pages/auth/Login';
-import Register from '../pages/Auth/Register';
-import ForgotPassword from '../pages/Auth/ForgotPassword';
-import ResetPassword from '../pages/Auth/ResetPassword';
-import AcceptInvitation from '../pages/Auth/AcceptInvitation';
+import Register from '../pages/auth/Register';
+import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
+import AcceptInvitation from '../pages/auth/AcceptInvitation';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import SuperAdminDashboard from '../pages/super-admin/SuperAdminDashboard';
 import Hospital from '../pages/admin/Hospital';
