@@ -3,19 +3,18 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Divider,
   IconButton,
   InputAdornment,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
 import { useSnackbar } from '../../theme/SnackbarProvider';
+import { StyledButton, StyledTextField } from '../../components/styled';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -79,7 +78,7 @@ const ResetPassword = () => {
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
-            <TextField
+            <StyledTextField
               label="New Password"
               name="password"
               type={showPassword ? 'text' : 'password'}
@@ -107,7 +106,7 @@ const ResetPassword = () => {
               }}
             />
 
-            <TextField
+            <StyledTextField
               label="Confirm New Password"
               name="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
@@ -135,9 +134,9 @@ const ResetPassword = () => {
               }}
             />
 
-            <Button type="submit" variant="contained" size="large" disabled={loading}>
+            <StyledButton type="submit" variantType="primary" size="large" disabled={loading}>
               {loading ? <CircularProgress size={22} color="inherit" /> : 'Reset Password'}
-            </Button>
+            </StyledButton>
           </Stack>
         </Box>
 
@@ -145,7 +144,7 @@ const ResetPassword = () => {
 
         <Typography variant="body2" color="text.secondary" align="center">
           Remembered your password?{' '}
-          <Link to="/login" style={{ color: '#0A0A0A', fontWeight: 700 }}>
+          <Link to="/login" style={{ color: '#0F172B', fontWeight: 700 }}>
             Login
           </Link>
         </Typography>

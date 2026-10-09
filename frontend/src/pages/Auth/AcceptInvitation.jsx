@@ -3,12 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Divider,
   Stack,
   Typography,
-  TextField,
 } from '@mui/material';
 import {
   BadgeRounded,
@@ -19,6 +17,7 @@ import employeeService from '../../services/employee.service';
 import AuthLayout from '../../components/AuthLayout';
 import StatusBadge from '../../components/StatusBadge';
 import MainContentLoader from '../../components/common/MainContentLoader';
+import { StyledButton, StyledTextField } from '../../components/styled';
 
 const AcceptInvitation = () => {
   const { token } = useParams();
@@ -104,9 +103,9 @@ const AcceptInvitation = () => {
         <Stack spacing={2.5}>
           <Box
             sx={{
-              border: '1px solid #E5E5E5',
-              borderRadius: '12px',
-              backgroundColor: '#f0fdf4',
+              border: '1px solid #BBF7D0',
+              borderRadius: '10px',
+              backgroundColor: '#F0FDF4',
               p: 3,
               textAlign: 'center',
             }}
@@ -122,15 +121,15 @@ const AcceptInvitation = () => {
               <strong>{invitation?.hospitalName || 'your hospital'}</strong>.
               You can now sign in using your email and password.
             </Typography>
-            <Button
-              variant="contained"
+            <StyledButton
+              variantType="primary"
               fullWidth
               component={Link}
               to="/login"
               size="large"
             >
               Go to Login
-            </Button>
+            </StyledButton>
           </Box>
         </Stack>
       </AuthLayout>
@@ -148,9 +147,9 @@ const AcceptInvitation = () => {
         {invitation && (
           <Box
             sx={{
-              border: '1px solid #E5E5E5',
-              borderRadius: '12px',
-              backgroundColor: '#FAFAFA',
+              border: '1px solid #E2E8F0',
+              borderRadius: '10px',
+              backgroundColor: '#FFFFFF',
               p: 2.5,
             }}
           >
@@ -244,7 +243,7 @@ const AcceptInvitation = () => {
           </Box>
         )}
 
-        <TextField
+        <StyledTextField
           label="Create Login Password *"
           type="password"
           placeholder="At least 6 characters"
@@ -255,8 +254,8 @@ const AcceptInvitation = () => {
           autoFocus
         />
 
-        <Button
-          variant="contained"
+        <StyledButton
+          variantType="primary"
           size="large"
           onClick={handleAccept}
           disabled={submitting || !password}
@@ -267,7 +266,7 @@ const AcceptInvitation = () => {
           ) : (
             'Complete Onboarding & Activate'
           )}
-        </Button>
+        </StyledButton>
       </Stack>
     </AuthLayout>
   );

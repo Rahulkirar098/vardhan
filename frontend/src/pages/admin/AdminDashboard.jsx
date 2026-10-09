@@ -18,13 +18,10 @@ import {
   EventNoteRounded,
   FingerprintRounded,
   GroupRounded,
-  LayersRounded,
-  LocalHospitalRounded,
   LoginRounded,
   LogoutRounded,
   MoreHorizRounded,
-  ScheduleRounded,
-  VpnKeyRounded,
+  ScheduleRounded
 } from '@mui/icons-material';
 import hospitalService from '../../services/hospital.service';
 import attendanceService from '../../services/attendance.service';
@@ -98,17 +95,17 @@ const getUserRoleFromStorage = () => {
 
 
 
+import { StyledPanel, StyledButton, StyledIconButton } from '../../components/styled';
+import { useTheme } from '@mui/material/styles';
+
 // ─── OPERATIONAL SECTION CARD ──────────────────────────────────────────────────
 const SectionCard = ({ title, subtitle, value, valueLabel, icon: Icon, action }) => {
+  const theme = useTheme();
   return (
-    <Box
+    <StyledPanel
       sx={{
         p: 3,
         height: '100%',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '14px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -117,24 +114,24 @@ const SectionCard = ({ title, subtitle, value, valueLabel, icon: Icon, action })
       <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
         <Box>
           <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: theme.palette.text.primary }}>
               {title}
             </Typography>
-            {Icon && <Icon sx={{ fontSize: 20, color: '#64748B' }} />}
+            {Icon && <Icon sx={{ fontSize: 20, color: theme.palette.text.secondary }} />}
           </Stack>
           {subtitle && (
-            <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.5 }}>
+            <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary, mt: 0.5 }}>
               {subtitle}
             </Typography>
           )}
         </Box>
 
         <Box sx={{ my: 1 }}>
-          <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>
+          <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: theme.palette.text.primary, lineHeight: 1.1 }}>
             {value}
           </Typography>
           {valueLabel && (
-            <Typography sx={{ fontSize: '0.775rem', color: '#64748B', mt: 0.5, fontWeight: 500 }}>
+            <Typography sx={{ fontSize: '0.775rem', color: theme.palette.text.secondary, mt: 0.5, fontWeight: 500 }}>
               {valueLabel}
             </Typography>
           )}
@@ -142,42 +139,39 @@ const SectionCard = ({ title, subtitle, value, valueLabel, icon: Icon, action })
 
         <Box pt={0.5}>{action}</Box>
       </Stack>
-    </Box>
+    </StyledPanel>
   );
 };
 
 // ─── WORKFORCE OVERVIEW GRAPH (BAR CHART) ──────────────────────────────────────
 const WorkforceOverviewGraph = ({ data = [] }) => {
+  const theme = useTheme();
   const maxCount = useMemo(() => {
     if (!data.length) return 1;
     return Math.max(...data.map((d) => d.count), 1);
   }, [data]);
 
   return (
-    <Box
+    <StyledPanel
       sx={{
         p: 3,
         height: '100%',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '14px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
       }}
     >
       <Box>
-        <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+        <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: theme.palette.text.primary }}>
           WORKFORCE OVERVIEW
         </Typography>
-        <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.2 }}>
+        <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary, mt: 0.2 }}>
           Employees by position
         </Typography>
 
         <Stack spacing={2} sx={{ mt: 3 }}>
           {data.length === 0 ? (
-            <Typography sx={{ fontSize: '0.875rem', color: '#94A3B8', py: 2 }}>
+            <Typography sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary, py: 2 }}>
               No employee workforce data available.
             </Typography>
           ) : (
@@ -189,14 +183,14 @@ const WorkforceOverviewGraph = ({ data = [] }) => {
               return (
                 <Box key={item.position || idx}>
                   <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155' }}>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: theme.palette.text.primary }}>
                       {item.position}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A' }}>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: theme.palette.text.primary }}>
                       {item.count}
                     </Typography>
                   </Stack>
-                  <Box sx={{ width: '100%', height: 8, backgroundColor: '#F1F5F9', borderRadius: 4, overflow: 'hidden' }}>
+                  <Box sx={{ width: '100%', height: 8, backgroundColor: theme.palette.action.hover, borderRadius: 4, overflow: 'hidden' }}>
                     <Box
                       sx={{
                         width: `${pct}%`,
@@ -213,12 +207,13 @@ const WorkforceOverviewGraph = ({ data = [] }) => {
           )}
         </Stack>
       </Box>
-    </Box>
+    </StyledPanel>
   );
 };
 
 // ─── ATTENDANCE GRAPH (DONUT CHART) ────────────────────────────────────────────
 const AttendanceDonutGraph = ({ data }) => {
+  const theme = useTheme();
   const todayDateStr = useMemo(() => {
     return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }, []);
@@ -237,10 +232,10 @@ const AttendanceDonutGraph = ({ data }) => {
       return [{ color: '#CBD5E1', dasharray: `${circumference} 0`, dashoffset: 0 }];
     }
     const items = [
-      { count: present, color: '#10B981', label: 'Present' },
-      { count: late, color: '#F59E0B', label: 'Late' },
-      { count: absent, color: '#EF4444', label: 'Absent' },
-      { count: onLeave, color: '#6366F1', label: 'On Leave' },
+      { count: present, color: theme.palette.status?.success || '#10B981', label: 'Present' },
+      { count: late, color: theme.palette.status?.warning || '#F59E0B', label: 'Late' },
+      { count: absent, color: theme.palette.status?.danger || '#EF4444', label: 'Absent' },
+      { count: onLeave, color: theme.palette.status?.info || '#6366F1', label: 'On Leave' },
     ];
     let currentOffset = 0;
     return items.map((item) => {
@@ -253,17 +248,13 @@ const AttendanceDonutGraph = ({ data }) => {
       currentOffset += segmentLen;
       return res;
     });
-  }, [present, late, absent, onLeave, total, circumference]);
+  }, [present, late, absent, onLeave, total, circumference, theme]);
 
   return (
-    <Box
+    <StyledPanel
       sx={{
         p: 3,
         height: '100%',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '14px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -271,10 +262,10 @@ const AttendanceDonutGraph = ({ data }) => {
     >
       <Box>
         <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: theme.palette.text.primary }}>
             ATTENDANCE
           </Typography>
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B' }}>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: theme.palette.text.secondary }}>
             Today · {todayDateStr}
           </Typography>
         </Stack>
@@ -299,10 +290,10 @@ const AttendanceDonutGraph = ({ data }) => {
             </g>
           </svg>
           <Box sx={{ position: 'absolute', textAlign: 'center' }}>
-            <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+            <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: theme.palette.text.primary, lineHeight: 1 }}>
               {total}
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600, mt: 0.2 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, fontWeight: 600, mt: 0.2 }}>
               Recorded
             </Typography>
           </Box>
@@ -311,94 +302,92 @@ const AttendanceDonutGraph = ({ data }) => {
         <Grid container spacing={1.5} sx={{ mt: 1 }}>
           <Grid xs={6}>
             <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
-              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#10B981' }} />
-              <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: theme.palette.status?.success || '#10B981' }} />
+              <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary, fontWeight: 600 }}>
                 Present
               </Typography>
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', ml: 'auto' }}>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: theme.palette.text.primary, ml: 'auto' }}>
                 {present}
               </Typography>
             </Stack>
           </Grid>
           <Grid xs={6}>
             <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
-              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#F59E0B' }} />
-              <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: theme.palette.status?.warning || '#F59E0B' }} />
+              <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary, fontWeight: 600 }}>
                 Late
               </Typography>
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', ml: 'auto' }}>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: theme.palette.text.primary, ml: 'auto' }}>
                 {late}
               </Typography>
             </Stack>
           </Grid>
           <Grid xs={6}>
             <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
-              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#EF4444' }} />
-              <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: theme.palette.status?.danger || '#EF4444' }} />
+              <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary, fontWeight: 600 }}>
                 Absent
               </Typography>
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', ml: 'auto' }}>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: theme.palette.text.primary, ml: 'auto' }}>
                 {absent}
               </Typography>
             </Stack>
           </Grid>
           <Grid xs={6}>
             <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
-              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#6366F1' }} />
-              <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: theme.palette.status?.info || '#6366F1' }} />
+              <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary, fontWeight: 600 }}>
                 On Leave
               </Typography>
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', ml: 'auto' }}>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: theme.palette.text.primary, ml: 'auto' }}>
                 {onLeave}
               </Typography>
             </Stack>
           </Grid>
         </Grid>
       </Box>
-    </Box>
+    </StyledPanel>
   );
 };
 
 // ─── LEAVE OVERVIEW GRAPH ──────────────────────────────────────────────────────
 const LeaveOverviewGraph = ({ data }) => {
+  const theme = useTheme();
   const pending = data?.pending || 0;
   const approved = data?.approved || 0;
   const rejected = data?.rejected || 0;
-  const currentMonthYear = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   const items = [
     {
       label: 'Pending requests',
       tag: 'Pending',
       count: pending,
-      bg: '#FEF3C7',
-      color: '#92400E',
+      bg: theme.palette.status?.warning ? `${theme.palette.status.warning}1A` : '#FEF3C7',
+      color: theme.palette.status?.warning || '#92400E',
     },
     {
       label: 'Approved requests',
       tag: 'Approved',
       count: approved,
-      bg: '#DCFCE7',
-      color: '#15803D',
+      bg: theme.palette.status?.success ? `${theme.palette.status.success}1A` : '#DCFCE7',
+      color: theme.palette.status?.success || '#15803D',
     },
     {
       label: 'Rejected requests',
       tag: 'Rejected',
       count: rejected,
-      bg: '#FEE2E2',
-      color: '#B91C1C',
+      bg: theme.palette.status?.danger ? `${theme.palette.status.danger}1A` : '#FEE2E2',
+      color: theme.palette.status?.danger || '#B91C1C',
     },
   ];
 
+  const currentMonthYear = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
   return (
-    <Box
+    <StyledPanel
       sx={{
         p: 3,
         height: '100%',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '14px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -407,14 +396,14 @@ const LeaveOverviewGraph = ({ data }) => {
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
           <Box>
-            <Typography sx={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', letterSpacing: '0.02em' }}>
+            <Typography sx={{ fontSize: '0.95rem', fontWeight: 800, color: theme.palette.text.primary, letterSpacing: '0.02em' }}>
               LEAVE OVERVIEW
             </Typography>
-            <Typography sx={{ fontSize: '0.8125rem', color: '#64748B', mt: 0.3, fontWeight: 500 }}>
+            <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary, mt: 0.3, fontWeight: 500 }}>
               {currentMonthYear}
             </Typography>
           </Box>
-          <IconButton size="small" sx={{ color: '#64748B', p: 0.5 }}>
+          <IconButton size="small" sx={{ color: theme.palette.text.secondary, p: 0.5 }}>
             <MoreHorizRounded />
           </IconButton>
         </Box>
@@ -461,7 +450,7 @@ const LeaveOverviewGraph = ({ data }) => {
           ))}
         </Stack>
       </Box>
-    </Box>
+    </StyledPanel>
   );
 };
 

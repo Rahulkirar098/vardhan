@@ -77,7 +77,6 @@ const AppLayout = ({ children, onLogout }) => {
           const hospitalLocation = u.hospitalLocation || '';
           const employeeId = u.employeeId || '';
 
-          // Synchronize all access keys into localStorage
           if (uid) localStorage.setItem('userId', uid);
           localStorage.setItem('userName', name);
           if (email) localStorage.setItem('userEmail', email);
@@ -161,7 +160,7 @@ const AppLayout = ({ children, onLogout }) => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        backgroundColor: '#FAFAFA',
+        backgroundColor: theme.palette.background.default,
       }}
     >
       <AppNavbar
@@ -202,7 +201,7 @@ const AppLayout = ({ children, onLogout }) => {
           <Box
             sx={{
               width: '100%',
-              maxWidth: 1280,
+              maxWidth: theme.custom?.sizing?.components?.pageMaxWidth || 1440,
               mx: 'auto',
               display: 'flex',
               flexDirection: 'column',

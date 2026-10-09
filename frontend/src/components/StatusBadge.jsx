@@ -1,29 +1,48 @@
 import { Chip } from '@mui/material';
+import { styled } from '@mui/material/styles';
 
-const STATUS_STYLES = {
-  active: { backgroundColor: '#0A0A0A', color: '#FFFFFF', borderColor: '#0A0A0A' },
-  accepted: { backgroundColor: '#0A0A0A', color: '#FFFFFF', borderColor: '#0A0A0A' },
-  verified: { backgroundColor: '#0A0A0A', color: '#FFFFFF', borderColor: '#0A0A0A' },
-  approved: { backgroundColor: '#ECFDF5', color: '#166534', borderColor: '#BBF7D0' },
-  present: { backgroundColor: '#ECFDF5', color: '#166534', borderColor: '#BBF7D0' },
-  half_day: { backgroundColor: '#FFFBEB', color: '#B45309', borderColor: '#FDE68A' },
-  'half day': { backgroundColor: '#FFFBEB', color: '#B45309', borderColor: '#FDE68A' },
-  absent: { backgroundColor: '#FEF2F2', color: '#991B1B', borderColor: '#FECACA' },
-  not_checked_in: { backgroundColor: '#F8FAFC', color: '#64748B', borderColor: '#E2E8F0' },
-  'not checked in': { backgroundColor: '#F8FAFC', color: '#64748B', borderColor: '#E2E8F0' },
-  weekly_off: { backgroundColor: '#F1F5F9', color: '#475569', borderColor: '#CBD5E1' },
-  'weekly off': { backgroundColor: '#F1F5F9', color: '#475569', borderColor: '#CBD5E1' },
-  on_leave: { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE' },
-  'on leave': { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE' },
-  leave: { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE' },
-  pending: { backgroundColor: '#FFFBEB', color: '#B45309', borderColor: '#FDE68A' },
-  invited: { backgroundColor: '#FFF7E6', color: '#B45309', borderColor: '#F1DFBF' },
-  inactive: { backgroundColor: '#F5F5F5', color: '#525252', borderColor: '#E5E5E5' },
-  expired: { backgroundColor: '#F5F5F5', color: '#8A8A8A', borderColor: '#E5E5E5' },
-  rejected: { backgroundColor: '#FEF2F2', color: '#991B1B', borderColor: '#FECACA' },
-  cancelled: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' },
-  revoked: { backgroundColor: '#FDECEC', color: '#B42318', borderColor: '#F5D0D0' },
+const STATUS_MAP = {
+  active: { bg: '#0F172B', color: '#FFFFFF', border: '#0F172B' },
+  accepted: { bg: '#0F172B', color: '#FFFFFF', border: '#0F172B' },
+  verified: { bg: '#0F172B', color: '#FFFFFF', border: '#0F172B' },
+  approved: { bg: '#F0FDF4', color: '#166534', border: '#BBF7D0' },
+  present: { bg: '#F0FDF4', color: '#166534', border: '#BBF7D0' },
+  half_day: { bg: '#FEF3C7', color: '#92400E', border: '#FDE68A' },
+  'half day': { bg: '#FEF3C7', color: '#92400E', border: '#FDE68A' },
+  absent: { bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
+  not_checked_in: { bg: '#F8FAFC', color: '#62748E', border: '#E2E8F0' },
+  'not checked in': { bg: '#F8FAFC', color: '#62748E', border: '#E2E8F0' },
+  weekly_off: { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' },
+  'weekly off': { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' },
+  on_leave: { bg: '#F0F9FF', color: '#075985', border: '#BAE6FD' },
+  'on leave': { bg: '#F0F9FF', color: '#075985', border: '#BAE6FD' },
+  leave: { bg: '#F0F9FF', color: '#075985', border: '#BAE6FD' },
+  pending: { bg: '#FEF3C7', color: '#92400E', border: '#FDE68A' },
+  invited: { bg: '#FEF3C7', color: '#92400E', border: '#FDE68A' },
+  inactive: { bg: '#F8FAFC', color: '#62748E', border: '#E2E8F0' },
+  expired: { bg: '#F8FAFC', color: '#62748E', border: '#E2E8F0' },
+  rejected: { bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
+  cancelled: { bg: '#F8FAFC', color: '#62748E', border: '#E2E8F0' },
+  revoked: { bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
 };
+
+const StyledChip = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== 'statusKey',
+})(({ theme, statusKey }) => {
+  const conf = STATUS_MAP[statusKey] || STATUS_MAP.inactive;
+  return {
+    height: 24,
+    fontSize: '0.75rem', // 12px
+    fontWeight: 600,
+    borderRadius: 9999,
+    backgroundColor: conf.bg,
+    color: conf.color,
+    border: `1px solid ${conf.border}`,
+    '& .MuiChip-label': {
+      px: 1.25,
+    },
+  };
+});
 
 const formatLabel = (value) => {
   const text = String(value || '').trim();
@@ -41,22 +60,13 @@ const formatLabel = (value) => {
 
 const StatusBadge = ({ status, label, size = 'small', sx = {} }) => {
   const key = String(status || 'active').toLowerCase();
-  const style = STATUS_STYLES[key] || STATUS_STYLES.inactive;
 
   return (
-    <Chip
+    <StyledChip
+      statusKey={key}
       label={label || formatLabel(status || 'active')}
       size={size}
-      sx={{
-        height: 24,
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: 0.2,
-        borderRadius: 999,
-        '& .MuiChip-label': { px: 1.25 },
-        ...style,
-        ...sx,
-      }}
+      sx={sx}
     />
   );
 };

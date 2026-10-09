@@ -3,19 +3,18 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Divider,
   IconButton,
   InputAdornment,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
 import { useSnackbar } from '../../theme/SnackbarProvider';
+import { StyledButton, StyledTextField } from '../../components/styled';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -87,12 +86,12 @@ const Register = () => {
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
-            <TextField label="Full Name" name="name" value={form.name} onChange={handleChange} required />
-            <TextField label="Email" name="email" type="email" value={form.email} onChange={handleChange} autoComplete="email" required />
-            <TextField label="Phone" name="phone" value={form.phone} onChange={handleChange} autoComplete="tel" />
+            <StyledTextField label="Full Name" name="name" value={form.name} onChange={handleChange} required />
+            <StyledTextField label="Email" name="email" type="email" value={form.email} onChange={handleChange} autoComplete="email" required />
+            <StyledTextField label="Phone" name="phone" value={form.phone} onChange={handleChange} autoComplete="tel" />
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
-              <TextField
+              <StyledTextField
                 label="Password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
@@ -119,7 +118,7 @@ const Register = () => {
                   },
                 }}
               />
-              <TextField
+              <StyledTextField
                 label="Confirm Password"
                 name="confirmPassword"
                 type={showConfirmPassword ? 'text' : 'password'}
@@ -148,9 +147,9 @@ const Register = () => {
               />
             </Stack>
 
-            <Button type="submit" variant="contained" size="large" disabled={loading}>
+            <StyledButton type="submit" variantType="primary" size="large" disabled={loading}>
               {loading ? <CircularProgress size={22} color="inherit" /> : 'Create Account'}
-            </Button>
+            </StyledButton>
           </Stack>
         </Box>
 
@@ -158,7 +157,7 @@ const Register = () => {
 
         <Typography variant="body2" color="text.secondary" align="center">
           Already have an account?{' '}
-          <Link to="/login" style={{ color: '#0A0A0A', fontWeight: 700 }}>
+          <Link to="/login" style={{ color: '#0F172B', fontWeight: 700 }}>
             Login
           </Link>
         </Typography>

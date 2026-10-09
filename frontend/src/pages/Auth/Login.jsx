@@ -3,18 +3,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Divider,
   IconButton,
   InputAdornment,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../components/AuthLayout';
+import { StyledButton, StyledTextField } from '../../components/styled';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -99,7 +98,7 @@ const Login = () => {
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
-            <TextField
+            <StyledTextField
               label="Email"
               name="email"
               type="email"
@@ -110,7 +109,7 @@ const Login = () => {
             />
 
             <Box>
-              <TextField
+              <StyledTextField
                 label="Password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
@@ -140,16 +139,16 @@ const Login = () => {
               <Box sx={{ textAlign: 'right', mt: 1.25 }}>
                 <Link
                   to="/forgot-password"
-                  style={{ fontSize: '0.875rem', color: '#6B6B6B', fontWeight: 600 }}
+                  style={{ fontSize: '0.875rem', color: '#62748E', fontWeight: 600 }}
                 >
                   Forgot password?
                 </Link>
               </Box>
             </Box>
 
-            <Button type="submit" variant="contained" size="large" disabled={loading}>
+            <StyledButton type="submit" variantType="primary" size="large" disabled={loading}>
               {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign In'}
-            </Button>
+            </StyledButton>
           </Stack>
         </Box>
 
@@ -159,7 +158,7 @@ const Login = () => {
           Don&apos;t have an account?{' '}
           <Link
             to="/register"
-            style={{ color: '#0A0A0A', fontWeight: 700 }}
+            style={{ color: '#0F172B', fontWeight: 700 }}
           >
             Register
           </Link>

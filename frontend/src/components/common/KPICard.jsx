@@ -1,5 +1,60 @@
 import { isValidElement } from 'react';
 import { Box, Stack, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
+
+const StyledKpiContainer = styled(Box)(({ theme }) => {
+  const colors = theme.custom?.colors || {};
+  const sizing = theme.custom?.sizing || {};
+  return {
+    padding: '16px 20px',
+    width: '100%',
+    height: '100%',
+    minHeight: 90,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    borderRadius: theme.shape.borderRadius || 10,
+    border: `1px solid ${colors.border || '#E2E8F0'}`,
+    backgroundColor: colors.background || '#FFFFFF',
+    boxShadow: sizing.shadows?.card || '0 1px 3px rgba(2, 6, 24, 0.04)',
+    boxSizing: 'border-box',
+    transition: 'all 180ms cubic-bezier(0.4, 0, 0.2, 1)',
+    '&:hover': {
+      borderColor: colors.ring || '#90A1B9',
+      boxShadow: '0 4px 12px rgba(2, 6, 24, 0.06)',
+    },
+  };
+});
+
+const StyledKpiTitle = styled(Typography)(({ theme }) => ({
+  fontSize: '0.8125rem', // 13px
+  fontWeight: 600,
+  color: theme.palette.text.secondary || '#62748E',
+  lineHeight: 1.2,
+}));
+
+const StyledKpiValue = styled(Typography)(({ theme }) => ({
+  fontSize: '1.5rem', // 24px
+  fontWeight: 700,
+  color: theme.palette.text.primary || '#020618',
+  letterSpacing: '-0.02em',
+  lineHeight: 1.1,
+  margin: '4px 0',
+}));
+
+const StyledKpiIconContainer = styled(Box)(({ theme }) => {
+  const colors = theme.custom?.colors || {};
+  return {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: colors.secondary || '#F1F5F9',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  };
+});
 
 const KPICard = ({
   title,
@@ -22,79 +77,28 @@ const KPICard = ({
       return IconProp;
     }
     const IconComponent = IconProp;
-    return <IconComponent sx={{ fontSize: 18, color: color || '#475569' }} />;
+    return <IconComponent sx={{ fontSize: 18, color: color || 'primary.main' }} />;
   };
 
   return (
-    <Box
-      sx={{
-        p: 1.25,
-        px: 1.5,
-        width: '100%',
-        height: '100%',
-        minHeight: 80,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        borderRadius: '10px',
-        border: '1px solid #E5E7EB',
-        backgroundColor: '#FFFFFF',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-        boxSizing: 'border-box',
-        transition: 'all 160ms ease',
-        '&:hover': {
-          borderColor: '#CBD5E1',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        },
-        ...sx,
-      }}
-    >
+    <StyledKpiContainer sx={sx}>
       <Stack spacing={0.5} sx={{ height: '100%', justifyContent: 'space-between' }}>
         {/* Header: Title at TOP-LEFT, Icon Container at TOP-RIGHT */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Typography
-            sx={{
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              color: '#64748B',
-              textTransform: 'none',
-              lineHeight: 1.2,
-              pr: 1,
-            }}
-          >
+          <StyledKpiTitle>
             {cardTitle}
-          </Typography>
+          </StyledKpiTitle>
           {IconProp && (
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: '8px',
-                backgroundColor: '#F1F5F9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
+            <StyledKpiIconContainer>
               {renderIcon()}
-            </Box>
+            </StyledKpiIconContainer>
           )}
         </Box>
 
-        {/* Body: Large Bold Value */}
-        <Typography
-          sx={{
-            fontSize: '1.5rem',
-            fontWeight: 800,
-            color: '#0F172A',
-            letterSpacing: '-0.02em',
-            lineHeight: 1,
-            my: 0.1,
-          }}
-        >
+        {/* Body: Large Bold 24px Value */}
+        <StyledKpiValue>
           {value !== undefined && value !== null ? value : '-'}
-        </Typography>
+        </StyledKpiValue>
 
         {/* Footer / Description */}
         {cardFooter && (
@@ -102,7 +106,7 @@ const KPICard = ({
             {typeof cardFooter === 'string' ? (
               <Typography
                 variant="body2"
-                sx={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 500 }}
+                sx={{ fontSize: '0.75rem', color: 'text.secondary', fontWeight: 500 }}
               >
                 {cardFooter}
               </Typography>
@@ -112,7 +116,7 @@ const KPICard = ({
           </Box>
         )}
       </Stack>
-    </Box>
+    </StyledKpiContainer>
   );
 };
 

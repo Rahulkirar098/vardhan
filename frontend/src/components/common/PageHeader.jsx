@@ -1,14 +1,27 @@
 import { Box, Stack, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
+
+const StyledHeaderTitle = styled(Typography)(({ theme }) => ({
+  fontSize: '1.875rem', // 30px
+  fontWeight: 700,
+  color: theme.palette.text.primary,
+  letterSpacing: '-0.03em',
+  lineHeight: 1.2,
+  [theme.breakpoints.down('sm')]: {
+    fontSize: '1.5rem', // 24px on mobile
+  },
+}));
+
+const StyledHeaderDescription = styled(Typography)(({ theme }) => ({
+  marginTop: theme.spacing(1),
+  fontSize: '0.875rem', // 14px
+  color: theme.palette.text.secondary,
+  lineHeight: 1.5,
+  fontWeight: 400,
+}));
 
 /**
  * PageHeader standardizes page titles, descriptions/subtitles, and top page actions across the app.
- * Located at: frontend/src/components/common/PageHeader.jsx
- *
- * Props:
- * - title: string | ReactNode
- * - description | subtitle: string | ReactNode
- * - actions | action: ReactNode
- * - breadcrumb: ReactNode
  */
 const PageHeader = ({
   title,
@@ -32,6 +45,7 @@ const PageHeader = ({
         justifyContent: 'space-between',
         width: '100%',
         boxSizing: 'border-box',
+        mb: 3,
         ...sx,
       }}
       {...props}
@@ -52,31 +66,14 @@ const PageHeader = ({
           </Typography>
         )}
 
-        <Typography
-          component="h1"
-          sx={{
-            fontSize: { xs: '1.5rem', md: '1.875rem' },
-            fontWeight: 800,
-            color: '#0F172A',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.2,
-          }}
-        >
+        <StyledHeaderTitle component="h1">
           {title}
-        </Typography>
+        </StyledHeaderTitle>
 
         {descText && (
-          <Typography
-            sx={{
-              mt: 0.85, // ~6.8px spacing between title & description
-              fontSize: { xs: '0.84rem', md: '0.875rem' },
-              color: '#64748B',
-              lineHeight: 1.5,
-              fontWeight: 400,
-            }}
-          >
+          <StyledHeaderDescription>
             {descText}
-          </Typography>
+          </StyledHeaderDescription>
         )}
       </Box>
 

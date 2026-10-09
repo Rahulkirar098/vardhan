@@ -15,7 +15,7 @@ const BrandMark = () => (
         height: 36,
         borderRadius: '10px',
         backgroundColor: '#FFFFFF',
-        color: '#0A0A0A',
+        color: '#0F172B',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -48,7 +48,7 @@ const BrandPanel = () => (
       maxWidth: 540,
       flexDirection: 'column',
       justifyContent: 'space-between',
-      backgroundColor: '#0A0A0A',
+      backgroundColor: '#0F172B',
       color: '#FFFFFF',
       p: { md: 6, lg: 7 },
       flexShrink: 0,
@@ -71,7 +71,7 @@ const BrandPanel = () => (
                 mt: 0.25,
                 borderRadius: '8px',
                 backgroundColor: '#FFFFFF',
-                color: '#0A0A0A',
+                color: '#0F172B',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -95,7 +95,7 @@ const BrandPanel = () => (
 );
 
 const AuthLayout = ({ title, subtitle, children }) => (
-  <Box sx={{ minHeight: '100vh', display: 'flex', backgroundColor: '#FAFAFA' }}>
+  <Box sx={{ minHeight: '100vh', display: 'flex', backgroundColor: '#F8FAFC' }}>
     <BrandPanel />
 
     <Box
@@ -116,7 +116,7 @@ const AuthLayout = ({ title, subtitle, children }) => (
                 width: 34,
                 height: 34,
                 borderRadius: '10px',
-                backgroundColor: '#0A0A0A',
+                backgroundColor: '#0F172B',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -127,13 +127,13 @@ const AuthLayout = ({ title, subtitle, children }) => (
             >
               N
             </Box>
-            <Typography sx={{ fontWeight: 800, fontSize: 18, letterSpacing: '-0.01em' }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 18, letterSpacing: '-0.01em', color: '#020618' }}>
               NUVINCE
             </Typography>
           </Stack>
         </Box>
 
-        <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.03em' }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.03em', color: '#020618' }}>
           {title}
         </Typography>
         {subtitle && (

@@ -1,6 +1,5 @@
 import {
   Box,
-  Stack,
   Table,
   TableBody,
   TableCell,
@@ -8,9 +7,8 @@ import {
   TableHead,
   TableRow,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import EmptyState from './EmptyState';
 import Loading from './Loading';
 
@@ -44,6 +42,48 @@ const CellValue = ({ row, column, renderCell }) => {
   return String(value);
 };
 
+const StyledTableContainer = styled(TableContainer)(({ theme }) => {
+  const colors = theme.custom?.colors || {};
+  const sizing = theme.custom?.sizing || {};
+  return {
+    width: '100%',
+    maxWidth: '100%',
+    border: `1px solid ${colors.border || '#E2E8F0'}`,
+    borderRadius: theme.shape.borderRadius || 10,
+    backgroundColor: colors.background || '#FFFFFF',
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    boxShadow: sizing.shadows?.card || '0 1px 3px rgba(2, 6, 24, 0.04)',
+    WebkitOverflowScrolling: 'touch',
+  };
+});
+
+const StyledHeadCell = styled(TableCell)(({ theme }) => {
+  const colors = theme.custom?.colors || {};
+  const typography = theme.custom?.typography || {};
+  return {
+    backgroundColor: colors.sidebar || '#F8FAFC',
+    color: colors.mutedForeground || '#62748E',
+    fontSize: typography.fontSize?.tableHeader || '0.6875rem', // 11px
+    fontWeight: 700,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    borderBottom: `1px solid ${colors.border || '#E2E8F0'}`,
+    padding: '10px 18px',
+    whiteSpace: 'nowrap',
+  };
+});
+
+const StyledBodyCell = styled(TableCell)(({ theme }) => {
+  const colors = theme.custom?.colors || {};
+  return {
+    borderBottom: `1px solid ${colors.borderSoft || '#F1F5F9'}`,
+    padding: '12px 18px',
+    fontSize: '0.875rem', // 14px
+    color: colors.foreground || '#020618',
+  };
+});
+
 const DataTable = ({
   columns,
   rows = [],
@@ -59,17 +99,17 @@ const DataTable = ({
 }) => {
   if (loading) {
     return (
-      <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
+      <StyledTableContainer>
         <Loading label="Loading…" height="auto" />
-      </Box>
+      </StyledTableContainer>
     );
   }
 
   if (!rows.length) {
     return (
-      <Box sx={{ border: '1px solid #E5E5E5', borderRadius: '12px', backgroundColor: '#FFFFFF' }}>
+      <StyledTableContainer>
         <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
-      </Box>
+      </StyledTableContainer>
     );
   }
 
@@ -77,59 +117,33 @@ const DataTable = ({
   const effectiveMinWidth = minWidth || calculatedMinWidth;
 
   return (
-    <TableContainer
-      sx={{
-        width: '100%',
-        maxWidth: '100%',
-        border: '1px solid #E5E5E5',
-        borderRadius: '12px',
-        backgroundColor: '#FFFFFF',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
-        WebkitOverflowScrolling: 'touch',
-      }}
-    >
+    <StyledTableContainer>
       <Table sx={{ minWidth: effectiveMinWidth, width: '100%', tableLayout: 'auto' }}>
         <TableHead>
           <TableRow>
             {columns.map((column) => (
-              <TableCell
+              <StyledHeadCell
                 key={column.key}
                 align={column.align || 'left'}
                 sx={{
                   width: column.width,
                   minWidth: column.minWidth || (column.key === 'employee' || column.key === 'name' ? 180 : undefined),
                   maxWidth: column.maxWidth,
-                  whiteSpace: 'nowrap',
-                  fontWeight: 700,
-                  color: 'text.secondary',
-                  fontSize: '0.75rem',
-                  letterSpacing: '0.05em',
-                  py: 1.5,
-                  px: 2,
                 }}
               >
                 {column.label}
-              </TableCell>
+              </StyledHeadCell>
             ))}
             {renderActions && (
-              <TableCell
+              <StyledHeadCell
                 align="right"
                 sx={{
                   width: 120,
                   minWidth: 100,
-                  whiteSpace: 'nowrap',
-                  fontWeight: 700,
-                  color: 'text.secondary',
-                  fontSize: '0.75rem',
-                  letterSpacing: '0.05em',
-                  py: 1.5,
-                  px: 2,
                 }}
               >
                 Actions
-              </TableCell>
+              </StyledHeadCell>
             )}
           </TableRow>
         </TableHead>
@@ -142,10 +156,15 @@ const DataTable = ({
                 key={rowKey}
                 hover
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                sx={{
+                  cursor: onRowClick ? 'pointer' : 'default',
+                  '&:last-of-type td': {
+                    borderBottom: 'none',
+                  },
+                }}
               >
                 {columns.map((column) => (
-                  <TableCell
+                  <StyledBodyCell
                     key={column.key}
                     align={column.align || 'left'}
                     sx={{
@@ -153,32 +172,28 @@ const DataTable = ({
                       minWidth: column.minWidth || (column.key === 'employee' || column.key === 'name' ? 180 : undefined),
                       maxWidth: column.maxWidth,
                       whiteSpace: column.whiteSpace || (column.key === 'employee' ? 'normal' : 'nowrap'),
-                      py: 1.5,
-                      px: 2,
                     }}
                   >
                     <CellValue row={row} column={column} renderCell={renderCell} />
-                  </TableCell>
+                  </StyledBodyCell>
                 ))}
                 {renderActions && (
-                  <TableCell
+                  <StyledBodyCell
                     align="right"
                     sx={{
                       whiteSpace: 'nowrap',
                       minWidth: 100,
-                      py: 1.5,
-                      px: 2,
                     }}
                   >
                     {renderActions(row)}
-                  </TableCell>
+                  </StyledBodyCell>
                 )}
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
-    </TableContainer>
+    </StyledTableContainer>
   );
 };
 
