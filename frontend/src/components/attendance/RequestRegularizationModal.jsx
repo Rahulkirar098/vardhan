@@ -1,17 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Box,
-  FormControl,
   Grid,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
-  TextField,
 } from '@mui/material';
 import EditCalendarRounded from '@mui/icons-material/EditCalendarRounded';
 import Modal from '../Modal';
+import { AppInput, AppSelect } from '../common';
 import attendanceService from '../../services/attendance.service';
 import { getTodayDateStr } from '../../utils/dateUtils';
 
@@ -112,7 +107,7 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
         {/* Date & Status Grid */}
         <Grid container spacing={2}>
           <Grid xs={12} sm={6}>
-            <TextField
+            <AppInput
               label="Date"
               type="date"
               fullWidth
@@ -125,28 +120,21 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
           </Grid>
 
           <Grid xs={12} sm={6}>
-            <FormControl fullWidth required>
-              <InputLabel id="requested-status-select-label">Attendance Status</InputLabel>
-              <Select
-                labelId="requested-status-select-label"
-                value={requestedStatus}
-                label="Attendance Status"
-                onChange={(e) => setRequestedStatus(e.target.value)}
-              >
-                {REQUESTED_STATUS_OPTIONS.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <AppSelect
+              label="Attendance Status"
+              name="requestedStatus"
+              value={requestedStatus}
+              options={REQUESTED_STATUS_OPTIONS}
+              onChange={(e) => setRequestedStatus(e.target.value)}
+              required
+            />
           </Grid>
         </Grid>
 
         {/* Check In & Check Out Times */}
         <Grid container spacing={2}>
           <Grid xs={12} sm={6}>
-            <TextField
+            <AppInput
               label="Check In"
               type="time"
               fullWidth
@@ -158,7 +146,7 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
           </Grid>
 
           <Grid xs={12} sm={6}>
-            <TextField
+            <AppInput
               label="Check Out"
               type="time"
               fullWidth
@@ -171,7 +159,7 @@ const RequestRegularizationModal = ({ open, onClose, onSuccess, initialDate }) =
         </Grid>
 
         {/* Reason */}
-        <TextField
+        <AppInput
           label="Reason"
           multiline
           rows={3}

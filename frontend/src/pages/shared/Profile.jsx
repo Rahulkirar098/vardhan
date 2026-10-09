@@ -13,7 +13,6 @@ import {
   Stack,
   Tab,
   Tabs,
-  TextField,
   Typography,
 } from '@mui/material';
 import {
@@ -28,6 +27,7 @@ import auth from '../../services/auth.service';
 import AppLayout from '../../wrapper/AppLayout';
 import MainContentLoader from '../../components/common/MainContentLoader';
 import PageHeader from '../../components/common/PageHeader';
+import { AppInput } from '../../components/common';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 
@@ -546,26 +546,11 @@ const Profile = () => {
                 >
                   Full name
                 </Typography>
-                <TextField
+                <AppInput
                   value={profile?.name || ''}
                   disabled
                   fullWidth
                   size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      backgroundColor: '#FFFFFF',
-                      '& fieldset': {
-                        borderColor: '#E2E8F0',
-                      },
-                    },
-                    '& .MuiInputBase-input': {
-                      fontSize: '0.925rem',
-                      fontWeight: 500,
-                      color: '#0F172A',
-                      py: 1.15,
-                    },
-                  }}
                 />
               </Box>
 
@@ -583,26 +568,11 @@ const Profile = () => {
                 >
                   Email
                 </Typography>
-                <TextField
+                <AppInput
                   value={profile?.email || ''}
                   disabled
                   fullWidth
                   size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      backgroundColor: '#FAFAFA',
-                      '& fieldset': {
-                        borderColor: '#E2E8F0',
-                      },
-                    },
-                    '& .MuiInputBase-input': {
-                      fontSize: '0.925rem',
-                      fontWeight: 500,
-                      color: '#64748B',
-                      py: 1.15,
-                    },
-                  }}
                 />
               </Box>
 
@@ -620,26 +590,11 @@ const Profile = () => {
                 >
                   Phone
                 </Typography>
-                <TextField
+                <AppInput
                   value={profile?.phone || '—'}
                   disabled
                   fullWidth
                   size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      backgroundColor: '#FFFFFF',
-                      '& fieldset': {
-                        borderColor: '#E2E8F0',
-                      },
-                    },
-                    '& .MuiInputBase-input': {
-                      fontSize: '0.925rem',
-                      fontWeight: 500,
-                      color: '#0F172A',
-                      py: 1.15,
-                    },
-                  }}
                 />
               </Box>
 
@@ -657,7 +612,7 @@ const Profile = () => {
                 >
                   Gender
                 </Typography>
-                <TextField
+                <AppInput
                   value={
                     profile?.gender
                       ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)
@@ -666,21 +621,6 @@ const Profile = () => {
                   disabled
                   fullWidth
                   size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      backgroundColor: '#FFFFFF',
-                      '& fieldset': {
-                        borderColor: '#E2E8F0',
-                      },
-                    },
-                    '& .MuiInputBase-input': {
-                      fontSize: '0.925rem',
-                      fontWeight: 500,
-                      color: '#0F172A',
-                      py: 1.15,
-                    },
-                  }}
                 />
               </Box>
             </Box>
@@ -808,7 +748,7 @@ const Profile = () => {
                     <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', display: 'block', mb: 0.75 }}>
                       Full Name
                     </Typography>
-                    <TextField
+                    <AppInput
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       fullWidth
@@ -823,7 +763,7 @@ const Profile = () => {
                     <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', display: 'block', mb: 0.75 }}>
                       Phone Number
                     </Typography>
-                    <TextField
+                    <AppInput
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
                       fullWidth
@@ -880,7 +820,7 @@ const Profile = () => {
                     <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', display: 'block', mb: 0.75 }}>
                       Current Password
                     </Typography>
-                    <TextField
+                    <AppInput
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
@@ -894,7 +834,7 @@ const Profile = () => {
                     <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', display: 'block', mb: 0.75 }}>
                       New Password
                     </Typography>
-                    <TextField
+                    <AppInput
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
@@ -909,7 +849,7 @@ const Profile = () => {
                     <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', display: 'block', mb: 0.75 }}>
                       Confirm New Password
                     </Typography>
-                    <TextField
+                    <AppInput
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}

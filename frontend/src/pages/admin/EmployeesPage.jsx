@@ -1295,19 +1295,19 @@ const EmployeesPage = () => {
                   : `Showing ${filteredInvitations.length} invitation${filteredInvitations.length !== 1 ? "s" : ""}`}
               </Typography>
 
-              <TextField
-                select
+              <AppSelect
                 size="small"
                 label="Invitation Filter"
                 value={invitationStatusFilter}
                 onChange={(e) => setInvitationStatusFilter(e.target.value)}
+                options={[
+                  { value: "pending", label: "Pending Only" },
+                  { value: "expired", label: "Expired Only" },
+                  { value: "cancelled", label: "Cancelled Only" },
+                  { value: "all", label: "All Invitations" },
+                ]}
                 sx={{ minWidth: 170 }}
-              >
-                <MenuItem value="pending">Pending Only</MenuItem>
-                <MenuItem value="expired">Expired Only</MenuItem>
-                <MenuItem value="cancelled">Cancelled Only</MenuItem>
-                <MenuItem value="all">All Invitations</MenuItem>
-              </TextField>
+              />
             </Stack>
 
             {filteredInvitations.length === 0 ? (

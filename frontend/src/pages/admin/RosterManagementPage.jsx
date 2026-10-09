@@ -34,7 +34,6 @@ import {
   TableHead,
   TableRow,
   Tabs,
-  TextField,
   Tooltip,
   Typography,
   useTheme,
@@ -72,6 +71,7 @@ import {
 import AppLayout from "../../wrapper/AppLayout";
 import MainContentLoader from "../../components/common/MainContentLoader";
 import PageHeader from "../../components/common/PageHeader";
+import { AppInput } from "../../components/common";
 import StatusBadge from "../../components/StatusBadge";
 import GlassCard from "../../components/GlassCard";
 import Modal from "../../components/Modal";
@@ -2479,7 +2479,7 @@ export default function RosterManagementPage() {
             </FormControl>
           )}
 
-          <TextField
+          <AppInput
             label="Roster Title"
             value={rosterForm.title}
             onChange={(e) =>
@@ -2492,7 +2492,7 @@ export default function RosterManagementPage() {
 
           <Grid container spacing={2}>
             <Grid xs={6}>
-              <TextField
+              <AppInput
                 label="Start Date"
                 type="date"
                 fullWidth
@@ -2505,7 +2505,7 @@ export default function RosterManagementPage() {
               />
             </Grid>
             <Grid xs={6}>
-              <TextField
+              <AppInput
                 label="End Date"
                 type="date"
                 fullWidth
@@ -2557,7 +2557,7 @@ export default function RosterManagementPage() {
                 <Paper key={col.id} variant="outlined" sx={{ p: 1.5 }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid xs={12} sm={4}>
-                      <TextField
+                      <AppInput
                         label="Shift Title"
                         size="small"
                         fullWidth
@@ -2570,7 +2570,7 @@ export default function RosterManagementPage() {
                       />
                     </Grid>
                     <Grid xs={5} sm={3}>
-                      <TextField
+                      <AppInput
                         label="Start Time"
                         type="time"
                         size="small"
@@ -2585,7 +2585,7 @@ export default function RosterManagementPage() {
                       />
                     </Grid>
                     <Grid xs={5} sm={3}>
-                      <TextField
+                      <AppInput
                         label="End Time"
                         type="time"
                         size="small"
@@ -2656,7 +2656,7 @@ export default function RosterManagementPage() {
                 <Paper key={da.id} variant="outlined" sx={{ p: 1.5 }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid xs={10}>
-                      <TextField
+                      <AppInput
                         label="Duty Area Name"
                         size="small"
                         fullWidth
@@ -2721,7 +2721,7 @@ export default function RosterManagementPage() {
         }
       >
         <Stack spacing={3} sx={{ pt: 1 }}>
-          <TextField
+          <AppInput
             label="Template Name"
             value={templateForm.name}
             onChange={(e) =>
@@ -2732,7 +2732,7 @@ export default function RosterManagementPage() {
             required
           />
 
-          <TextField
+          <AppInput
             label="Description (Optional)"
             value={templateForm.description}
             onChange={(e) =>
@@ -2780,7 +2780,7 @@ export default function RosterManagementPage() {
                 <Paper key={col.id} variant="outlined" sx={{ p: 1.5 }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid xs={12} sm={4}>
-                      <TextField
+                      <AppInput
                         label="Shift Title"
                         size="small"
                         fullWidth
@@ -2793,7 +2793,7 @@ export default function RosterManagementPage() {
                       />
                     </Grid>
                     <Grid xs={5} sm={3}>
-                      <TextField
+                      <AppInput
                         label="Start Time"
                         type="time"
                         size="small"
@@ -2808,7 +2808,7 @@ export default function RosterManagementPage() {
                       />
                     </Grid>
                     <Grid xs={5} sm={3}>
-                      <TextField
+                      <AppInput
                         label="End Time"
                         type="time"
                         size="small"
@@ -2879,7 +2879,7 @@ export default function RosterManagementPage() {
                 <Paper key={da.id} variant="outlined" sx={{ p: 1.5 }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid xs={10}>
-                      <TextField
+                      <AppInput
                         label="Duty Area Name"
                         size="small"
                         fullWidth
@@ -2981,7 +2981,7 @@ export default function RosterManagementPage() {
             !assignmentTarget.editingAssignment && (
               <Grid container spacing={2}>
                 <Grid xs={6}>
-                  <TextField
+                  <AppInput
                     label="From Date"
                     type="date"
                     fullWidth
@@ -2994,7 +2994,7 @@ export default function RosterManagementPage() {
                   />
                 </Grid>
                 <Grid xs={6}>
-                  <TextField
+                  <AppInput
                     label="To Date"
                     type="date"
                     fullWidth
@@ -3011,7 +3011,7 @@ export default function RosterManagementPage() {
 
           <Grid container spacing={2}>
             <Grid xs={6}>
-              <TextField
+              <AppInput
                 label="Start Time"
                 type="time"
                 fullWidth
@@ -3026,7 +3026,7 @@ export default function RosterManagementPage() {
               />
             </Grid>
             <Grid xs={6}>
-              <TextField
+              <AppInput
                 label="End Time"
                 type="time"
                 fullWidth
@@ -3039,7 +3039,7 @@ export default function RosterManagementPage() {
             </Grid>
           </Grid>
 
-          <TextField
+          <AppInput
             label="Notes (Optional)"
             value={assignmentForm.notes}
             onChange={(e) =>
@@ -3336,18 +3336,12 @@ export default function RosterManagementPage() {
             leave feedback comments.
           </Typography>
 
-          <TextField
+          <AppInput
             size="small"
             placeholder="Search employee..."
             value={reviewerSearch}
             onChange={(e) => setReviewerSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRounded fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
+            startIcon={SearchRounded}
           />
 
           <Paper variant="outlined" sx={{ maxHeight: 260, overflowY: "auto" }}>
@@ -3472,7 +3466,7 @@ export default function RosterManagementPage() {
           <Typography variant="subtitle2" fontWeight="bold">
             Add Review Feedback:
           </Typography>
-          <TextField
+          <AppInput
             placeholder="e.g. Please change Nurse A from NICU morning to PICU morning on 15 Sep."
             value={newCommentText}
             onChange={(e) => setNewCommentText(e.target.value)}
