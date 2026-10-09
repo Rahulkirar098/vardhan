@@ -57,6 +57,7 @@ import {
   GroupAddRounded,
   PersonAddOutlined,
   PersonOutlineRounded,
+  PhoneOutlined,
   PublishRounded,
   ScheduleRounded,
   SearchRounded,
@@ -1724,11 +1725,12 @@ export default function RosterManagementPage() {
                                 <Stack spacing={1}>
                                   {cellAssignments.map((ass) => {
                                     const emp = ass.employeeId;
-                                    const fullName = emp
-                                      ? `${emp.firstName || ""} ${emp.lastName || ""}`
-                                          .trim()
-                                          .toUpperCase()
-                                      : "UNKNOWN STAFF";
+                                    const rawFirstName = typeof emp === "object" ? emp?.firstName : "";
+                                    const rawLastName = typeof emp === "object" ? emp?.lastName : "";
+                                    const fullName = typeof emp === "object"
+                                      ? `${rawFirstName || ""} ${rawLastName || ""}`.trim() || emp?.name || "UNKNOWN STAFF"
+                                      : (typeof ass.fullName === "string" ? ass.fullName : "UNKNOWN STAFF");
+                                    const phone = typeof emp === "object" ? (emp?.phone || emp?.mobile || null) : null;
                                     const isCustomTime =
                                       ass.startTime !== col.startTime ||
                                       ass.endTime !== col.endTime;
@@ -1793,12 +1795,35 @@ export default function RosterManagementPage() {
                                                 />
                                               )}
                                             </Stack>
+                                            {phone && String(phone).trim() && (
+                                              <Stack
+                                                direction="row"
+                                                spacing={0.5}
+                                                alignItems="center"
+                                                sx={{ mt: 0.25 }}
+                                              >
+                                                <PhoneOutlined
+                                                  sx={{ fontSize: "0.75rem", color: "text.secondary" }}
+                                                />
+                                                <Typography
+                                                  variant="caption"
+                                                  sx={{
+                                                    color: "text.secondary",
+                                                    fontWeight: 600,
+                                                    fontSize: "0.75rem",
+                                                    lineHeight: 1.2,
+                                                  }}
+                                                >
+                                                  {String(phone).trim()}
+                                                </Typography>
+                                              </Stack>
+                                            )}
                                             {isCustomTime && (
                                               <Typography
                                                 variant="caption"
                                                 fontWeight="700"
                                                 color="primary"
-                                                sx={{ display: "block" }}
+                                                sx={{ display: "block", mt: 0.25 }}
                                               >
                                                 {formatTime12h(ass.startTime)}{" "}
                                                 TO {formatTime12h(ass.endTime)}
@@ -1811,6 +1836,7 @@ export default function RosterManagementPage() {
                                                 sx={{
                                                   display: "block",
                                                   fontStyle: "italic",
+                                                  mt: 0.25,
                                                 }}
                                               >
                                                 Note: {ass.notes}

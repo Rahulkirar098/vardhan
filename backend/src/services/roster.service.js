@@ -1060,9 +1060,19 @@ const addBulkRangeAssignments = async ({
     roster.updatedBy = userId;
     await roster.save();
 
+    const populatedCreatedAssignments = createdAssignments.length > 0
+        ? await RosterAssignment.find({ _id: { $in: createdAssignments.map((a) => a._id) } })
+            .populate({
+                path: "employeeId",
+                select: "employeeId firstName lastName email phone positionId employmentStatus",
+                populate: { path: "positionId", select: "name" },
+            })
+            .lean()
+        : [];
+
     return {
         createdCount: createdAssignments.length,
-        createdAssignments,
+        createdAssignments: populatedCreatedAssignments,
         conflicts,
         leaveWarnings,
         approvedLeaveConflicts,
