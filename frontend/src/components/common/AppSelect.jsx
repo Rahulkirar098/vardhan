@@ -1,9 +1,11 @@
+import { useState, useId } from 'react';
 import {
   FormControl,
   FormHelperText,
   InputLabel,
   MenuItem,
   Select,
+  Typography,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -11,9 +13,11 @@ const StyledFormControl = styled(FormControl)(({ theme }) => {
   const custom = theme.custom || {};
   const tokens = custom.tokens || {};
   const colors = tokens.colors || {};
+  const primaryColor = colors.primary || '#252525';
 
   return {
     '& .MuiOutlinedInput-root': {
+      height: '50px',
       borderRadius: theme.shape.borderRadius || 10,
       backgroundColor: theme.palette.background.paper || '#FFFFFF',
       fontSize: '0.875rem',
@@ -24,11 +28,11 @@ const StyledFormControl = styled(FormControl)(({ theme }) => {
       },
 
       '&:hover fieldset': {
-        borderColor: colors.strongBlue || '#0284C7',
+        borderColor: primaryColor,
       },
 
       '&.Mui-focused fieldset': {
-        borderColor: colors.strongBlue || '#0284C7',
+        borderColor: primaryColor,
         borderWidth: '1.5px',
       },
 
@@ -41,17 +45,37 @@ const StyledFormControl = styled(FormControl)(({ theme }) => {
       },
     },
 
+    '& .MuiSelect-select': {
+      height: '50px',
+      boxSizing: 'border-box',
+      display: 'flex',
+      alignItems: 'center',
+      paddingTop: 0,
+      paddingBottom: 0,
+      paddingLeft: '14px',
+      paddingRight: '32px !important',
+      fontSize: '0.875rem',
+    },
+
     '& .MuiInputLabel-root': {
       fontSize: '0.875rem',
       fontWeight: 500,
       color: theme.palette.text.secondary || '#6B7280',
 
       '&.Mui-focused': {
-        color: colors.strongBlue || '#0284C7',
+        color: primaryColor,
       },
 
       '&.Mui-error': {
         color: theme.palette.error?.main || '#DF2225',
+      },
+
+      '&:not(.MuiInputLabel-shrink)': {
+        transform: 'translate(14px, 15px) scale(1)',
+      },
+
+      '&.MuiInputLabel-shrink': {
+        transform: 'translate(14px, -9px) scale(0.75)',
       },
     },
 
@@ -84,6 +108,7 @@ const AppSelect = ({
   onChange,
   options = [],
   name,
+  id,
   placeholder,
   error = false,
   helperText,
@@ -94,20 +119,82 @@ const AppSelect = ({
   multiple = false,
   children,
   sx = {},
+  InputLabelProps,
   ...props
 }) => {
-  const labelId = name ? `${name}-select-label` : 'app-select-label';
+  const [focused, setFocused] = useState(false);
+  const reactId = useId();
+  const selectId = id || (name ? `app-select-${name}` : `app-select-${reactId}`);
+  const labelId = `${selectId}-label`;
 
   // Normalize options array
   const formattedOptions = options.map((opt) => {
     if (typeof opt === 'object' && opt !== null) {
-      return {
-        value: opt.value !== undefined ? opt.value : (opt.id !== undefined ? opt.id : opt.code),
-        label: opt.label !== undefined ? opt.label : (opt.name !== undefined ? opt.name : String(opt.value)),
-      };
+      const val = opt.value !== undefined ? opt.value : (opt.id !== undefined ? opt.id : (opt._id !== undefined ? opt._id : opt.code));
+      const lbl = opt.label !== undefined ? opt.label : (opt.name !== undefined ? opt.name : String(val ?? ''));
+      return { value: val, label: lbl };
     }
     return { value: opt, label: String(opt) };
   });
+
+  const hasEmptyOption = formattedOptions.some(
+    (opt) => opt.value === '' || opt.value === null || opt.value === undefined
+  );
+
+  const hasValue = multiple
+    ? Array.isArray(value) && value.length > 0
+    : value !== '' && value !== null && value !== undefined;
+
+  const shouldShrink =
+    Boolean(InputLabelProps?.shrink) ||
+    focused ||
+    hasValue ||
+    hasEmptyOption;
+
+  const renderSelectValue = (selected) => {
+    if (props.renderValue) {
+      return props.renderValue(selected);
+    }
+
+    const isEmpty = multiple
+      ? !Array.isArray(selected) || selected.length === 0
+      : selected === '' || selected === null || selected === undefined;
+
+    if (isEmpty) {
+      if (hasEmptyOption) {
+        const emptyOpt = formattedOptions.find(
+          (opt) => opt.value === '' || opt.value === null || opt.value === undefined
+        );
+        if (emptyOpt) return emptyOpt.label;
+      }
+      if ((focused || shouldShrink) && placeholder) {
+        return (
+          <Typography
+            component="span"
+            sx={{ color: 'text.secondary', fontSize: '0.875rem' }}
+          >
+            {placeholder}
+          </Typography>
+        );
+      }
+      return '';
+    }
+
+    if (multiple) {
+      if (Array.isArray(selected)) {
+        return selected
+          .map((val) => {
+            const opt = formattedOptions.find((o) => o.value === val);
+            return opt ? opt.label : val;
+          })
+          .join(', ');
+      }
+      return String(selected);
+    }
+
+    const selectedOpt = formattedOptions.find((opt) => opt.value === selected);
+    return selectedOpt ? selectedOpt.label : String(selected);
+  };
 
   return (
     <StyledFormControl
@@ -118,21 +205,52 @@ const AppSelect = ({
       required={required}
       sx={sx}
     >
-      {label && <InputLabel id={labelId}>{label}</InputLabel>}
+      {label && (
+        <InputLabel
+          id={labelId}
+          htmlFor={selectId}
+          shrink={shouldShrink}
+          {...InputLabelProps}
+        >
+          {label}
+        </InputLabel>
+      )}
       <Select
         labelId={labelId}
-        id={name || labelId}
+        id={selectId}
         value={value ?? (multiple ? [] : '')}
         onChange={onChange}
         label={label}
         name={name}
         multiple={multiple}
-        displayEmpty={Boolean(placeholder)}
+        displayEmpty={Boolean(placeholder || hasEmptyOption)}
+        notched={shouldShrink}
+        onFocus={(e) => {
+          setFocused(true);
+          if (props.onFocus) props.onFocus(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          if (props.onBlur) props.onBlur(e);
+        }}
+        onOpen={(e) => {
+          setFocused(true);
+          if (props.onOpen) props.onOpen(e);
+        }}
+        onClose={(e) => {
+          setFocused(false);
+          if (props.onClose) props.onClose(e);
+        }}
+        renderValue={renderSelectValue}
         MenuProps={menuPropsStyle}
         {...props}
       >
-        {placeholder && (
-          <MenuItem value="" disabled sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+        {placeholder && !hasEmptyOption && (
+          <MenuItem
+            value=""
+            disabled
+            sx={{ color: 'text.secondary', fontSize: '0.875rem' }}
+          >
             {placeholder}
           </MenuItem>
         )}

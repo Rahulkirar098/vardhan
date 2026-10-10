@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import {
   Alert,
   Box,
-  CircularProgress,
   Divider,
   Stack,
   Typography,
@@ -27,6 +26,8 @@ const AcceptInvitation = () => {
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   useEffect(() => {
     const fetchInvitation = async () => {
@@ -48,10 +49,44 @@ const AcceptInvitation = () => {
     }
   }, [token]);
 
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    setPassword(val);
+    if (confirmPassword) {
+      if (val !== confirmPassword) {
+        setConfirmPasswordError('Passwords do not match.');
+      } else {
+        setConfirmPasswordError('');
+      }
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    const val = e.target.value;
+    setConfirmPassword(val);
+    if (password && val !== password) {
+      setConfirmPasswordError('Passwords do not match.');
+    } else {
+      setConfirmPasswordError('');
+    }
+  };
+
   const handleAccept = async () => {
     setError('');
+    setConfirmPasswordError('');
+
     if (!password) {
       setError('Please set a password for your Nuvince login account.');
+      return;
+    }
+    if (!confirmPassword) {
+      setConfirmPasswordError('Passwords do not match.');
+      setError('Please confirm your password.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match.');
+      setError('Passwords do not match.');
       return;
     }
     if (password.length < 6) {
@@ -248,10 +283,22 @@ const AcceptInvitation = () => {
           type="password"
           placeholder="At least 6 characters"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={handlePasswordChange}
           fullWidth
           required
           autoFocus
+        />
+
+        <AppInput
+          label="Confirm Password *"
+          type="password"
+          placeholder="Re-enter your password"
+          value={confirmPassword}
+          onChange={handleConfirmPasswordChange}
+          error={Boolean(confirmPasswordError)}
+          helperText={confirmPasswordError}
+          fullWidth
+          required
         />
 
         <AppButton
@@ -259,7 +306,7 @@ const AcceptInvitation = () => {
           size="large"
           onClick={handleAccept}
           loading={submitting}
-          disabled={!password}
+          disabled={!password || !confirmPassword || Boolean(confirmPasswordError)}
           fullWidth
         >
           Complete Onboarding & Activate

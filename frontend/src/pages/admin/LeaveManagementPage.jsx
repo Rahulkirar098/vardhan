@@ -197,12 +197,13 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
           onChange={(e) => setLeaveType(e.target.value)}
           required
           fullWidth
+          placeholder="Select Leave Type"
           options={LEAVE_TYPES.map((t) => ({ value: t.key, label: t.label }))}
         />
 
         {/* Start Date & End Date (Always visible) */}
         <Grid container spacing={2}>
-          <Grid xs={12} sm={6}>
+          <Grid item xs={12} sm={6}>
             <AppInput
               label="Start Date"
               type="date"
@@ -219,7 +220,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
               }}
             />
           </Grid>
-          <Grid xs={12} sm={6}>
+          <Grid item xs={12} sm={6}>
             <AppInput
               label="End Date"
               type="date"
@@ -234,7 +235,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
 
         {/* Day Type Dropdown */}
         <Grid container spacing={2}>
-          <Grid xs={12} sm={dayType === "HALF_DAY" ? 6 : 12}>
+          <Grid item xs={12} sm={dayType === "HALF_DAY" ? 6 : 12}>
             <AppSelect
               label="Day Type *"
               value={dayType}
@@ -250,7 +251,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
 
           {/* Half Day Session Dropdown (only visible when Day Type is Half Day) */}
           {dayType === "HALF_DAY" && (
-            <Grid xs={12} sm={6}>
+            <Grid item xs={12} sm={6}>
               <AppSelect
                 label="Half Day Session *"
                 value={halfDaySession}
@@ -269,7 +270,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
         {/* Calculated Total Duration Banner */}
         <Box
           sx={{
-            p: 1.5,
+            p: 2,
             borderRadius: "10px",
             backgroundColor: totalDays > 0 ? "#F0FDF4" : "#FEF2F2",
             border: `1px solid ${totalDays > 0 ? "#BBF7D0" : "#FECACA"}`,
@@ -289,7 +290,7 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
               Calculated Duration
             </Typography>
             {dayType === "HALF_DAY" && totalDays > 0 && (
-              <Typography variant="caption" sx={{ color: "#166534" }}>
+              <Typography variant="caption" sx={{ color: "#166534", display: "block", mt: 0.25 }}>
                 {startDate === endDate
                   ? `Half Day: ${halfDaySession === "FIRST_HALF" ? "First Half (Morning)" : "Second Half (Afternoon)"}`
                   : `Includes half-day session on end date (${formatDate(endDate)})`}
@@ -313,9 +314,8 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
 
         {/* Reason for Leave */}
         <AppInput
-          label="Reason for Leave"
+          label="Reason for Leave *"
           multiline
-          minRows={3}
           fullWidth
           required
           placeholder="Enter reason for leave..."

@@ -200,6 +200,14 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
       backgroundColor: theme.palette.background.paper || '#FFFFFF',
       backgroundImage: 'none',
       padding: '8px',
+      maxHeight: 'calc(100vh - 48px)',
+      display: 'flex',
+      flexDirection: 'column',
+      margin: '16px',
+    },
+    '& .MuiDialogContent-root': {
+      overflowY: 'auto',
+      flex: 1,
     },
   };
 });

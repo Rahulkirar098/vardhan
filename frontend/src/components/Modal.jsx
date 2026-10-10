@@ -86,7 +86,17 @@ const Modal = forwardRef(
         {...rest}
         ref={ref}
       >
-        <Box component="form" onSubmit={handleSubmit} noValidate>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          noValidate
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: 'calc(100vh - 48px)',
+            overflow: 'hidden',
+          }}
+        >
           <DialogTitle sx={{ pr: 6.5 }}>
             <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1.5}>
               {SubmitIcon && (
@@ -128,7 +138,7 @@ const Modal = forwardRef(
             <CloseRounded />
           </IconButton>
 
-          <DialogContent sx={{ overflowX: 'hidden' }}>
+          <DialogContent sx={{ overflowX: 'hidden', overflowY: 'auto', flex: 1, minHeight: 0 }}>
             <Box sx={{ pt: 0.5 }}>
               {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>

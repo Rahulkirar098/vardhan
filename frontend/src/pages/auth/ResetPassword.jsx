@@ -3,14 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   Box,
-  CircularProgress,
   Divider,
-  IconButton,
-  InputAdornment,
   Stack,
   Typography,
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../wrapper/AuthLayout';
 import { useSnackbar } from '../../theme/SnackbarProvider';
@@ -22,23 +18,38 @@ const ResetPassword = () => {
   const [form, setForm] = useState({ password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const { showSnackbar } = useSnackbar();
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const nextForm = { ...form, [name]: value };
+    setForm(nextForm);
+
+    if (name === 'password' || name === 'confirmPassword') {
+      if (nextForm.confirmPassword && nextForm.password !== nextForm.confirmPassword) {
+        setConfirmPasswordError('Passwords do not match.');
+      } else {
+        setConfirmPasswordError('');
+      }
+    }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    setConfirmPasswordError('');
 
     if (!form.password || !form.confirmPassword) {
+      if (!form.confirmPassword && form.password) {
+        setConfirmPasswordError('Passwords do not match.');
+      }
       setError('Please enter and confirm your new password.');
       return;
     }
 
     if (form.password !== form.confirmPassword) {
+      setConfirmPasswordError('Passwords do not match.');
       setError('Passwords do not match.');
       return;
     }
@@ -92,6 +103,8 @@ const ResetPassword = () => {
               type="password"
               value={form.confirmPassword}
               onChange={handleChange}
+              error={Boolean(confirmPasswordError)}
+              helperText={confirmPasswordError}
               autoComplete="new-password"
               required
             />
