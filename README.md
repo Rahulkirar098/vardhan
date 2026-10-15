@@ -1,6 +1,6 @@
 # Nuvince
 
-A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management with dual-model attendance expectations (roster-based vs normal working days/shift timing), IANA hospital timezone support, workforce employee management, leave management, attendance & regularization with hospital timezone-aware background automatic absence scheduling, simplified duty roster planning, roster history auditing, and generic access management.
+A full-stack hospital management SaaS platform built with Node.js, Express, MongoDB, React, Vite, and Material UI. Designed for role-based hospital administration, multi-tenant isolation, hospital structure (floors and rooms), position management with dual-model attendance expectations (roster-based vs normal working days/shift timing), IANA hospital timezone support, workforce employee management with invitations lifecycle and Last Working Day (LWD) enforcement, leave management, attendance & regularization with date-wise grouping and hospital timezone-aware background automatic absence scheduling, simplified duty roster planning with staff contact visibility, roster history auditing, and generic access management.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white" alt="Node.js 18+" />
@@ -19,11 +19,11 @@ A full-stack hospital management SaaS platform built with Node.js, Express, Mong
 NUVINCE SaaS
 │
 ├── CORE PLATFORM
-│   ├── Authentication (JWT with token revocation)
+│   ├── Authentication (JWT with token revocation, password confirmation & reset)
 │   ├── Hospital / Tenant (Strict tenant isolation & IANA Hospital Timezone support)
 │   ├── Users (Authentication & Identity)
 │   ├── Roles (super_admin, admin, employee)
-│   ├── Permissions (Centralized capability registry)
+│   ├── Permissions (Centralized granular capability registry)
 │   ├── Module Access (core, hrms, hospital_structure)
 │   ├── Access Management (Workforce permissions & module configuration)
 │   ├── Hospital Structure
@@ -33,11 +33,11 @@ NUVINCE SaaS
 │
 └── MODULES
     └── HRMS
-        ├── Employees (Workforce staff record reciprocal to User)
-        ├── Invitations (Centralized invitation flow with token hashing)
-        ├── Leave Management (Apply, My Leave, Approval, Balance, Stats, Workforce Leave)
-        ├── Attendance & Regularization (Clock-In/Out, Regularization Requests, Dual-Model Expectations & Hospital Timezone-Aware Background Scheduler)
-        └── Roster Module (Simplified Direct Architecture, Shift Columns, Duty Areas, Draft/Current/History Lifecycle, Delete Draft, Immutability, Leave Warnings)
+        ├── Employees (Workforce staff record reciprocal to User, LWD boundary enforcement, cross-tenant email uniqueness checks)
+        ├── Invitations (Centralized invitation flow with SHA-256 token hashing, 48h expiration, resend & cancel actions)
+        ├── Leave Management (Apply, My Leave, Approval, Balance, Stats, Workforce Leave, Approved Leave Roster & Attendance Blocking)
+        ├── Attendance & Regularization (Clock-In/Out, Regularization Requests & Atomic Approvals, Date-Wise Grouping, Search & Filtering, Dual-Model Expectations & Hospital Timezone-Aware Background Scheduler)
+        └── Roster Module (Simplified Direct Architecture, Multiple Active Rosters with Roster Switcher, Shift Columns, Duty Areas, Draft/Current/History Lifecycle, Delete Draft, Immutability, Leave Warnings, Populated Staff Contact Info & Phone Display, Single-Page PDF Summary Export)
 ```
 
 ---
@@ -46,6 +46,7 @@ NUVINCE SaaS
 
 ### 1. Authentication & Security
 - Admin registration and multi-role login (`super_admin`, `admin`, `employee`).
+- Password confirmation validation on registration and password reset.
 - Stateless JWT-based authentication with `RevokedToken` support for explicit logout.
 - In-app profile updates and password changes.
 - Password reset via secure email tokens.
@@ -53,7 +54,7 @@ NUVINCE SaaS
 
 ### 2. Hospital Administration & Multi-Tenancy
 - Hospital creation and management (1:1 Admin to Hospital ownership).
-- Configurable **Hospital Timezone** using IANA identifiers (`Asia/Kolkata`, `Asia/Dubai`, `Asia/Singapore`, etc.) ensuring shift timings and automatic absence logic execute in local hospital time.
+- Configurable **Hospital Timezone** using IANA identifiers (`Asia/Kolkata`, `Asia/Dubai`, `Asia/Singapore`, etc.) ensuring shift timings, attendance cutoffs, and automatic absence logic execute in local hospital time.
 - Hospital Structure: Floors and generic Rooms with deletion/deactivation safety checks.
 
 ### 3. Positions Master & Attendance Expectations
@@ -67,10 +68,17 @@ NUVINCE SaaS
 ### 4. Workforce & Employee Management
 - Centralized Employee table with reciprocal references between User and Employee records.
 - Status filters (`All`, `Active`, `Inactive`).
-- Single generic invitation flow with SHA-256 token hashing and 48-hour expiration.
-- Every invited employee receives a linked Nuvince login account.
-- Employee deactivation disables login without deleting historical data; reactivation restores login.
-- Employee Edit manages profile details and is strictly decoupled from Access Management.
+- **Invitations Lifecycle:**
+  - Secure invitation generation with SHA-256 token hashing and 48-hour expiration.
+  - Public invitation onboarding flow creating linked User and Employee accounts.
+  - Resend pending invitation with regenerated token and refreshed expiration.
+  - Cancel pending invitation to immediately invalidate onboarding links.
+  - Cross-tenant email uniqueness validation to prevent duplicated identities across hospitals.
+- **Last Working Day (LWD) Operational Rules:**
+  - LWD marks the inclusive last active day of employment in hospital local time.
+  - Post-LWD operational access is strictly blocked across login, JWT authentication (HTTP 403 `EMPLOYMENT_ENDED`), roster assignments, leaves, and attendance marking.
+  - Historical records (attendance, leaves, rosters) are immutably preserved upon employment termination.
+- Self-protection and privilege rules preventing unauthorized status changes or self-deactivation.
 
 ### 5. Leave Management
 - Self-service leave applications (`leave.apply`, `leave.view_own`, `leave.cancel_own`).
@@ -80,13 +88,20 @@ NUVINCE SaaS
 
 ### 6. Attendance & Background Automatic Absence
 - Employee check-in/out tracking with working duration computation.
-- Dual expectation evaluation model (Roster assignments for `rosterEligible = true`, Position `workSchedule` for `rosterEligible = false`).
+- **Workforce Attendance Table:**
+  - Date-wise collapsible accordion grouping displaying daily attendance metrics.
+  - Search by employee name, employee code, or position title.
+  - Multi-filtering by date range and status (`PRESENT`, `HALF_DAY`, `ABSENT`).
+- **Dual Expectation Evaluation Model:**
+  - Roster assignments for `rosterEligible = true`.
+  - Position `workSchedule` for `rosterEligible = false`.
 - Attendance regularization submission, cancellation, and atomic approval transactions.
 - Automated background scheduler executing periodic absence marking in local **Hospital Timezone** once shift end times pass.
 
 ### 7. Roster Module & Template Management
 - **Roster Templates:** Full template actions (Edit, Copy/Duplicate, Activate/Deactivate, Delete). Deactivated templates remain visible with `Status: INACTIVE` and an `Activate` action.
 - **Roster Switcher:** Current Roster tab supports multiple coexisting active rosters with a Roster Switcher dropdown selector.
+- **Staff Contact Information Display:** Roster duty cells display staff name, initials avatar, email, and phone number (`phone`), providing immediate contact access for shift coordinators.
 - **Roster Lifecycle:** `DRAFT` → `PUBLISHED`. Authorized managers (`roster.manage`) can delete draft rosters via modal confirmation dialogs.
 - **Roster History & Immutability:** Published rosters past their end date move to **Roster History**. Historical rosters are read-only (API rejects updates, deletion, or re-publishing with HTTP `409 Conflict`).
 - **Single-Page PDF Summary Export:** Clean single-page PDF export for any roster date range, deduplicating employee names per shift cell and omitting empty text placeholders.
@@ -95,7 +110,7 @@ NUVINCE SaaS
 ### 8. Access Management
 - Unified Access Management screen for administrators to manage permissions and module access for workforce accounts (`employee` role).
 - Grouped capability permissions (Hospital Structure, Workforce, Hospital Info, Positions, Leave, Attendance, Roster).
-- Module access toggling (`hrms`).
+- Module access toggling (`hrms`, `hospital_structure`).
 - Privilege escalation protections preventing ordinary administrators from altering system-level admin accounts or self-modifying access.
 
 ---
@@ -103,17 +118,22 @@ NUVINCE SaaS
 ## 🛠️ Tech Stack
 
 ### Backend
-- **Runtime & Framework:** Node.js, Express.js
-- **Database & ODM:** MongoDB, Mongoose
+- **Runtime & Framework:** Node.js (18+), Express.js (v5)
+- **Database & ODM:** MongoDB Atlas, Mongoose (v9)
 - **Auth & Cryptography:** JSON Web Tokens (jsonwebtoken), bcryptjs, crypto
 - **Mailing:** Nodemailer
 - **Environment & Config:** dotenv, cors
 
 ### Frontend
-- **Framework & Build:** React 19, Vite
-- **UI Library & Icons:** Material UI (MUI), Material Icons, @fontsource/roboto
-- **Routing & Networking:** React Router DOM, Axios
-- **Design Language:** Minimalist monochrome palette with high-contrast surfaces and micro-interactions
+- **Framework & Build:** React 19, Vite (v8)
+- **UI Library & Components:** Material UI (v9), Emotion (`@emotion/react`, `@emotion/styled`), Material Icons, `@fontsource/roboto`
+- **Routing & Networking:** React Router DOM (v7), Axios
+- **Document Generation:** jsPDF (`jspdf`, `jspdf-autotable`)
+- **Centralized Design System:**
+  - Finalized Brand Color System: Charcoal (`#252525`), Strong Blue (`#0284C7`), Light Blue (`#E0F2FE`), Light Gray (`#F3F4F6` / `#F9FAFB`).
+  - Layout & wrapper layer (`AppLayout`, `AuthLayout`, `KPIGrid`).
+  - Custom UI primitives (`AppInput`, `AppSelect`, `AppButton`, `AppCheckbox`, `KPICard`, `KPICardWithAction`, `MainContentLoader`, `PageHeader`, `InitialsAvatar`).
+  - Global toast notification system (`SnackbarProvider`).
 
 ---
 
@@ -160,12 +180,24 @@ npm run dev
 cd backend
 npm test
 ```
-The test suite includes:
+
+The comprehensive backend test suite includes:
+- `schema.test.js`: MongoDB schema definition and constraint validation.
+- `auth-foundation.test.js`: JWT lifecycle, password hashing, and token revocation.
+- `structure.test.js`: Hospital floor and room hierarchy and multi-tenant isolation.
+- `permission.test.js`: Capability authorization middleware and role enforcement.
+- `core-platform.test.js`: Auth, user profile, password changes, and module catalog.
+- `unified-employees.test.js`: Complete workforce employee lifecycle, invitations (invite, resend, cancel), cross-tenant email uniqueness, and self-protection rules.
+- `employee-lwd.test.js`: Last Working Day (LWD) inclusive boundary rules, post-LWD auth/JWT blocking, roster assignment blocking, leave suppression, and automatic absence suppression.
 - `datetime-policy.test.js`: IANA timezone parsing, UTC conversion, shift timing cutoffs, and timezone policy checks.
+- `access-management.test.js`: Access management, tenant isolation, and privilege protection.
+- `leave-management.test.js`: Leave applications, balances, self-service cancellations, and workforce manager approvals.
+- `attendance.test.js`: Clock-in/out, workforce logs, and tenant isolation.
+- `attendance-regularization.test.js`: Atomic regularization approval transactions and rollback guarantees.
+- `attendance-leave-integration.test.js`: Integration verification between approved leaves and attendance absence suppression.
 - `attendance-normal-schedule.test.js`: Normal employment per-day work schedule timing persistence and automatic absence evaluation.
-- `roster.test.js`: Roster builder, draft updates, review comments, double-booking prevention, delete draft roster, and roster history immutability.
+- `roster.test.js` & `roster-r2.test.js`: Roster builder, draft updates, review comments, double-booking prevention, delete draft roster, roster history immutability, approved leave conflict blocking, and contact details display.
 - `full-qa-audit.test.js`: Comprehensive permission matrix verification across all modules.
-- `attendance-regularization.test.js`, `attendance.test.js`, `leave-management.test.js`, `access-management.test.js`, `unified-employees.test.js`, `hospital-structure.test.js`, `core-platform.test.js`.
 
 ---
 
