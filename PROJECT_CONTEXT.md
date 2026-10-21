@@ -51,7 +51,7 @@ NUVINCE SaaS
   - **Fields:** `hospitalId`, `email`, `firstName`, `lastName`, `phone`, `positionId`, `tokenHash`, `expiresAt`, `status` (`PENDING`, `ACCEPTED`, `CANCELLED`, `EXPIRED`), `createdBy`, `updatedBy`.
   - **Token Security:** SHA-256 hashed token with 48-hour expiration. Public endpoints `/api/v1/hrms/employee-invitations/:token` and `/:token/accept`.
   - **Invitation Actions:**
-    - `POST /api/v1/hrms/employees/invitations/:id/resend`: Regenerates token hash and extends validity by 48 hours for pending invitations.
+    - `POST /api/v1/hrms/employees/invitations/:id/resend`: Regenerates token hash, resets status to `PENDING`, and extends validity by 48 hours for pending and expired invitations.
     - `PATCH /api/v1/hrms/employees/invitations/:id/cancel`: Marks invitation as `CANCELLED`, invalidating acceptance attempts.
   - **Cross-Tenant Email Uniqueness:** Prevents inviting an email that is already registered or actively employed across any tenant (`TC-EMAIL-001` through `TC-EMAIL-010`).
 - **Last Working Day (LWD) Rules:**
