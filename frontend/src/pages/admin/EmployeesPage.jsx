@@ -1059,9 +1059,18 @@ const EmployeesPage = () => {
     }
   };
 
+  const getResendTooltip = (effectiveStatus) => {
+    if (effectiveStatus === "pending") return "Resend invitation";
+    if (effectiveStatus === "expired") return "Resend expired invitation";
+    if (effectiveStatus === "accepted") return "Accepted invitations cannot be resent";
+    if (effectiveStatus === "cancelled") return "Cancelled invitations cannot be resent";
+    return "Only pending or expired invitations can be resent";
+  };
+
   const renderInvitationActions = (inv) => {
     const effectiveStatus = getEffectiveStatus(inv);
-    const isPending = effectiveStatus === "pending";
+    const canResend = effectiveStatus === "pending" || effectiveStatus === "expired";
+    const canCancel = effectiveStatus === "pending";
     if (!hasCreate) return null;
 
     const isBusy =
@@ -1070,18 +1079,12 @@ const EmployeesPage = () => {
 
     return (
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
-        <Tooltip
-          title={
-            isPending
-              ? "Resend Invitation"
-              : "Only pending invitations can be resent"
-          }
-        >
+        <Tooltip title={getResendTooltip(effectiveStatus)}>
           <span>
             <IconButton
               size="small"
               color="primary"
-              disabled={!isPending || isBusy || resending || cancelling}
+              disabled={!canResend || isBusy || resending || cancelling}
               onClick={(e) => {
                 e.stopPropagation();
                 setResendTarget(inv);
@@ -1093,7 +1096,7 @@ const EmployeesPage = () => {
         </Tooltip>
         <Tooltip
           title={
-            isPending
+            canCancel
               ? "Cancel Invitation"
               : "Only pending invitations can be cancelled"
           }
@@ -1102,7 +1105,7 @@ const EmployeesPage = () => {
             <IconButton
               size="small"
               color="error"
-              disabled={!isPending || isBusy || resending || cancelling}
+              disabled={!canCancel || isBusy || resending || cancelling}
               onClick={(e) => {
                 e.stopPropagation();
                 setCancelTarget(inv);

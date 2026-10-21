@@ -644,6 +644,42 @@ const runTests = async () => {
         assert.notStrictEqual(invAfterResend.tokenHash, invC20.tokenHash, "New token hash generated");
         console.log("  ✓ 26d. Admin can resend pending invitation and token hash is updated");
 
+        // 26d-2. Admin can resend expired invitation
+        const expiredInv = await Invitation.create({
+            hospitalId: hospitalA._id,
+            employeeId: `EMP_EXP_${testTimestamp}`,
+            firstName: "Expired",
+            lastName: "User",
+            email: `expired_user_${testTimestamp}@hospital.com`,
+            positionId: posNurseA._id,
+            role: "employee",
+            tokenHash: "old_expired_hash",
+            expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            status: "expired",
+            invitedBy: adminA._id,
+            createdBy: adminA._id,
+        });
+
+        const resendExpired = await request(`/api/v1/hrms/employees/invitations/${expiredInv._id}/resend`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+        });
+        assert.strictEqual(resendExpired.status, 200, "Resend expired invitation succeeds (200)");
+        const invAfterExpiredResend = await Invitation.findById(expiredInv._id).lean();
+        assert.strictEqual(invAfterExpiredResend.status, "pending", "Status renewed to pending");
+        assert.notStrictEqual(invAfterExpiredResend.tokenHash, "old_expired_hash");
+        assert(invAfterExpiredResend.expiresAt.getTime() > Date.now() + 47 * 60 * 60 * 1000);
+        console.log("  ✓ 26d-2. Admin can resend expired invitation and status is restored to pending");
+
+        // 26d-3. Resending accepted invitation is rejected (400)
+        const resendAccepted = await request(`/api/v1/hrms/employees/invitations/${c24Inv._id}/resend`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${adminAToken}` },
+        });
+        assert.strictEqual(resendAccepted.status, 400, "Accepted invitation cannot be resent (400)");
+        assert.strictEqual(resendAccepted.body.message, "Accepted invitations cannot be resent.");
+        console.log("  ✓ 26d-3. Resending accepted invitation is rejected (400)");
+
         // 26e. Cross-hospital resend invitation rejected (404)
         const c26eCrossResend = await request(`/api/v1/hrms/employees/invitations/${invC20._id}/resend`, {
             method: "POST",
@@ -1476,7 +1512,7 @@ const runTests = async () => {
         console.log("  ✓ TC-EMAIL-012: Failed duplicate invitation does NOT send email or create DB record");
 
         console.log("\n=======================================================");
-        console.log("=== ALL 79 LIFECYCLE, AUTH, STATUS, EDIT & MULTI-TENANT UNIQUENESS TESTS PASSED 100% ===");
+        console.log("=== ALL 81 LIFECYCLE, AUTH, STATUS, EDIT & MULTI-TENANT UNIQUENESS TESTS PASSED 100% ===");
         console.log("=======================================================\n");
     } finally {
         if (server) {

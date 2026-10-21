@@ -481,6 +481,13 @@ const resendInvitation = async (req, res) => {
                 return res.status(404).json({ success: false, message: "Invitation not found" });
             }
             if (
+                serviceError.code === "ACTIVE_EMPLOYMENT_EXISTS" ||
+                serviceError.code === "ACTIVE_INVITATION_EXISTS" ||
+                serviceError.code === "CONCURRENT_MODIFICATION"
+            ) {
+                return res.status(409).json({ success: false, message: serviceError.message });
+            }
+            if (
                 msg.includes("SMTP configuration is missing") ||
                 msg.includes("SMTP configuration is invalid") ||
                 msg.includes("placeholder values") ||

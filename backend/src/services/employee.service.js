@@ -5,7 +5,7 @@ const Hospital = require("../models/hospital.model");
 const Position = require("../models/position.model");
 const User = require("../models/user.model");
 const { sendEmail } = require("../utils/mail");
-const { sendInvitationEmail } = require("./email.service");
+const emailService = require("./email.service");
 const { hashPassword } = require("../utils/password");
 const { getFrontendUrl } = require("../utils/url.utils");
 const { hashTokenValue, generateInvitationToken, getStandardExpiry } = require("./invitation.service");
@@ -18,7 +18,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 const validateNoActiveEmploymentOrInvitation = async (email, options = {}) => {
     const normalizedEmail = String(email).trim().toLowerCase();
-    const { excludeEmployeeId } = options;
+    const { excludeEmployeeId, excludeInvitationId } = options;
 
     // 1. Check active employee across ALL hospitals
     const employeeQuery = {
@@ -41,11 +41,16 @@ const validateNoActiveEmploymentOrInvitation = async (email, options = {}) => {
     }
 
     // 2. Check pending non-expired invitation across ALL hospitals
-    const existingInvitation = await Invitation.findOne({
+    const invitationQuery = {
         email: normalizedEmail,
         status: "pending",
         expiresAt: { $gt: new Date() },
-    }).lean();
+    };
+    if (excludeInvitationId) {
+        invitationQuery._id = { $ne: excludeInvitationId };
+    }
+
+    const existingInvitation = await Invitation.findOne(invitationQuery).lean();
 
     if (existingInvitation) {
         const err = new Error("An active invitation already exists for this email address.");
@@ -362,7 +367,7 @@ const inviteEmployee = async ({
     const invitationUrl = `${frontendUrl}/invite/${rawToken}`;
     const fullName = `${invitation.firstName} ${invitation.lastName}`;
 
-    await sendInvitationEmail({
+    await emailService.sendInvitationEmail({
         to: normalizedEmail,
         recipientName: fullName,
         hospitalName: hospital.name,
@@ -828,28 +833,96 @@ const resendInvitation = async ({ invitationId, hospitalId }) => {
         throw err;
     }
 
-    if (invitation.status !== "pending") {
-        throw new Error("Only pending invitations can be resent.");
+    if (invitation.status === "accepted") {
+        const err = new Error("Accepted invitations cannot be resent.");
+        err.code = "INVITATION_ALREADY_ACCEPTED";
+        throw err;
     }
 
+    if (invitation.status === "cancelled") {
+        const err = new Error("Cancelled invitations cannot be resent.");
+        err.code = "INVITATION_CANCELLED";
+        throw err;
+    }
+
+    if (invitation.status !== "pending" && invitation.status !== "expired") {
+        const err = new Error("Only pending or expired invitations can be resent.");
+        err.code = "INVALID_INVITATION_STATUS";
+        throw err;
+    }
+
+    // Safeguard: Ensure email is not actively employed or has another active invitation elsewhere
+    await validateNoActiveEmploymentOrInvitation(invitation.email, {
+        excludeInvitationId: invitation._id,
+    });
+
+    const previousTokenHash = invitation.tokenHash;
+    const previousExpiresAt = invitation.expiresAt;
+    const previousStatus = invitation.status;
+
     const rawToken = generateInvitationToken();
-    invitation.tokenHash = hashTokenValue(rawToken);
-    invitation.expiresAt = getStandardExpiry();
-    await invitation.save();
+    const newTokenHash = hashTokenValue(rawToken);
+    const newExpiresAt = getStandardExpiry();
+
+    // Atomic conditional update to guard against concurrent resend attempts
+    const updatedInvitation = await Invitation.findOneAndUpdate(
+        {
+            _id: invitationId,
+            hospitalId,
+            tokenHash: previousTokenHash,
+        },
+        {
+            $set: {
+                tokenHash: newTokenHash,
+                expiresAt: newExpiresAt,
+                status: "pending",
+            },
+        },
+        { returnDocument: "after" }
+    ).populate("hospitalId", "name");
+
+    if (!updatedInvitation) {
+        const err = new Error("Invitation was updated by another request. Please refresh and try again.");
+        err.code = "CONCURRENT_MODIFICATION";
+        throw err;
+    }
 
     const frontendUrl = getFrontendUrl();
     const invitationUrl = `${frontendUrl}/invite/${rawToken}`;
-    const fullName = `${invitation.firstName} ${invitation.lastName || ""}`.trim();
+    const fullName = `${updatedInvitation.firstName} ${updatedInvitation.lastName || ""}`.trim();
+    const hospitalName = updatedInvitation.hospitalId?.name || "Hospital";
 
-    await sendInvitationEmail({
-        to: invitation.email,
-        recipientName: fullName,
-        hospitalName: invitation.hospitalId.name,
-        invitationUrl,
-        expiresAt: invitation.expiresAt,
-    });
+    try {
+        await emailService.sendInvitationEmail({
+            to: updatedInvitation.email,
+            recipientName: fullName,
+            hospitalName,
+            invitationUrl,
+            expiresAt: newExpiresAt,
+        });
+    } catch (emailError) {
+        // Rollback state in DB so the invitation is not left with an undelivered/unusable token
+        await Invitation.updateOne(
+            {
+                _id: invitationId,
+                hospitalId,
+                tokenHash: newTokenHash,
+            },
+            {
+                $set: {
+                    tokenHash: previousTokenHash,
+                    expiresAt: previousExpiresAt,
+                    status: previousStatus,
+                },
+            }
+        ).catch((rollbackErr) => {
+            console.error("Failed to rollback invitation after email delivery error:", rollbackErr);
+        });
 
-    return invitation;
+        throw emailError;
+    }
+
+    return updatedInvitation;
 };
 
 // ─── Employee Stats ───────────────────────────────────────────────────────────
