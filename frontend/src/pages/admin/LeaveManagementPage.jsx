@@ -996,7 +996,8 @@ const LeaveManagementPage = () => {
     currentlyOnLeave: 0,
     total: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Filters & Pagination
@@ -1045,7 +1046,7 @@ const LeaveManagementPage = () => {
 
   // Load leaves
   const loadLeaves = useCallback(async () => {
-    setLoading(true);
+    setTableLoading(true);
     setError("");
     try {
       const isMyLeaveTab =
@@ -1067,29 +1068,41 @@ const LeaveManagementPage = () => {
       if (isMyLeaveTab) {
         if (!canViewOwn) {
           setLeaves([]);
-          setLoading(false);
+          setTableLoading(false);
+          setInitialLoading(false);
           return;
         }
         res = await leaveService.getMyLeaves(params);
       } else {
         if (!canViewManagement) {
           setLeaves([]);
-          setLoading(false);
+          setTableLoading(false);
+          setInitialLoading(false);
           return;
         }
         res = await leaveService.getHospitalLeaves(params);
       }
 
-      setLeaves(res?.data?.leaves || res?.data?.data || []);
-      setTotalLeaves(
-        res?.data?.pagination?.total ?? res?.data?.total ?? (res?.data?.leaves?.length || 0)
-      );
+      const fetchedLeaves = res?.data?.leaves || res?.data?.data || [];
+      const total =
+        res?.data?.pagination?.total ?? res?.data?.total ?? fetchedLeaves.length;
+      const totalPages =
+        res?.data?.pagination?.totalPages ?? Math.ceil(total / limit) ?? 1;
+
+      if (page > totalPages && totalPages > 0) {
+        setPage(totalPages);
+        return;
+      }
+
+      setLeaves(fetchedLeaves);
+      setTotalLeaves(total);
     } catch (err) {
       setError(
         err?.response?.data?.message || "Failed to load leave requests.",
       );
     } finally {
-      setLoading(false);
+      setTableLoading(false);
+      setInitialLoading(false);
     }
   }, [page, limit, activeTab, typeFilter, search, canViewManagement, canViewOwn]);
 
@@ -1321,7 +1334,7 @@ const LeaveManagementPage = () => {
     );
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <AppLayout>
         <MainContentLoader />
@@ -1521,7 +1534,7 @@ const LeaveManagementPage = () => {
                 getRowKey={(row) => row._id}
                 renderCell={renderLeaveCell}
                 renderActions={renderLeaveActions}
-                loading={loading}
+                loading={tableLoading}
                 pagination={{
                   server: true,
                   page,

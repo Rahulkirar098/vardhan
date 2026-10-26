@@ -635,7 +635,8 @@ const EmployeesPage = () => {
     inactive: 0,
     pendingInvitations: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState("");
   const [tabIndex, setTabIndex] = useState(0);
 
@@ -705,7 +706,7 @@ const EmployeesPage = () => {
 
   const loadEmployees = useCallback(async () => {
     try {
-      setLoading(true);
+      setTableLoading(true);
       setError("");
       const [empRes, invRes, statRes, posRes] = await Promise.all([
         employeeService.listEmployees({
@@ -726,10 +727,19 @@ const EmployeesPage = () => {
           .catch(() => ({ data: [] })),
       ]);
       const empData = empRes?.data?.data;
-      setEmployees(empData?.employees || empData?.data || []);
-      setTotalEmployees(
-        empData?.pagination?.total ?? empData?.total ?? (empData?.employees?.length || 0)
-      );
+      const fetchedEmployees = empData?.employees || empData?.data || [];
+      const total =
+        empData?.pagination?.total ?? empData?.total ?? fetchedEmployees.length;
+      const totalPages =
+        empData?.pagination?.totalPages ?? Math.ceil(total / limit) ?? 1;
+
+      if (page > totalPages && totalPages > 0) {
+        setPage(totalPages);
+        return;
+      }
+
+      setEmployees(fetchedEmployees);
+      setTotalEmployees(total);
       const allInvs = invRes?.data?.data || [];
       setRawInvitations(allInvs);
       setStats(
@@ -744,7 +754,8 @@ const EmployeesPage = () => {
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to load employees.");
     } finally {
-      setLoading(false);
+      setTableLoading(false);
+      setInitialLoading(false);
     }
   }, [page, limit, search, statusFilter, roleFilter]);
 
@@ -1138,7 +1149,7 @@ const EmployeesPage = () => {
     );
   }
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <AppLayout>
         <MainContentLoader />
@@ -1295,6 +1306,7 @@ const EmployeesPage = () => {
                 getRowKey={(emp) => emp._id}
                 renderCell={renderEmployeeCell}
                 renderActions={renderEmployeeActions}
+                loading={tableLoading}
                 pagination={{
                   server: true,
                   page,
@@ -1367,6 +1379,7 @@ const EmployeesPage = () => {
                 getRowKey={(inv) => inv._id}
                 renderCell={renderInvitationCell}
                 renderActions={renderInvitationActions}
+                loading={tableLoading}
               />
             )}
           </>
