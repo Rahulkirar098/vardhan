@@ -644,6 +644,11 @@ const EmployeesPage = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+
   // Modals & Actions
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
@@ -704,6 +709,8 @@ const EmployeesPage = () => {
       setError("");
       const [empRes, invRes, statRes, posRes] = await Promise.all([
         employeeService.listEmployees({
+          page,
+          limit,
           search: search || undefined,
           status: statusFilter || undefined,
           role: roleFilter || undefined,
@@ -718,7 +725,11 @@ const EmployeesPage = () => {
           .getPositions({ status: "active" })
           .catch(() => ({ data: [] })),
       ]);
-      setEmployees(empRes?.data?.data?.employees || []);
+      const empData = empRes?.data?.data;
+      setEmployees(empData?.employees || empData?.data || []);
+      setTotalEmployees(
+        empData?.pagination?.total ?? empData?.total ?? (empData?.employees?.length || 0)
+      );
       const allInvs = invRes?.data?.data || [];
       setRawInvitations(allInvs);
       setStats(
@@ -735,12 +746,12 @@ const EmployeesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, roleFilter]);
+  }, [page, limit, search, statusFilter, roleFilter]);
 
   useEffect(() => {
     const t = setTimeout(loadEmployees, search ? 350 : 0);
     return () => clearTimeout(t);
-  }, [loadEmployees]);
+  }, [loadEmployees, search]);
 
   const handleDeactivateConfirm = async () => {
     if (!deactivateTarget) return;
@@ -1198,7 +1209,7 @@ const EmployeesPage = () => {
             }}
           >
             <Tab
-              label={`Employees (${employees.length})`}
+              label={`Employees (${totalEmployees || stats.total || employees.length})`}
               icon={<GroupsRounded fontSize="small" />}
               iconPosition="start"
             />
@@ -1224,13 +1235,22 @@ const EmployeesPage = () => {
               <AppInput
                 placeholder="Search employees..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 size="small"
                 sx={{ flex: 1, minWidth: { xs: "100%", sm: 260 } }}
                 startIcon={<SearchRounded fontSize="small" />}
                 endIcon={
                   search ? (
-                    <IconButton size="small" onClick={() => setSearch("")}>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSearch("");
+                        setPage(1);
+                      }}
+                    >
                       <CloseRounded fontSize="small" />
                     </IconButton>
                   ) : null
@@ -1241,7 +1261,10 @@ const EmployeesPage = () => {
                 <AppSelect
                   size="small"
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
                   sx={{ minWidth: 150 }}
                   options={[
                     { value: "", label: "All Status" },
@@ -1272,6 +1295,18 @@ const EmployeesPage = () => {
                 getRowKey={(emp) => emp._id}
                 renderCell={renderEmployeeCell}
                 renderActions={renderEmployeeActions}
+                pagination={{
+                  server: true,
+                  page,
+                  limit,
+                  pageSize: limit,
+                  total: totalEmployees,
+                  onPageChange: (newPage) => setPage(newPage),
+                  onRowsPerPageChange: (newLimit) => {
+                    setLimit(newLimit);
+                    setPage(1);
+                  },
+                }}
               />
             )}
           </>

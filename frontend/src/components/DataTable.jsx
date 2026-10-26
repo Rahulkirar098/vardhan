@@ -145,7 +145,7 @@ const DataTable = ({
   startIndex,
   renderSerialNumber,
   pagination = true,
-  rowsPerPageOptions = [10, 25, 50, 100],
+  rowsPerPageOptions = [10, 20, 25, 50, 100],
   defaultRowsPerPage = 10,
 }) => {
   const isPaginationEnabled = Boolean(pagination);
@@ -178,6 +178,14 @@ const DataTable = ({
   const totalCount = isServerPagination
     ? (paginationConfig.total ?? rows.length)
     : rows.length;
+
+  const effectiveRowsPerPageOptions = useMemo(() => {
+    const baseOptions = paginationConfig.rowsPerPageOptions || rowsPerPageOptions;
+    if (baseOptions.includes(activeRowsPerPage)) {
+      return baseOptions;
+    }
+    return [...baseOptions, activeRowsPerPage].sort((a, b) => a - b);
+  }, [paginationConfig.rowsPerPageOptions, rowsPerPageOptions, activeRowsPerPage]);
 
   const displayedRows = useMemo(() => {
     if (!isPaginationEnabled || isServerPagination) {
@@ -362,7 +370,7 @@ const DataTable = ({
           onPageChange={handlePageChange}
           rowsPerPage={activeRowsPerPage}
           onRowsPerPageChange={handleRowsPerPageChange}
-          rowsPerPageOptions={rowsPerPageOptions}
+          rowsPerPageOptions={effectiveRowsPerPageOptions}
         />
       )}
     </TableWrapper>

@@ -999,9 +999,12 @@ const LeaveManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Filters
+  // Filters & Pagination
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalLeaves, setTotalLeaves] = useState(0);
 
   // Modals
   const [isApplyOpen, setIsApplyOpen] = useState(false);
@@ -1053,6 +1056,8 @@ const LeaveManagementPage = () => {
       if (activeTab === "rejected") statusParam = "rejected";
 
       const params = {
+        page,
+        limit,
         status: statusParam,
         leaveType: typeFilter || undefined,
         search: search ? search.trim() : undefined,
@@ -1075,7 +1080,10 @@ const LeaveManagementPage = () => {
         res = await leaveService.getHospitalLeaves(params);
       }
 
-      setLeaves(res?.data?.leaves || []);
+      setLeaves(res?.data?.leaves || res?.data?.data || []);
+      setTotalLeaves(
+        res?.data?.pagination?.total ?? res?.data?.total ?? (res?.data?.leaves?.length || 0)
+      );
     } catch (err) {
       setError(
         err?.response?.data?.message || "Failed to load leave requests.",
@@ -1083,7 +1091,7 @@ const LeaveManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, typeFilter, search, canViewManagement, canViewOwn]);
+  }, [page, limit, activeTab, typeFilter, search, canViewManagement, canViewOwn]);
 
   useEffect(() => {
     loadStats();
@@ -1384,7 +1392,10 @@ const LeaveManagementPage = () => {
         >
           <Tabs
             value={activeTab}
-            onChange={(_, val) => setActiveTab(val)}
+            onChange={(_, val) => {
+              setActiveTab(val);
+              setPage(1);
+            }}
             variant="scrollable"
             scrollButtons="auto"
             sx={{
@@ -1426,13 +1437,19 @@ const LeaveManagementPage = () => {
                     size="small"
                     placeholder="Search by employee name or ID..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
                     startIcon={<SearchRounded fontSize="small" />}
                     endIcon={
                       search ? (
                         <IconButton
                           size="small"
-                          onClick={() => setSearch("")}
+                          onClick={() => {
+                            setSearch("");
+                            setPage(1);
+                          }}
                         >
                           <CloseRounded fontSize="small" />
                         </IconButton>
@@ -1445,7 +1462,10 @@ const LeaveManagementPage = () => {
                   <AppSelect
                     size="small"
                     value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
+                    onChange={(e) => {
+                      setTypeFilter(e.target.value);
+                      setPage(1);
+                    }}
                     fullWidth
                     options={[
                       { value: "", label: "All Leave Types" },
@@ -1502,6 +1522,18 @@ const LeaveManagementPage = () => {
                 renderCell={renderLeaveCell}
                 renderActions={renderLeaveActions}
                 loading={loading}
+                pagination={{
+                  server: true,
+                  page,
+                  limit,
+                  pageSize: limit,
+                  total: totalLeaves,
+                  onPageChange: (newPage) => setPage(newPage),
+                  onRowsPerPageChange: (newLimit) => {
+                    setLimit(newLimit);
+                    setPage(1);
+                  },
+                }}
               />
             )}
           </>

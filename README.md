@@ -113,6 +113,14 @@ NUVINCE SaaS
 - Module access toggling (`hrms`, `hospital_structure`).
 - Privilege escalation protections preventing ordinary administrators from altering system-level admin accounts or self-modifying access.
 
+### 9. Centralized Pagination & Reusable DataTable
+- **Backend Standardized Pagination (`pagination.util.js`):** Unified pagination parameter parsing, limit clamping, and metadata generation (`total`, `page`, `limit`, `totalPages`, `hasNextPage`, `hasPrevPage`) across Employee, Leave, Attendance, and Super Admin listing endpoints.
+- **Dual-Mode Frontend DataTable (`DataTable.jsx`):**
+  - Integrated **Serial Number (`S.No.`)** column with tabular numeric styling and automatic page-offset calculation across pages.
+  - Built-in automatic client-side pagination (`pagination = true`, rows-per-page options `[10, 25, 50, 100]`) with automatic reset on search or filter updates.
+  - Controlled server-side pagination mode for high-volume datasets.
+  - Pinned bottom `<StyledPagination>` bar anchored within an outer `<TableWrapper>` card.
+
 ---
 
 ## 🛠️ Tech Stack
@@ -182,6 +190,7 @@ npm test
 ```
 
 The comprehensive backend test suite includes:
+- `pagination.test.js`: Unit tests for backend query parsing, parameter sanitization, limit clamping, and pagination metadata generation.
 - `schema.test.js`: MongoDB schema definition and constraint validation.
 - `auth-foundation.test.js`: JWT lifecycle, password hashing, and token revocation.
 - `structure.test.js`: Hospital floor and room hierarchy and multi-tenant isolation.

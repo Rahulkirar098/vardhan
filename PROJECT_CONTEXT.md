@@ -1,7 +1,7 @@
 # Nuvince — Project Context
 
 Status: Standardized Target Architecture  
-Updated: 2026-10-14  
+Updated: 2026-10-26  
 Purpose: Single source of truth for developers and coding agents.
 
 ---
@@ -189,7 +189,10 @@ NUVINCE SaaS
   - `/api/v1/roster-templates/*` (List, Get, Create, Update, Duplicate, Activate/Deactivate, Delete)
 - **Platform Modules & Super Admin:**
   - `/api/v1/modules/*` (Module Catalog & Access)
-  - `/api/v1/super-admin/*` (Super admin platform administration)
+  - `/api/v1/super-admin/*` (Super admin platform administration, hospitals with optional pagination)
+- **Centralized Pagination & Filtering Contract (`utils/pagination.util.js`):**
+  - Standardized request parameter parsing and clamping: `page` (default `1`), `limit` (default `10`–`20`, max `100`), and `skip`.
+  - Consistent response envelope metadata: `pagination: { total, page, limit, totalPages, hasNextPage, hasPrevPage }` across Employee, Leave, Attendance, and Super Admin listing endpoints with full backward compatibility.
 
 ---
 
@@ -212,7 +215,10 @@ NUVINCE SaaS
   - `MainContentLoader.jsx`: Standard loading indicator for asynchronous data transitions.
   - `AppSnackbar.jsx`: Branded toast notification UI.
 - **Shared Components (`components/`):**
-  - `DataTable.jsx`: Responsive table with card-view collapse on small viewports.
+  - `DataTable.jsx`: Responsive data table featuring:
+    - Built-in **Serial Number (`S.No.`)** column with tabular numeric styling and automatic page-offset calculation across pages.
+    - **Dual-Mode Pagination:** Automatic client-side slicing by default (`pagination = true`, rows-per-page `[10, 25, 50, 100]`, auto-reset on filtering) and controlled server-side pagination via `pagination={{ server: true, page, pageSize, total, onPageChange, onRowsPerPageChange }}`.
+    - Pinned bottom `<StyledPagination>` bar anchored within an outer `<TableWrapper>` card.
   - `InitialsAvatar.jsx`: Deterministic color avatar from employee name initials.
   - `Modal.jsx` & `ConfirmDialog.jsx`: Standardized modal shells with responsive action bars.
   - `UnifiedCalendar.jsx`: Calendar matrix for leave and attendance visualization.
@@ -228,6 +234,7 @@ NUVINCE SaaS
 ## 6. VERIFICATION & TESTING
 
 The test suite in `backend/tests/` covers complete end-to-end functionality, security boundaries, and regression testing:
+- `pagination.test.js` (Unit tests for backend query parsing, parameter sanitization, limit clamping, and pagination metadata generation)
 - `schema.test.js` (Database schema validation and constraints)
 - `auth-foundation.test.js` (JWT issuance, password hashing, and token revocation)
 - `structure.test.js` (Hospital floor and room hierarchy isolation)
