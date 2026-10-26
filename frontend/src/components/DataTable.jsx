@@ -1,3 +1,4 @@
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Table,
@@ -5,6 +6,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   Typography,
 } from '@mui/material';
@@ -42,7 +44,7 @@ const CellValue = ({ row, column, renderCell }) => {
   return String(value);
 };
 
-const StyledTableContainer = styled(TableContainer)(({ theme }) => {
+const TableWrapper = styled(Box)(({ theme }) => {
   const colors = theme.custom?.colors || {};
   const sizing = theme.custom?.sizing || {};
   return {
@@ -51,11 +53,19 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => {
     border: `1px solid ${colors.border || '#E2E8F0'}`,
     borderRadius: theme.shape.borderRadius || 10,
     backgroundColor: colors.background || '#FFFFFF',
-    overflowX: 'auto',
-    overflowY: 'hidden',
     boxShadow: sizing.shadows?.card || '0 1px 3px rgba(2, 6, 24, 0.04)',
-    WebkitOverflowScrolling: 'touch',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
   };
+});
+
+const StyledTableContainer = styled(TableContainer)({
+  width: '100%',
+  maxWidth: '100%',
+  overflowX: 'auto',
+  overflowY: 'hidden',
+  WebkitOverflowScrolling: 'touch',
 });
 
 const StyledHeadCell = styled(TableCell)(({ theme }) => {
@@ -84,8 +94,41 @@ const StyledBodyCell = styled(TableCell)(({ theme }) => {
   };
 });
 
+const StyledPagination = styled(TablePagination)(({ theme }) => {
+  const colors = theme.custom?.colors || {};
+  return {
+    borderTop: `1px solid ${colors.border || '#E2E8F0'}`,
+    backgroundColor: colors.background || '#FFFFFF',
+    color: colors.mutedForeground || '#62748E',
+    overflow: 'visible',
+    '& .MuiTablePagination-toolbar': {
+      minHeight: 52,
+      paddingLeft: 16,
+      paddingRight: 16,
+    },
+    '& .MuiTablePagination-selectLabel': {
+      fontSize: '0.8125rem',
+      fontWeight: 500,
+      color: colors.mutedForeground || '#62748E',
+    },
+    '& .MuiTablePagination-displayedRows': {
+      fontSize: '0.8125rem',
+      fontWeight: 500,
+      color: colors.mutedForeground || '#62748E',
+    },
+    '& .MuiTablePagination-select': {
+      fontSize: '0.8125rem',
+      fontWeight: 600,
+      color: colors.foreground || '#020618',
+    },
+    '& .MuiTablePagination-actions': {
+      color: colors.foreground || '#020618',
+    },
+  };
+});
+
 const DataTable = ({
-  columns,
+  columns = [],
   rows = [],
   getRowKey,
   renderCell,
@@ -96,104 +139,233 @@ const DataTable = ({
   loading = false,
   onRowClick,
   minWidth,
+  showSerialNumber = true,
+  serialNumberLabel = 'S.No.',
+  serialNumberAlign = 'center',
+  startIndex,
+  renderSerialNumber,
+  pagination = true,
+  rowsPerPageOptions = [10, 25, 50, 100],
+  defaultRowsPerPage = 10,
 }) => {
+  const isPaginationEnabled = Boolean(pagination);
+  const paginationConfig = typeof pagination === 'object' ? pagination : {};
+  const isServerPagination = Boolean(
+    paginationConfig.server || typeof paginationConfig.onPageChange === 'function'
+  );
+
+  const initialRowsPerPage =
+    paginationConfig.pageSize || paginationConfig.limit || defaultRowsPerPage;
+
+  const [clientPage, setClientPage] = useState(0);
+  const [clientRowsPerPage, setClientRowsPerPage] = useState(initialRowsPerPage);
+
+  // Auto-reset page if filtering/search reduced rows count below current page
+  useEffect(() => {
+    if (!isServerPagination && clientPage > 0 && clientPage * clientRowsPerPage >= rows.length) {
+      setClientPage(0);
+    }
+  }, [rows.length, clientPage, clientRowsPerPage, isServerPagination]);
+
+  const activePage = isServerPagination
+    ? Math.max(0, (paginationConfig.page || 1) - 1)
+    : clientPage;
+
+  const activeRowsPerPage = isServerPagination
+    ? (paginationConfig.pageSize || paginationConfig.limit || defaultRowsPerPage)
+    : clientRowsPerPage;
+
+  const totalCount = isServerPagination
+    ? (paginationConfig.total ?? rows.length)
+    : rows.length;
+
+  const displayedRows = useMemo(() => {
+    if (!isPaginationEnabled || isServerPagination) {
+      return rows;
+    }
+    const start = clientPage * clientRowsPerPage;
+    return rows.slice(start, start + clientRowsPerPage);
+  }, [rows, isPaginationEnabled, isServerPagination, clientPage, clientRowsPerPage]);
+
+  const handlePageChange = (event, newPage) => {
+    if (isServerPagination) {
+      paginationConfig.onPageChange?.(newPage + 1);
+    } else {
+      setClientPage(newPage);
+    }
+  };
+
+  const handleRowsPerPageChange = (event) => {
+    const newLimit = parseInt(event.target.value, 10);
+    if (isServerPagination) {
+      const onRowsChange = paginationConfig.onRowsPerPageChange || paginationConfig.onLimitChange;
+      onRowsChange?.(newLimit);
+    } else {
+      setClientRowsPerPage(newLimit);
+      setClientPage(0);
+    }
+  };
+
+  const baseStartIndex =
+    startIndex !== undefined
+      ? startIndex
+      : isPaginationEnabled
+      ? (activePage * activeRowsPerPage) + 1
+      : 1;
+
   if (loading) {
     return (
-      <StyledTableContainer>
+      <TableWrapper>
         <Loading label="Loading…" height="auto" />
-      </StyledTableContainer>
+      </TableWrapper>
     );
   }
 
   if (!rows.length) {
     return (
-      <StyledTableContainer>
+      <TableWrapper>
         <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
-      </StyledTableContainer>
+      </TableWrapper>
     );
   }
 
-  const calculatedMinWidth = Math.max(700, (columns.length + (renderActions ? 1 : 0)) * 130);
+  const calculatedMinWidth = Math.max(
+    700,
+    (columns.length + (showSerialNumber ? 0.5 : 0) + (renderActions ? 1 : 0)) * 130
+  );
   const effectiveMinWidth = minWidth || calculatedMinWidth;
 
-  return (
-    <StyledTableContainer>
-      <Table sx={{ minWidth: effectiveMinWidth, width: '100%', tableLayout: 'auto' }}>
-        <TableHead>
-          <TableRow>
-            {columns.map((column) => (
-              <StyledHeadCell
-                key={column.key}
-                align={column.align || 'left'}
-                sx={{
-                  width: column.width,
-                  minWidth: column.minWidth || (column.key === 'employee' || column.key === 'name' ? 180 : undefined),
-                  maxWidth: column.maxWidth,
-                }}
-              >
-                {column.label}
-              </StyledHeadCell>
-            ))}
-            {renderActions && (
-              <StyledHeadCell
-                align="right"
-                sx={{
-                  width: 120,
-                  minWidth: 100,
-                }}
-              >
-                Actions
-              </StyledHeadCell>
-            )}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row, index) => {
-            const rowKey = getRowKey ? getRowKey(row, index) : index;
+  const shouldRenderPagination =
+    isPaginationEnabled &&
+    (!paginationConfig.hideOnSinglePage || totalCount > activeRowsPerPage);
 
-            return (
-              <TableRow
-                key={rowKey}
-                hover
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                sx={{
-                  cursor: onRowClick ? 'pointer' : 'default',
-                  '&:last-of-type td': {
-                    borderBottom: 'none',
-                  },
-                }}
-              >
-                {columns.map((column) => (
-                  <StyledBodyCell
-                    key={column.key}
-                    align={column.align || 'left'}
-                    sx={{
-                      width: column.width,
-                      minWidth: column.minWidth || (column.key === 'employee' || column.key === 'name' ? 180 : undefined),
-                      maxWidth: column.maxWidth,
-                      whiteSpace: column.whiteSpace || (column.key === 'employee' ? 'normal' : 'nowrap'),
-                    }}
-                  >
-                    <CellValue row={row} column={column} renderCell={renderCell} />
-                  </StyledBodyCell>
-                ))}
-                {renderActions && (
-                  <StyledBodyCell
-                    align="right"
-                    sx={{
-                      whiteSpace: 'nowrap',
-                      minWidth: 100,
-                    }}
-                  >
-                    {renderActions(row)}
-                  </StyledBodyCell>
-                )}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </StyledTableContainer>
+  return (
+    <TableWrapper>
+      <StyledTableContainer>
+        <Table sx={{ minWidth: effectiveMinWidth, width: '100%', tableLayout: 'auto' }}>
+          <TableHead>
+            <TableRow>
+              {showSerialNumber && (
+                <StyledHeadCell
+                  key="__serial_number__"
+                  align={serialNumberAlign}
+                  sx={{
+                    width: 64,
+                    minWidth: 54,
+                    maxWidth: 72,
+                    px: 1.5,
+                    textAlign: serialNumberAlign,
+                  }}
+                >
+                  {serialNumberLabel}
+                </StyledHeadCell>
+              )}
+              {columns.map((column) => (
+                <StyledHeadCell
+                  key={column.key}
+                  align={column.align || 'left'}
+                  sx={{
+                    width: column.width,
+                    minWidth: column.minWidth || (column.key === 'employee' || column.key === 'name' ? 180 : undefined),
+                    maxWidth: column.maxWidth,
+                  }}
+                >
+                  {column.label}
+                </StyledHeadCell>
+              ))}
+              {renderActions && (
+                <StyledHeadCell
+                  align="right"
+                  sx={{
+                    width: 120,
+                    minWidth: 100,
+                  }}
+                >
+                  Actions
+                </StyledHeadCell>
+              )}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {displayedRows.map((row, index) => {
+              const rowKey = getRowKey ? getRowKey(row, index) : index;
+
+              return (
+                <TableRow
+                  key={rowKey}
+                  hover
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  sx={{
+                    cursor: onRowClick ? 'pointer' : 'default',
+                    '&:last-of-type td': {
+                      borderBottom: shouldRenderPagination ? undefined : 'none',
+                    },
+                  }}
+                >
+                  {showSerialNumber && (
+                    <StyledBodyCell
+                      key="__serial_number__"
+                      align={serialNumberAlign}
+                      sx={{
+                        width: 64,
+                        minWidth: 54,
+                        maxWidth: 72,
+                        px: 1.5,
+                        textAlign: serialNumberAlign,
+                        color: 'text.secondary',
+                        fontWeight: 600,
+                        fontSize: '0.8125rem',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {typeof renderSerialNumber === 'function'
+                        ? renderSerialNumber(row, index, baseStartIndex + index)
+                        : baseStartIndex + index}
+                    </StyledBodyCell>
+                  )}
+                  {columns.map((column) => (
+                    <StyledBodyCell
+                      key={column.key}
+                      align={column.align || 'left'}
+                      sx={{
+                        width: column.width,
+                        minWidth: column.minWidth || (column.key === 'employee' || column.key === 'name' ? 180 : undefined),
+                        maxWidth: column.maxWidth,
+                        whiteSpace: column.whiteSpace || (column.key === 'employee' ? 'normal' : 'nowrap'),
+                      }}
+                    >
+                      <CellValue row={row} column={column} renderCell={renderCell} />
+                    </StyledBodyCell>
+                  ))}
+                  {renderActions && (
+                    <StyledBodyCell
+                      align="right"
+                      sx={{
+                        whiteSpace: 'nowrap',
+                        minWidth: 100,
+                      }}
+                    >
+                      {renderActions(row)}
+                    </StyledBodyCell>
+                  )}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </StyledTableContainer>
+      {shouldRenderPagination && (
+        <StyledPagination
+          component="div"
+          count={totalCount}
+          page={activePage}
+          onPageChange={handlePageChange}
+          rowsPerPage={activeRowsPerPage}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          rowsPerPageOptions={rowsPerPageOptions}
+        />
+      )}
+    </TableWrapper>
   );
 };
 

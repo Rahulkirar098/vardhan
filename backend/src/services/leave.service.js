@@ -5,6 +5,7 @@ const User = require("../models/user.model");
 const { LEAVE_STATUSES } = require("../constants/leave.constants");
 const { PERMISSIONS } = require("../config/permissions");
 const { hasPermission } = require("../config/rolePermissions");
+const { parsePagination, buildPaginationMeta } = require("../utils/pagination.util");
 
 /**
  * Calculates total calendar days inclusively between two dates
@@ -218,9 +219,7 @@ const getMyLeaves = async ({ user, query = {} }) => {
         filter.leaveType = query.leaveType;
     }
 
-    const page = Math.max(1, parseInt(query.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 20));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(query, { defaultLimit: 20 });
 
     const [leaves, total] = await Promise.all([
         Leave.find(filter)
@@ -239,12 +238,13 @@ const getMyLeaves = async ({ user, query = {} }) => {
         Leave.countDocuments(filter),
     ]);
 
+    const meta = buildPaginationMeta(total, page, limit);
+
     return {
         leaves,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit) || 1,
+        data: leaves,
+        ...meta,
+        pagination: meta,
     };
 };
 
@@ -267,9 +267,7 @@ const getHospitalLeaves = async ({ user, query = {} }) => {
         filter.employeeId = query.employeeId;
     }
 
-    const page = Math.max(1, parseInt(query.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 20));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(query, { defaultLimit: 20 });
 
     let employeeMatch = {};
     if (query.search && String(query.search).trim()) {
@@ -306,12 +304,13 @@ const getHospitalLeaves = async ({ user, query = {} }) => {
         Leave.countDocuments(filter),
     ]);
 
+    const meta = buildPaginationMeta(total, page, limit);
+
     return {
         leaves,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit) || 1,
+        data: leaves,
+        ...meta,
+        pagination: meta,
     };
 };
 

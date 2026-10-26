@@ -1,9 +1,56 @@
 const Hospital = require("../models/hospital.model");
 const User = require("../models/user.model");
 const { isValidObjectId } = require("../utils/validate");
+const { parsePagination, buildPaginationMeta } = require("../utils/pagination.util");
+
+const mapHospital = (hospital) => ({
+    id: hospital._id,
+    name: hospital.name,
+    code: hospital.code,
+    registrationNumber: hospital.registrationNumber,
+    status: hospital.status,
+    createdBy: hospital.createdBy
+        ? {
+            id: hospital.createdBy._id,
+            name: hospital.createdBy.name,
+            email: hospital.createdBy.email,
+            phone: hospital.createdBy.phone,
+            role: hospital.createdBy.role,
+            status: hospital.createdBy.status,
+        }
+        : null,
+    contact: hospital.contact,
+    address: hospital.address,
+    createdAt: hospital.createdAt,
+    updatedAt: hospital.updatedAt,
+});
 
 const getAllHospitalsForSuperAdmin = async (req, res) => {
     try {
+        const isPaginated = Boolean(req.query.page || req.query.limit);
+
+        if (isPaginated) {
+            const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 20 });
+            const [hospitals, total] = await Promise.all([
+                Hospital.find({})
+                    .populate("createdBy", "name email phone role status")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit),
+                Hospital.countDocuments({}),
+            ]);
+
+            const meta = buildPaginationMeta(total, page, limit);
+
+            return res.status(200).json({
+                success: true,
+                message: "Hospitals retrieved successfully",
+                data: hospitals.map(mapHospital),
+                ...meta,
+                pagination: meta,
+            });
+        }
+
         const hospitals = await Hospital.find({})
             .populate("createdBy", "name email phone role status")
             .sort({ createdAt: -1 });
@@ -11,27 +58,7 @@ const getAllHospitalsForSuperAdmin = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Hospitals retrieved successfully",
-            data: hospitals.map((hospital) => ({
-                id: hospital._id,
-                name: hospital.name,
-                code: hospital.code,
-                registrationNumber: hospital.registrationNumber,
-                status: hospital.status,
-                createdBy: hospital.createdBy
-                    ? {
-                        id: hospital.createdBy._id,
-                        name: hospital.createdBy.name,
-                        email: hospital.createdBy.email,
-                        phone: hospital.createdBy.phone,
-                        role: hospital.createdBy.role,
-                        status: hospital.createdBy.status,
-                    }
-                    : null,
-                contact: hospital.contact,
-                address: hospital.address,
-                createdAt: hospital.createdAt,
-                updatedAt: hospital.updatedAt,
-            })),
+            data: hospitals.map(mapHospital),
         });
     } catch (error) {
         console.error("Get All Hospitals For Super Admin Error:", error);

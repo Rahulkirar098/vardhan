@@ -10,6 +10,7 @@ const { hashPassword } = require("../utils/password");
 const { getFrontendUrl } = require("../utils/url.utils");
 const { hashTokenValue, generateInvitationToken, getStandardExpiry } = require("./invitation.service");
 const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+const { parsePagination, buildPaginationMeta } = require("../utils/pagination.util");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -154,8 +155,7 @@ const listEmployees = async ({
         ];
     }
 
-    const skip = (Math.max(1, Number(page)) - 1) * Math.min(100, Number(limit));
-    const take = Math.min(100, Number(limit));
+    const { page: currPage, limit: take, skip } = parsePagination({ page, limit }, { defaultLimit: 20 });
 
     const [employees, total] = await Promise.all([
         Employee.find(filter)
@@ -170,11 +170,13 @@ const listEmployees = async ({
         Employee.countDocuments(filter),
     ]);
 
+    const meta = buildPaginationMeta(total, currPage, take);
+
     return {
         employees,
-        total,
-        page: Number(page),
-        totalPages: Math.ceil(total / take),
+        data: employees,
+        ...meta,
+        pagination: meta,
     };
 };
 

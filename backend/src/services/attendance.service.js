@@ -18,6 +18,7 @@ const {
   getHospitalDayOfWeek,
   parseHospitalTimeToDate,
 } = require("../utils/timezone.utils");
+const { parsePagination, buildPaginationMeta } = require("../utils/pagination.util");
 
 /**
  * Format Date to YYYY-MM-DD
@@ -596,8 +597,7 @@ const getHospitalAttendance = async ({
     query.status = status;
   }
 
-  const skip = (Math.max(1, parseInt(page, 10)) - 1) * Math.max(1, parseInt(limit, 10));
-  const take = Math.max(1, Math.min(100, parseInt(limit, 10)));
+  const { page: currPage, limit: take, skip } = parsePagination({ page, limit }, { defaultLimit: 20 });
 
   const [records, total] = await Promise.all([
     Attendance.find(query)
@@ -613,11 +613,13 @@ const getHospitalAttendance = async ({
     Attendance.countDocuments(query),
   ]);
 
+  const meta = buildPaginationMeta(total, currPage, take);
+
   return {
     records,
-    total,
-    page: parseInt(page, 10),
-    totalPages: Math.ceil(total / take),
+    data: records,
+    ...meta,
+    pagination: meta,
   };
 };
 
@@ -926,8 +928,7 @@ const getHospitalRegularizations = async ({
     query.dateStr = { $gte: startDate, $lte: endDate };
   }
 
-  const skip = (Math.max(1, parseInt(page, 10)) - 1) * Math.max(1, parseInt(limit, 10));
-  const take = Math.max(1, Math.min(100, parseInt(limit, 10)));
+  const { page: currPage, limit: take, skip } = parsePagination({ page, limit }, { defaultLimit: 20 });
 
   const [records, total] = await Promise.all([
     AttendanceRegularization.find(query)
@@ -945,11 +946,13 @@ const getHospitalRegularizations = async ({
     AttendanceRegularization.countDocuments(query),
   ]);
 
+  const meta = buildPaginationMeta(total, currPage, take);
+
   return {
     records,
-    total,
-    page: parseInt(page, 10),
-    totalPages: Math.ceil(total / take),
+    data: records,
+    ...meta,
+    pagination: meta,
   };
 };
 
