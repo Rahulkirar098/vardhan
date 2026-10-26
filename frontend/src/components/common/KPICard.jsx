@@ -15,7 +15,7 @@ const StyledKpiContainer = styled(Box)(({ theme }) => {
     justifyContent: 'space-between',
     borderRadius: theme.shape.borderRadius || 10,
     border: `1px solid ${colors.border || '#E2E8F0'}`,
-    backgroundColor: colors.background || '#FFFFFF',
+    backgroundColor: colors.card || '#FFFFFF',
     boxShadow: sizing.shadows?.card || '0 1px 3px rgba(2, 6, 24, 0.04)',
     boxSizing: 'border-box',
     transition: 'all 180ms cubic-bezier(0.4, 0, 0.2, 1)',

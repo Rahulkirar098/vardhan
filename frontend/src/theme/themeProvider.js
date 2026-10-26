@@ -49,6 +49,10 @@ export const createAppTheme = (mode = 'light') => {
     },
     custom: {
       tokens: designTokens,
+      colors,
+      typography,
+      sizing,
+      transitions,
     },
     components: {
       MuiCssBaseline: {

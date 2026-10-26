@@ -52,7 +52,7 @@ const TableWrapper = styled(Box)(({ theme }) => {
     maxWidth: '100%',
     border: `1px solid ${colors.border || '#E2E8F0'}`,
     borderRadius: theme.shape.borderRadius || 10,
-    backgroundColor: colors.background || '#FFFFFF',
+    backgroundColor: colors.card || '#FFFFFF',
     boxShadow: sizing.shadows?.card || '0 1px 3px rgba(2, 6, 24, 0.04)',
     display: 'flex',
     flexDirection: 'column',
@@ -98,7 +98,7 @@ const StyledPagination = styled(TablePagination)(({ theme }) => {
   const colors = theme.custom?.colors || {};
   return {
     borderTop: `1px solid ${colors.border || '#E2E8F0'}`,
-    backgroundColor: colors.background || '#FFFFFF',
+    backgroundColor: colors.card || '#FFFFFF',
     color: colors.mutedForeground || '#62748E',
     overflow: 'visible',
     '& .MuiTablePagination-toolbar': {
@@ -238,8 +238,8 @@ const DataTable = ({
   }
 
   const calculatedMinWidth = Math.max(
-    700,
-    (columns.length + (showSerialNumber ? 0.5 : 0) + (renderActions ? 1 : 0)) * 130
+    650,
+    (columns.length + (showSerialNumber ? 0.5 : 0) + (renderActions ? 1 : 0)) * 100
   );
   const effectiveMinWidth = minWidth || calculatedMinWidth;
 

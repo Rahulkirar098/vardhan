@@ -848,14 +848,14 @@ const EmployeesPage = () => {
   };
 
   const employeeColumns = [
-    { key: "employee", label: "EMPLOYEE", minWidth: 220 },
-    { key: "employeeId", label: "EMPLOYEE ID", minWidth: 120 },
-    { key: "position", label: "POSITION", minWidth: 140 },
-    { key: "gender", label: "GENDER", minWidth: 100 },
-    { key: "role", label: "ROLE", minWidth: 110 },
-    { key: "joined", label: "JOINED", minWidth: 120 },
-    { key: "lwd", label: "LAST WORKING DAY", minWidth: 140 },
-    { key: "status", label: "STATUS", minWidth: 110 },
+    { key: "employee", label: "EMPLOYEE", minWidth: 200 },
+    { key: "employeeId", label: "EMPLOYEE ID", minWidth: 100 },
+    { key: "position", label: "POSITION", minWidth: 110 },
+    { key: "gender", label: "GENDER", minWidth: 80 },
+    { key: "role", label: "ROLE", minWidth: 90 },
+    { key: "joined", label: "JOINED", minWidth: 95 },
+    { key: "lwd", label: "LAST WORKING DAY", minWidth: 110 },
+    { key: "status", label: "STATUS", minWidth: 90 },
   ];
 
   const renderEmployeeCell = (emp, column) => {
