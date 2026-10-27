@@ -25,6 +25,10 @@ const StyledAppInput = styled(TextField)(({ theme }) => {
       fontSize: '0.875rem',
       transition: 'all 180ms ease',
 
+      '&.MuiInputBase-sizeSmall': {
+        height: '42px',
+      },
+
       '& fieldset': {
         borderColor: theme.palette.divider || '#E5E7EB',
       },
@@ -113,6 +117,10 @@ const StyledAppInput = styled(TextField)(({ theme }) => {
         transform: 'translate(14px, 15px) scale(1)',
       },
 
+      '&.MuiInputLabel-sizeSmall:not(.MuiInputLabel-shrink)': {
+        transform: 'translate(14px, 11px) scale(1)',
+      },
+
       '&.MuiInputLabel-shrink': {
         transform: 'translate(14px, -9px) scale(0.75)',
       },
@@ -156,6 +164,7 @@ const AppInput = ({
   sx = {},
   inputProps,
   InputProps,
+  slotProps,
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -172,7 +181,7 @@ const AppInput = ({
   };
 
   // Determine start adornment
-  let computedStartAdornment = startAdornment;
+  let computedStartAdornment = startAdornment || InputProps?.startAdornment || slotProps?.input?.startAdornment;
   if (!computedStartAdornment && StartIcon) {
     computedStartAdornment = (
       <InputAdornment position="start">
@@ -188,17 +197,27 @@ const AppInput = ({
   }
 
   // Determine end adornment
-  let computedEndAdornment = endAdornment;
+  let computedEndAdornment = endAdornment || InputProps?.endAdornment || slotProps?.input?.endAdornment;
   if (isPassword && showPasswordToggle && !disabled) {
     computedEndAdornment = (
       <InputAdornment position="end">
         <IconButton
-          aria-label="toggle password visibility"
+          type="button"
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+          title={showPassword ? 'Hide password' : 'Show password'}
           onClick={handleTogglePassword}
+          onMouseDown={(e) => e.preventDefault()}
           edge="end"
           size="small"
           tabIndex={-1}
-          sx={{ color: 'text.secondary' }}
+          sx={{
+            color: 'text.secondary',
+            p: '6px',
+            '&:hover': {
+              color: 'text.primary',
+              backgroundColor: 'action.hover',
+            },
+          }}
         >
           {showPassword ? (
             <VisibilityOff fontSize="small" />
@@ -235,14 +254,19 @@ const AppInput = ({
       minRows={rows ? undefined : minRows}
       maxRows={rows ? undefined : maxRows}
       variant="outlined"
-      inputProps={{
-        readOnly,
-        ...inputProps,
-      }}
-      InputProps={{
-        startAdornment: computedStartAdornment,
-        endAdornment: computedEndAdornment,
-        ...InputProps,
+      slotProps={{
+        ...slotProps,
+        htmlInput: {
+          ...(readOnly ? { readOnly: true } : {}),
+          ...inputProps,
+          ...(slotProps?.htmlInput || {}),
+        },
+        input: {
+          ...InputProps,
+          ...(slotProps?.input || {}),
+          ...(computedStartAdornment ? { startAdornment: computedStartAdornment } : {}),
+          ...(computedEndAdornment ? { endAdornment: computedEndAdornment } : {}),
+        },
       }}
       sx={sx}
       {...props}

@@ -822,6 +822,9 @@ const Profile = () => {
                     </Typography>
                     <AppInput
                       type="password"
+                      name="currentPassword"
+                      placeholder="Enter current password"
+                      autoComplete="current-password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       fullWidth
@@ -836,6 +839,9 @@ const Profile = () => {
                     </Typography>
                     <AppInput
                       type="password"
+                      name="newPassword"
+                      placeholder="Enter new password (min. 6 characters)"
+                      autoComplete="new-password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       fullWidth
@@ -851,6 +857,9 @@ const Profile = () => {
                     </Typography>
                     <AppInput
                       type="password"
+                      name="confirmPassword"
+                      placeholder="Re-enter new password"
+                      autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       fullWidth

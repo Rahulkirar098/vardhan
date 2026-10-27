@@ -91,6 +91,7 @@ const ResetPassword = () => {
               label="New Password"
               name="password"
               type="password"
+              placeholder="Enter new password (min. 6 characters)"
               value={form.password}
               onChange={handleChange}
               autoComplete="new-password"
@@ -101,6 +102,7 @@ const ResetPassword = () => {
               label="Confirm New Password"
               name="confirmPassword"
               type="password"
+              placeholder="Re-enter new password"
               value={form.confirmPassword}
               onChange={handleChange}
               error={Boolean(confirmPasswordError)}

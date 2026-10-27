@@ -280,8 +280,10 @@ const AcceptInvitation = () => {
 
         <AppInput
           label="Create Login Password *"
+          name="password"
           type="password"
           placeholder="At least 6 characters"
+          autoComplete="new-password"
           value={password}
           onChange={handlePasswordChange}
           fullWidth
@@ -291,8 +293,10 @@ const AcceptInvitation = () => {
 
         <AppInput
           label="Confirm Password *"
+          name="confirmPassword"
           type="password"
           placeholder="Re-enter your password"
+          autoComplete="new-password"
           value={confirmPassword}
           onChange={handleConfirmPasswordChange}
           error={Boolean(confirmPasswordError)}

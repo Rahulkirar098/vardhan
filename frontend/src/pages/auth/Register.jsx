@@ -93,6 +93,7 @@ const Register = () => {
                 label="Password"
                 name="password"
                 type="password"
+                placeholder="Create password"
                 value={form.password}
                 onChange={handleChange}
                 autoComplete="new-password"
@@ -102,6 +103,7 @@ const Register = () => {
                 label="Confirm Password"
                 name="confirmPassword"
                 type="password"
+                placeholder="Confirm password"
                 value={form.confirmPassword}
                 onChange={handleChange}
                 autoComplete="new-password"

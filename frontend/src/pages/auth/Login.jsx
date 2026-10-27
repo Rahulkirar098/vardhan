@@ -108,6 +108,7 @@ const Login = () => {
                 label="Password"
                 name="password"
                 type="password"
+                placeholder="Enter your password"
                 value={form.password}
                 onChange={handleChange}
                 autoComplete="current-password"
