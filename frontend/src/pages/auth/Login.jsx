@@ -132,7 +132,7 @@ const Login = () => {
 
         <Divider />
 
-        <Typography variant="body2" color="text.secondary" align="center">
+        {/* <Typography variant="body2" color="text.secondary" align="center">
           Don&apos;t have an account?{' '}
           <Link
             to="/register"
@@ -140,7 +140,7 @@ const Login = () => {
           >
             Register
           </Link>
-        </Typography>
+        </Typography> */}
       </Stack>
     </AuthLayout>
   );
