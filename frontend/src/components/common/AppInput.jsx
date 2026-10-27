@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, isValidElement } from 'react';
 import {
   IconButton,
   InputAdornment,
@@ -185,7 +185,11 @@ const AppInput = ({
   if (!computedStartAdornment && StartIcon) {
     computedStartAdornment = (
       <InputAdornment position="start">
-        <StartIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+        {isValidElement(StartIcon) ? (
+          StartIcon
+        ) : (
+          <StartIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+        )}
       </InputAdornment>
     );
   } else if (!computedStartAdornment && type === 'search') {
@@ -230,7 +234,11 @@ const AppInput = ({
   } else if (!computedEndAdornment && EndIcon) {
     computedEndAdornment = (
       <InputAdornment position="end">
-        <EndIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+        {isValidElement(EndIcon) ? (
+          EndIcon
+        ) : (
+          <EndIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+        )}
       </InputAdornment>
     );
   }

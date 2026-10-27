@@ -1497,7 +1497,7 @@ const LeaveManagementPage = () => {
               <Box sx={{ p: 4 }}>
                 <ErrorState message={error} onRetry={loadLeaves} />
               </Box>
-            ) : leaves.length === 0 && !loading ? (
+            ) : leaves.length === 0 && !tableLoading ? (
               <Box sx={{ p: 6 }}>
                 <EmptyState
                   icon={EventBusyRounded}

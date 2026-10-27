@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, isValidElement } from 'react';
 import {
   Alert,
   Box,
@@ -65,6 +65,13 @@ const Modal = forwardRef(
       }
     };
 
+    const renderSubmitIcon = (iconProps = {}) => {
+      if (!SubmitIcon) return null;
+      if (isValidElement(SubmitIcon)) return SubmitIcon;
+      const IconComponent = SubmitIcon;
+      return <IconComponent {...iconProps} />;
+    };
+
     return (
       <StyledDialog
         open={open}
@@ -113,7 +120,7 @@ const Modal = forwardRef(
                     flexShrink: 0,
                   }}
                 >
-                  <SubmitIcon fontSize="small" />
+                  {renderSubmitIcon({ fontSize: 'small' })}
                 </Box>
               )}
               <Box sx={{ minWidth: 0 }}>
@@ -169,7 +176,7 @@ const Modal = forwardRef(
                     variant="primary"
                     loading={submitting}
                     disabled={disableSubmit}
-                    startIcon={SubmitIcon ? <SubmitIcon /> : null}
+                    startIcon={renderSubmitIcon()}
                   >
                     {submitting ? submittingLabel : submitLabel}
                   </AppButton>

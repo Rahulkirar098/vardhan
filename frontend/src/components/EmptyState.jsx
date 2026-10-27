@@ -1,3 +1,4 @@
+import { isValidElement } from 'react';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import InboxRounded from '@mui/icons-material/InboxRounded';
 
@@ -26,7 +27,7 @@ const EmptyState = ({
         color: 'text.secondary',
       }}
     >
-      <Icon />
+      {isValidElement(Icon) ? Icon : <Icon />}
     </Box>
 
     <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 17 }}>
