@@ -1,6 +1,6 @@
 import { Box, CircularProgress, Typography } from '@mui/material';
 
-const MainContentLoader = ({ label = 'Loading...' }) => {
+export const MainContentLoader = ({ label = 'Loading...' }) => {
   return (
     <Box
       sx={{
@@ -38,4 +38,3 @@ const MainContentLoader = ({ label = 'Loading...' }) => {
   );
 };
 
-export default MainContentLoader;

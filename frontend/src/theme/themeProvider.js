@@ -34,6 +34,7 @@ export const createAppTheme = (mode = 'light') => {
     typography: {
       fontFamily: typography.fontFamily,
       fontSize: 14,
+      htmlFontSize: 16,
     },
     shape: {
       borderRadius: 10, // base 0.625rem
@@ -57,8 +58,16 @@ export const createAppTheme = (mode = 'light') => {
     components: {
       MuiCssBaseline: {
         styleOverrides: {
+          html: {
+            fontSize: '16px',
+            WebkitTextSizeAdjust: '100%',
+            textSizeAdjust: '100%',
+            boxSizing: 'border-box',
+          },
           body: {
             fontFamily: typography.fontFamily,
+            fontSize: '14px',
+            lineHeight: 1.5,
             backgroundColor: isDark ? '#121212' : colors.background,
             color: isDark ? '#F9FAFB' : colors.foreground,
             margin: 0,

@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, Box, Stack } from '@mui/material';
-import { AppButton } from '../../components/common';
+import { AppButton, MainContentLoader, PageHeader } from '../../components/common';
 import { ArrowBackRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../wrapper/AppLayout';
-import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/common/PageHeader';
 import SectionCard from '../../components/SectionCard';
 import InfoRow from '../../components/InfoRow';
 import StatusBadge from '../../components/StatusBadge';

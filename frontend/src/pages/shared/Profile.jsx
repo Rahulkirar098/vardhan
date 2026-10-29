@@ -25,9 +25,7 @@ import {
 } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AppLayout from '../../wrapper/AppLayout';
-import MainContentLoader from '../../components/common/MainContentLoader';
-import PageHeader from '../../components/common/PageHeader';
-import { AppInput } from '../../components/common';
+import { AppInput, MainContentLoader, PageHeader } from '../../components/common';
 import InitialsAvatar from '../../components/InitialsAvatar';
 import { hasPermission, PERMISSIONS } from '../../utils/permissions';
 

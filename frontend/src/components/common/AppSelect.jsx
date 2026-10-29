@@ -102,7 +102,7 @@ const menuPropsStyle = {
  * Supports options array `[{ value, label }]`, single/multiple selection, placeholder,
  * required, disabled, error, and helperText states.
  */
-const AppSelect = ({
+export const AppSelect = ({
   label,
   value,
   onChange,
@@ -288,4 +288,3 @@ const AppSelect = ({
   );
 };
 
-export default AppSelect;

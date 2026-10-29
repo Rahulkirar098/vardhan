@@ -15,8 +15,7 @@ import {
 import employeeService from '../../services/employee.service';
 import AuthLayout from '../../wrapper/AuthLayout';
 import StatusBadge from '../../components/StatusBadge';
-import MainContentLoader from '../../components/common/MainContentLoader';
-import { AppInput, AppButton } from '../../components/common';
+import { AppInput, AppButton, MainContentLoader } from '../../components/common';
 
 const AcceptInvitation = () => {
   const { token } = useParams();

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import AppSnackbar from "../components/common/AppSnackbar";
+import { AppSnackbar } from "../components/common";
 
 const SnackbarContext = createContext(null);
 

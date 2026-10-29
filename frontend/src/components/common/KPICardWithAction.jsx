@@ -1,7 +1,7 @@
 import { isValidElement } from 'react';
 import { Box, Button, Stack, Typography } from '@mui/material';
 
-const KPICardWithAction = ({
+export const KPICardWithAction = ({
   title,
   label,
   value,
@@ -149,4 +149,3 @@ const KPICardWithAction = ({
   );
 };
 
-export default KPICardWithAction;

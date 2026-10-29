@@ -23,7 +23,7 @@ const StyledHeaderDescription = styled(Typography)(({ theme }) => ({
 /**
  * PageHeader standardizes page titles, descriptions/subtitles, and top page actions across the app.
  */
-const PageHeader = ({
+export const PageHeader = ({
   title,
   description,
   subtitle,
@@ -96,4 +96,3 @@ const PageHeader = ({
   );
 };
 
-export default PageHeader;

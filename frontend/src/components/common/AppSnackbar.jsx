@@ -56,7 +56,7 @@ const getSeverityColors = (severity) => {
  * AppSnackbar Component
  * Nuvince design system top-right clean toast notification.
  */
-const AppSnackbar = ({ open, message, severity = 'info', duration = 4000, onClose }) => {
+export const AppSnackbar = ({ open, message, severity = 'info', duration = 4000, onClose }) => {
   const colors = getSeverityColors(severity);
 
   return (
@@ -122,4 +122,3 @@ const AppSnackbar = ({ open, message, severity = 'info', duration = 4000, onClos
   );
 };
 
-export default AppSnackbar;

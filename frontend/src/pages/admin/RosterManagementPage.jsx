@@ -69,9 +69,7 @@ import {
 } from "@mui/icons-material";
 
 import AppLayout from "../../wrapper/AppLayout";
-import MainContentLoader from "../../components/common/MainContentLoader";
-import PageHeader from "../../components/common/PageHeader";
-import { AppInput } from "../../components/common";
+import { AppInput, MainContentLoader, PageHeader } from "../../components/common";
 import StatusBadge from "../../components/StatusBadge";
 import GlassCard from "../../components/GlassCard";
 import Modal from "../../components/Modal";

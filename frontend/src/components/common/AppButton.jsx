@@ -94,7 +94,7 @@ const StyledMuiButton = styled(Button, {
  * Supports primary, secondary, outlined, text, and danger variants.
  * Supports loading spinner (prevents duplicate submission), start/end icons, size, fullWidth.
  */
-const AppButton = ({
+export const AppButton = ({
   children,
   variant = 'primary',
   type = 'button',
@@ -134,4 +134,3 @@ const AppButton = ({
   );
 };
 
-export default AppButton;

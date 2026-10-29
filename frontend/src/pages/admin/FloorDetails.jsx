@@ -11,7 +11,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { AppInput, AppButton } from "../../components/common";
+import { AppInput, AppButton, MainContentLoader, PageHeader } from "../../components/common";
 import {
   AddRounded,
   ArrowBackRounded,
@@ -23,8 +23,6 @@ import {
 import structureService from "../../services/structure.service";
 import auth from "../../services/auth.service";
 import AppLayout from "../../wrapper/AppLayout";
-import MainContentLoader from "../../components/common/MainContentLoader";
-import PageHeader from "../../components/common/PageHeader";
 import StatusBadge from "../../components/StatusBadge";
 import GlassCard from "../../components/GlassCard";
 import Modal from "../../components/Modal";

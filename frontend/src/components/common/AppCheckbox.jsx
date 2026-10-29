@@ -40,7 +40,7 @@ const StyledCheckbox = styled(Checkbox)(({ theme }) => {
  * Reusable AppCheckbox Component for Nuvince SaaS Application.
  * Supports label, controlled checked state, disabled, required, error, helperText, and indeterminate states.
  */
-const AppCheckbox = ({
+export const AppCheckbox = ({
   label,
   checked = false,
   onChange,
@@ -87,4 +87,3 @@ const AppCheckbox = ({
   );
 };
 
-export default AppCheckbox;

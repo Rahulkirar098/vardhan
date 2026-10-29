@@ -56,7 +56,7 @@ const StyledKpiIconContainer = styled(Box)(({ theme }) => {
   };
 });
 
-const KPICard = ({
+export const KPICard = ({
   title,
   label,
   value,
@@ -120,4 +120,3 @@ const KPICard = ({
   );
 };
 
-export default KPICard;

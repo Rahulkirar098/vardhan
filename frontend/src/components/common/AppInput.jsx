@@ -138,7 +138,7 @@ const StyledAppInput = styled(TextField)(({ theme }) => {
  * Supports text, password (with toggle visibility), email, number, search,
  * multiline, start/end icons, custom adornments, and error/helper text states.
  */
-const AppInput = ({
+export const AppInput = ({
   label,
   type = 'text',
   value,
@@ -282,4 +282,3 @@ const AppInput = ({
   );
 };
 
-export default AppInput;
