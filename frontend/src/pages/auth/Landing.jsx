@@ -87,9 +87,9 @@ const Landing = () => {
             <AppButton component={RouterLink} to="/login" variant="text">
               Sign In
             </AppButton>
-            <AppButton component={RouterLink} to="/register" variant="primary">
+            {/* <AppButton component={RouterLink} to="/register" variant="primary">
               Get Started
-            </AppButton>
+            </AppButton> */}
           </Stack>
         </Toolbar>
       </AppBar>
@@ -134,7 +134,7 @@ const Landing = () => {
               </Typography>
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <AppButton
+                {/* <AppButton
                   component={RouterLink}
                   to="/register"
                   variant="primary"
@@ -142,7 +142,7 @@ const Landing = () => {
                   endIcon={<ArrowForwardRounded fontSize="small" />}
                 >
                   Get Started
-                </AppButton>
+                </AppButton> */}
                 <AppButton component={RouterLink} to="/login" variant="outlined" size="large">
                   Sign In
                 </AppButton>
