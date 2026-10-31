@@ -1,7 +1,7 @@
 const express = require("express");
 const { authMiddleware } = require("../middleware/auth.middleware");
 const { requireModule } = require("../middleware/module.middleware");
-const { authorizePermission } = require("../middleware/permission.middleware");
+const { authorizePermission, authorizeAnyPermission } = require("../middleware/permission.middleware");
 const { PERMISSIONS } = require("../config/permissions");
 const {
     listEmployees,
@@ -79,14 +79,14 @@ employeeRoute.post(
 // List employees
 employeeRoute.get(
     "/employees",
-    authorizePermission(PERMISSIONS.EMPLOYEE_VIEW),
+    authorizeAnyPermission(PERMISSIONS.EMPLOYEE_VIEW, PERMISSIONS.ROSTER_MANAGE),
     listEmployees
 );
 
 // Get employee by ID
 employeeRoute.get(
     "/employees/:id",
-    authorizePermission(PERMISSIONS.EMPLOYEE_VIEW),
+    authorizeAnyPermission(PERMISSIONS.EMPLOYEE_VIEW, PERMISSIONS.ROSTER_MANAGE),
     getEmployee
 );
 

@@ -1244,7 +1244,7 @@ async function runTests() {
             body: {
                 title: "Active Roster C",
                 startDate: "2026-10-01",
-                endDate: "2026-10-15",
+                endDate: "2026-11-15",
                 columns: [{ id: "col-1", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
                 dutyAreas: [{ id: "da-1", name: "OPD", order: 1 }],
             },
@@ -1263,7 +1263,7 @@ async function runTests() {
             body: {
                 title: "Active Roster D",
                 startDate: "2026-10-10",
-                endDate: "2026-10-25",
+                endDate: "2026-11-25",
                 columns: [{ id: "col-1", title: "Evening", startTime: "16:00", endTime: "00:00", order: 1 }],
                 dutyAreas: [{ id: "da-1", name: "OT", order: 1 }],
             },

@@ -79,6 +79,7 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import { useSnackbar } from "../../theme/SnackbarProvider";
 import EmptyState from "../../components/EmptyState";
 import InitialsAvatar from "../../components/InitialsAvatar";
+import RosterEmployeeDropdown from "../../components/RosterEmployeeDropdown";
 
 import rosterService from "../../services/roster.service";
 import employeeService from "../../services/employee.service";
@@ -243,6 +244,7 @@ export default function RosterManagementPage() {
     endDate: "",
   });
   const [leaveWarning, setLeaveWarning] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [conflictPrompt, setConflictPrompt] = useState({
     open: false,
     message: "",
@@ -755,6 +757,7 @@ export default function RosterManagementPage() {
       showToast("Please select a date first", "warning");
       return;
     }
+    setSelectedEmployee(null);
     setAssignmentTarget({
       dutyArea: dutyAreaName,
       shift: shiftCol,
@@ -784,6 +787,20 @@ export default function RosterManagementPage() {
   };
 
   const handleOpenEditAssignment = (ass) => {
+    if (ass.employeeId && typeof ass.employeeId === "object") {
+      setSelectedEmployee(ass.employeeId);
+    } else if (ass.employeeId) {
+      employeeService
+        .getEmployee(ass.employeeId)
+        .then((res) => {
+          const emp = res?.data?.data || res?.data;
+          if (emp) setSelectedEmployee(emp);
+        })
+        .catch(() => {});
+    } else {
+      setSelectedEmployee(null);
+    }
+
     setAssignmentTarget({
       dutyArea: ass.dutyArea,
       shift: {
@@ -1263,8 +1280,18 @@ export default function RosterManagementPage() {
 
   const selectedEmployeeInfo = useMemo(() => {
     if (!assignmentForm.employeeId) return null;
-    return activeEmployees.find((e) => e._id === assignmentForm.employeeId);
-  }, [activeEmployees, assignmentForm.employeeId]);
+    if (
+      selectedEmployee &&
+      String(selectedEmployee._id) === String(assignmentForm.employeeId)
+    ) {
+      return selectedEmployee;
+    }
+    return (
+      activeEmployees.find(
+        (e) => String(e._id) === String(assignmentForm.employeeId),
+      ) || null
+    );
+  }, [activeEmployees, assignmentForm.employeeId, selectedEmployee]);
 
   if (initialLoading) {
     return (
@@ -2955,25 +2982,93 @@ export default function RosterManagementPage() {
             </Tabs>
           )}
 
-          <FormControl fullWidth required>
-            <InputLabel>Select Employee / Nurse</InputLabel>
-            <Select
-              value={assignmentForm.employeeId}
-              label="Select Employee / Nurse"
-              onChange={(e) =>
-                setAssignmentForm((p) => ({ ...p, employeeId: e.target.value }))
+          <RosterEmployeeDropdown
+            value={assignmentForm.employeeId}
+            onChange={(employeeId, employeeObj) => {
+              setAssignmentForm((p) => ({ ...p, employeeId }));
+              if (employeeObj) {
+                setSelectedEmployee(employeeObj);
               }
+            }}
+            selectedEmployee={selectedEmployeeInfo}
+            disabled={loading}
+            required
+          />
+
+          {selectedEmployeeInfo && (
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: "10px",
+                bgcolor: "#F8FAFC",
+                borderColor: "#E2E8F0",
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+              }}
             >
-              {(Array.isArray(activeEmployees) ? activeEmployees : []).map(
-                (emp) => (
-                  <MenuItem key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId || "Staff"})
-                    - {emp.positionId?.name || "Staff"}
-                  </MenuItem>
-                ),
-              )}
-            </Select>
-          </FormControl>
+              <InitialsAvatar
+                name={`${selectedEmployeeInfo.firstName || ""} ${selectedEmployeeInfo.lastName || ""}`}
+                src={selectedEmployeeInfo.avatarUrl}
+                size={38}
+                sx={{ bgcolor: "#252525" }}
+              />
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    {selectedEmployeeInfo.firstName}{" "}
+                    {selectedEmployeeInfo.lastName}
+                  </Typography>
+                  <Chip
+                    label={selectedEmployeeInfo.employeeId || "Staff"}
+                    size="small"
+                    sx={{
+                      fontSize: "0.68rem",
+                      height: 20,
+                      fontWeight: 600,
+                      bgcolor: "#E2E8F0",
+                    }}
+                  />
+                  {selectedEmployeeInfo.gender && (
+                    <Chip
+                      label={selectedEmployeeInfo.gender.toUpperCase()}
+                      size="small"
+                      variant="outlined"
+                      sx={{
+                        fontSize: "0.62rem",
+                        height: 20,
+                        borderColor: "#CBD5E1",
+                      }}
+                    />
+                  )}
+                </Stack>
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="center"
+                  sx={{ mt: 0.3 }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    Position:{" "}
+                    <strong>
+                      {selectedEmployeeInfo.positionId?.name || "Staff"}
+                    </strong>
+                  </Typography>
+                  {selectedEmployeeInfo.phone && (
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <PhoneOutlined
+                        sx={{ fontSize: 13, color: "text.secondary" }}
+                      />
+                      <Typography variant="caption" color="text.secondary">
+                        {selectedEmployeeInfo.phone}
+                      </Typography>
+                    </Stack>
+                  )}
+                </Stack>
+              </Box>
+            </Paper>
+          )}
 
           {assignmentMode === "range" &&
             !assignmentTarget.editingAssignment && (

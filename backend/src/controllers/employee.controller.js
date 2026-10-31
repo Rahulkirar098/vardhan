@@ -5,13 +5,17 @@ const employeeService = require("../services/employee.service");
 
 const listEmployees = async (req, res) => {
     try {
-        const { search, status, page, limit, role } = req.query;
+        const { search, status, page, limit, role, rosterEligible } = req.query;
 
         const result = await employeeService.listEmployees({
             hospitalId: req.user.hospitalId,
             search,
             status,
             role,
+            rosterEligible:
+                rosterEligible !== undefined
+                    ? rosterEligible === "true" || rosterEligible === true
+                    : undefined,
             page: page || 1,
             limit: limit || 20,
         });

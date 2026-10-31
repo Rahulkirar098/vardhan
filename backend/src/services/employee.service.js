@@ -130,37 +130,63 @@ const listEmployees = async ({
     search,
     status,
     role,
+    rosterEligible,
     page = 1,
     limit = 20,
 }) => {
-    const filter = { hospitalId };
+    const andConditions = [{ hospitalId }];
 
     if (role) {
         const usersWithRole = await User.find({ role }).select("_id").lean();
         const userIds = usersWithRole.map(u => u._id);
-        filter.userId = { $in: userIds };
+        andConditions.push({ userId: { $in: userIds } });
     }
 
     if (status && ["ACTIVE", "INACTIVE"].includes(String(status).toUpperCase())) {
-        filter.employmentStatus = String(status).toUpperCase();
+        andConditions.push({ employmentStatus: String(status).toUpperCase() });
+    }
+
+    if (rosterEligible !== undefined && rosterEligible !== null && rosterEligible !== "") {
+        const isEligible = String(rosterEligible) === "true" || rosterEligible === true;
+        const positions = await Position.find({
+            hospitalId,
+            rosterEligible: isEligible,
+        }).select("_id").lean();
+        const posIds = positions.map(p => p._id);
+        andConditions.push({ positionId: { $in: posIds } });
     }
 
     if (search && String(search).trim()) {
         const q = String(search).trim();
-        filter.$or = [
+        const matchingPositions = await Position.find({
+            hospitalId,
+            name: { $regex: q, $options: "i" },
+        }).select("_id").lean();
+        const matchedPosIds = matchingPositions.map(p => p._id);
+
+        const searchOr = [
             { firstName: { $regex: q, $options: "i" } },
             { lastName: { $regex: q, $options: "i" } },
             { email: { $regex: q, $options: "i" } },
             { employeeId: { $regex: q, $options: "i" } },
+            { phone: { $regex: q, $options: "i" } },
         ];
+        if (matchedPosIds.length > 0) {
+            searchOr.push({ positionId: { $in: matchedPosIds } });
+        }
+        andConditions.push({ $or: searchOr });
     }
 
+    const filter = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };
+
     const { page: currPage, limit: take, skip } = parsePagination({ page, limit }, { defaultLimit: 20 });
+
+    const sort = rosterEligible ? { firstName: 1, lastName: 1, _id: 1 } : { createdAt: -1 };
 
     const [employees, total] = await Promise.all([
         Employee.find(filter)
             .select("-__v")
-            .sort({ createdAt: -1 })
+            .sort(sort)
             .skip(skip)
             .limit(take)
             .populate("userId", "role status permissions modules")
