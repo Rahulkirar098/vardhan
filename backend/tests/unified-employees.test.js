@@ -1321,7 +1321,7 @@ const runTests = async () => {
         console.log("  ✓ TC-EMAIL-004: Same email with different casing (REJECTED 409)");
 
         // TC-EMAIL-005: Employee LWD is today -> Hospital B CANNOT invite today
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayDate = new Date();
         await Employee.create({
             employeeId: `EMP_LWD_TODAY_${testTimestamp}`,
             firstName: "LwdToday",
@@ -1329,7 +1329,7 @@ const runTests = async () => {
             email: `lwd_today_${testTimestamp}@yopmail.com`,
             positionId: posNurseA._id,
             employmentStatus: "ACTIVE",
-            lastWorkingDay: new Date(todayStr),
+            lastWorkingDay: todayDate,
             hospitalId: hospitalA._id,
             createdBy: adminA._id,
         });
