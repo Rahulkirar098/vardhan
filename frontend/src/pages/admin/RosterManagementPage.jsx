@@ -243,6 +243,7 @@ export default function RosterManagementPage() {
     startDate: "",
     endDate: "",
   });
+  const [selectedShiftColumnIds, setSelectedShiftColumnIds] = useState([]);
   const [leaveWarning, setLeaveWarning] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [conflictPrompt, setConflictPrompt] = useState({
@@ -764,13 +765,15 @@ export default function RosterManagementPage() {
       editingAssignment: null,
     });
     setAssignmentMode("range");
+    const initialColId = shiftCol ? (shiftCol.id || shiftCol._id) : "";
+    setSelectedShiftColumnIds(initialColId ? [initialColId] : []);
     setAssignmentForm({
       employeeId: "",
       date: activeRosterDate,
-      columnId: shiftCol.id || shiftCol._id,
-      shiftTitle: shiftCol.title,
-      startTime: shiftCol.startTime || "08:00",
-      endTime: shiftCol.endTime || "16:00",
+      columnId: initialColId,
+      shiftTitle: shiftCol?.title || "",
+      startTime: shiftCol?.startTime || "08:00",
+      endTime: shiftCol?.endTime || "16:00",
       dutyArea: dutyAreaName,
       notes: "",
     });
@@ -812,6 +815,7 @@ export default function RosterManagementPage() {
       editingAssignment: ass,
     });
     setAssignmentMode("single");
+    setSelectedShiftColumnIds(ass.columnId ? [ass.columnId] : []);
     setAssignmentForm({
       employeeId: ass.employeeId?._id || ass.employeeId || "",
       date: getTodayDateStr(ass.date),
@@ -857,25 +861,34 @@ export default function RosterManagementPage() {
               "success",
             );
           } else if (assignmentMode === "range") {
-            // Bulk Range Assignment
+            // Bulk Multi-Shift Range Assignment
+            if (selectedShiftColumnIds.length === 0) {
+              showToast("Please select at least one shift column", "warning");
+              setLoading(false);
+              return;
+            }
+            if (!rangeForm.startDate || !rangeForm.endDate) {
+              showToast("Please select start and end dates", "warning");
+              setLoading(false);
+              return;
+            }
+
             const payload = {
               employeeId: assignmentForm.employeeId,
               startDate: rangeForm.startDate,
               endDate: rangeForm.endDate,
-              columnId: assignmentForm.columnId,
-              shiftTitle: assignmentForm.shiftTitle,
-              startTime: assignmentForm.startTime,
-              endTime: assignmentForm.endTime,
-              dutyArea: assignmentForm.dutyArea,
+              shiftColumnIds: selectedShiftColumnIds,
+              dutyArea: assignmentForm.dutyArea || assignmentTarget.dutyArea,
               notes: assignmentForm.notes || null,
               overwriteConflicts,
+              allOrNothing: true,
             };
             const res = await rosterService.addBulkRangeAssignment(
               activeRoster._id,
               payload,
             );
             showToast(
-              `Range duty assigned successfully (${res.data?.count || "multiple"} days)`,
+              `Bulk duty assigned successfully (${res.data?.count || res.data?.length || "multiple"} shifts created)`,
               "success",
             );
           } else {
@@ -929,6 +942,18 @@ export default function RosterManagementPage() {
               allDatesBlocked: true,
               onContinue: null,
             });
+          } else if (
+            err.response?.status === 409 &&
+            (err.response?.data?.code === "SHIFT_OVERLAP" ||
+              err.response?.data?.code === "DUPLICATE_ASSIGNMENT" ||
+              err.response?.data?.code === "BUSINESS_CONFLICT" ||
+              err.response?.data?.conflicts?.length > 0)
+          ) {
+            showToast(
+              err.response?.data?.message ||
+                "Shift overlap or duplicate conflict detected. No assignments were created.",
+              "error",
+            );
           } else {
             showToast(
               err.response?.data?.message || "Failed to save duty assignment",
@@ -1206,6 +1231,47 @@ export default function RosterManagementPage() {
     });
     return map;
   }, [activeRoster, activeRosterDate]);
+
+  // Existing assignments for the selected employee on the target date (for multi-shift support)
+  const selectedEmpExistingShifts = useMemo(() => {
+    if (!activeRoster?.assignments || !assignmentForm.employeeId) return [];
+    const targetDateStr = assignmentForm.date || activeRosterDate;
+    if (!targetDateStr) return [];
+
+    const editingId = assignmentTarget.editingAssignment?._id?.toString();
+    const selEmpId = assignmentForm.employeeId.toString();
+
+    return activeRoster.assignments.filter((ass) => {
+      if (editingId && ass._id?.toString() === editingId) return false;
+      const empId = ass.employeeId?._id?.toString() || ass.employeeId?.toString();
+      if (empId !== selEmpId) return false;
+      const assDateStr = getTodayDateStr(ass.date);
+      return assDateStr === targetDateStr;
+    });
+  }, [
+    activeRoster?.assignments,
+    assignmentForm.employeeId,
+    assignmentForm.date,
+    activeRosterDate,
+    assignmentTarget.editingAssignment,
+  ]);
+
+  // Bulk Multi-Shift preview counts
+  const selectedDaysCount = useMemo(() => {
+    if (!rangeForm.startDate || !rangeForm.endDate) return 0;
+    try {
+      const s = new Date(rangeForm.startDate + "T00:00:00");
+      const e = new Date(rangeForm.endDate + "T00:00:00");
+      const diff = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+      return diff > 0 ? diff : 0;
+    } catch {
+      return 0;
+    }
+  }, [rangeForm.startDate, rangeForm.endDate]);
+
+  const totalAssignmentsCount = useMemo(() => {
+    return selectedDaysCount * selectedShiftColumnIds.length;
+  }, [selectedDaysCount, selectedShiftColumnIds.length]);
 
   // Transform My Roster into Calendar Events for UnifiedCalendar
   const myRosterCalendarEvents = useMemo(() => {
@@ -2959,10 +3025,15 @@ export default function RosterManagementPage() {
             <Button
               variant="contained"
               onClick={() => handleSaveAssignment(false)}
-              disabled={loading}
+              disabled={
+                loading ||
+                (assignmentMode === "range" &&
+                  !assignmentTarget.editingAssignment &&
+                  selectedShiftColumnIds.length === 0)
+              }
             >
               {assignmentMode === "range" && !assignmentTarget.editingAssignment
-                ? "Apply Range Duty"
+                ? `Apply Bulk Duty (${totalAssignmentsCount})`
                 : "Assign Staff"}
             </Button>
           </>
@@ -3070,67 +3141,290 @@ export default function RosterManagementPage() {
             </Paper>
           )}
 
+          {selectedEmpExistingShifts.length > 0 && (
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: "10px",
+                bgcolor: "#F0FDF4",
+                borderColor: "#86EFAC",
+              }}
+            >
+              <Stack spacing={1}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <ScheduleRounded sx={{ fontSize: 18, color: "success.main" }} />
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: "success.dark" }}>
+                    Already assigned on {assignmentForm.date || activeRosterDate} ({selectedEmpExistingShifts.length} shift{selectedEmpExistingShifts.length > 1 ? "s" : ""}):
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {selectedEmpExistingShifts.map((s, idx) => (
+                    <Chip
+                      key={s._id || idx}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      label={`${s.shiftTitle} (${s.startTime} – ${s.endTime}) • ${s.dutyArea}`}
+                      sx={{ fontWeight: 600, fontSize: "0.72rem", bgcolor: "#FFFFFF" }}
+                    />
+                  ))}
+                </Stack>
+                <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.7rem" }}>
+                  Multi-shift assignment supported. Non-overlapping shifts can be assigned; overlapping times will be rejected.
+                </Typography>
+              </Stack>
+            </Paper>
+          )}
+
           {assignmentMode === "range" &&
             !assignmentTarget.editingAssignment && (
-              <Grid container spacing={2}>
-                <Grid xs={6}>
-                  <AppInput
-                    label="From Date"
-                    type="date"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    value={rangeForm.startDate}
-                    onChange={(e) =>
-                      setRangeForm((p) => ({ ...p, startDate: e.target.value }))
-                    }
-                    required
-                  />
-                </Grid>
-                <Grid xs={6}>
-                  <AppInput
-                    label="To Date"
-                    type="date"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    value={rangeForm.endDate}
-                    onChange={(e) =>
-                      setRangeForm((p) => ({ ...p, endDate: e.target.value }))
-                    }
-                    required
-                  />
-                </Grid>
-              </Grid>
+              <Stack spacing={2}>
+                <Box>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{ mb: 1 }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 700,
+                        color: "text.secondary",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      Date Range
+                    </Typography>
+                    {activeRoster?.startDate && activeRoster?.endDate && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          setRangeForm({
+                            startDate: getTodayDateStr(activeRoster.startDate),
+                            endDate: getTodayDateStr(activeRoster.endDate),
+                          });
+                        }}
+                        sx={{
+                          fontSize: "0.72rem",
+                          py: 0.2,
+                          px: 1,
+                          textTransform: "none",
+                        }}
+                      >
+                        Select Entire Roster ({getTodayDateStr(activeRoster.startDate)} – {getTodayDateStr(activeRoster.endDate)})
+                      </Button>
+                    )}
+                  </Stack>
+                  <Grid container spacing={2}>
+                    <Grid xs={6}>
+                      <AppInput
+                        label="From Date"
+                        type="date"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        value={rangeForm.startDate}
+                        onChange={(e) =>
+                          setRangeForm((p) => ({ ...p, startDate: e.target.value }))
+                        }
+                        required
+                      />
+                    </Grid>
+                    <Grid xs={6}>
+                      <AppInput
+                        label="To Date"
+                        type="date"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        value={rangeForm.endDate}
+                        onChange={(e) =>
+                          setRangeForm((p) => ({ ...p, endDate: e.target.value }))
+                        }
+                        required
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 700,
+                      color: "text.secondary",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      display: "block",
+                      mb: 1,
+                    }}
+                  >
+                    Select Shift Columns ({selectedShiftColumnIds.length} selected)
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {(activeRoster?.columns || []).map((col) => {
+                      const colId = col.id || col._id;
+                      const isSelected = selectedShiftColumnIds.includes(colId);
+                      return (
+                        <Chip
+                          key={colId}
+                          label={`${col.title} (${col.startTime} – ${col.endTime})`}
+                          clickable
+                          color={isSelected ? "primary" : "default"}
+                          variant={isSelected ? "filled" : "outlined"}
+                          onClick={() => {
+                            setSelectedShiftColumnIds((prev) =>
+                              prev.includes(colId)
+                                ? prev.filter((id) => id !== colId)
+                                : [...prev, colId]
+                            );
+                          }}
+                          sx={{
+                            fontWeight: isSelected ? 700 : 500,
+                            fontSize: "0.78rem",
+                            py: 0.5,
+                          }}
+                        />
+                      );
+                    })}
+                  </Stack>
+                  {selectedShiftColumnIds.length === 0 && (
+                    <Typography
+                      variant="caption"
+                      color="error.main"
+                      sx={{ mt: 0.5, display: "block" }}
+                    >
+                      Please select at least one shift column.
+                    </Typography>
+                  )}
+                </Box>
+
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1.75,
+                    borderRadius: "10px",
+                    bgcolor: "#F8FAFC",
+                    borderColor: "#CBD5E1",
+                  }}
+                >
+                  <Stack spacing={1}>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 700, color: "text.primary" }}
+                      >
+                        Bulk Multi-Shift Assignment Live Preview
+                      </Typography>
+                      <Chip
+                        label={`${totalAssignmentsCount} Duty Slot${totalAssignmentsCount !== 1 ? "s" : ""}`}
+                        color={totalAssignmentsCount > 0 ? "primary" : "default"}
+                        size="small"
+                        sx={{ fontWeight: 700 }}
+                      />
+                    </Stack>
+                    <Divider />
+                    <Grid container spacing={1}>
+                      <Grid xs={6}>
+                        <Typography variant="caption" color="text.secondary">
+                          Staff:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {selectedEmployeeInfo
+                            ? `${selectedEmployeeInfo.firstName} ${selectedEmployeeInfo.lastName}`
+                            : "Select staff above"}
+                        </Typography>
+                      </Grid>
+                      <Grid xs={6}>
+                        <Typography variant="caption" color="text.secondary">
+                          Duty Area:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {assignmentForm.dutyArea ||
+                            assignmentTarget.dutyArea ||
+                            "Default Area"}
+                        </Typography>
+                      </Grid>
+                      <Grid xs={6}>
+                        <Typography variant="caption" color="text.secondary">
+                          Date Span:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {rangeForm.startDate && rangeForm.endDate
+                            ? `${rangeForm.startDate} to ${rangeForm.endDate} (${selectedDaysCount} day${selectedDaysCount !== 1 ? "s" : ""})`
+                            : "—"}
+                        </Typography>
+                      </Grid>
+                      <Grid xs={6}>
+                        <Typography variant="caption" color="text.secondary">
+                          Selected Shifts:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {selectedShiftColumnIds.length > 0
+                            ? (activeRoster?.columns || [])
+                                .filter((c) =>
+                                  selectedShiftColumnIds.includes(c.id || c._id),
+                                )
+                                .map((c) => c.title)
+                                .join(", ")
+                            : "None"}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                        fontSize: "0.72rem",
+                        fontStyle: "italic",
+                        mt: 0.5,
+                      }}
+                    >
+                      Strict All-or-Nothing check: Any overlapping shift or approved leave conflict across the range will reject the entire batch (0 assignments saved).
+                    </Typography>
+                  </Stack>
+                </Paper>
+              </Stack>
             )}
 
-          <Grid container spacing={2}>
-            <Grid xs={6}>
-              <AppInput
-                label="Start Time"
-                type="time"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                value={assignmentForm.startTime}
-                onChange={(e) =>
-                  setAssignmentForm((p) => ({
-                    ...p,
-                    startTime: e.target.value,
-                  }))
-                }
-              />
+          {/* Show Custom Shift Times only for Single Date mode or when editing */}
+          {(assignmentMode === "single" || assignmentTarget.editingAssignment) && (
+            <Grid container spacing={2}>
+              <Grid xs={6}>
+                <AppInput
+                  label="Start Time"
+                  type="time"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={assignmentForm.startTime}
+                  onChange={(e) =>
+                    setAssignmentForm((p) => ({
+                      ...p,
+                      startTime: e.target.value,
+                    }))
+                  }
+                />
+              </Grid>
+              <Grid xs={6}>
+                <AppInput
+                  label="End Time"
+                  type="time"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={assignmentForm.endTime}
+                  onChange={(e) =>
+                    setAssignmentForm((p) => ({ ...p, endTime: e.target.value }))
+                  }
+                />
+              </Grid>
             </Grid>
-            <Grid xs={6}>
-              <AppInput
-                label="End Time"
-                type="time"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                value={assignmentForm.endTime}
-                onChange={(e) =>
-                  setAssignmentForm((p) => ({ ...p, endTime: e.target.value }))
-                }
-              />
-            </Grid>
-          </Grid>
+          )}
 
           <AppInput
             label="Notes (Optional)"

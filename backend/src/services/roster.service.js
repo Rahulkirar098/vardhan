@@ -4,8 +4,27 @@ const RosterAssignment = require("../models/rosterAssignment.model");
 const RosterTemplate = require("../models/rosterTemplate.model");
 const Employee = require("../models/employee.model");
 const Leave = require("../models/leave.model");
+const Attendance = require("../models/attendance.model");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+const { parseHospitalTimeToDate, getHospitalTodayDateStr } = require("../utils/timezone.utils");
+
+const getShiftIntervalUtc = (baseDateStr, startTime, endTime, timezone = "Asia/Kolkata") => {
+    const start = parseHospitalTimeToDate(startTime, baseDateStr, timezone);
+    let end = parseHospitalTimeToDate(endTime, baseDateStr, timezone);
+    if (!start || !end) return null;
+    if (end.getTime() <= start.getTime()) {
+        const nextDate = new Date(start.getTime() + 24 * 3600 * 1000);
+        const nextDateStr = getHospitalTodayDateStr(nextDate, timezone);
+        end = parseHospitalTimeToDate(endTime, nextDateStr, timezone);
+    }
+    return { start, end };
+};
+
+const areShiftsOverlapping = (shiftA, shiftB) => {
+    if (!shiftA || !shiftB || !shiftA.start || !shiftA.end || !shiftB.start || !shiftB.end) return false;
+    return Math.max(shiftA.start.getTime(), shiftB.start.getTime()) < Math.min(shiftA.end.getTime(), shiftB.end.getTime());
+};
 
 const toCalendarDateStr = (dateInput) => {
     if (!dateInput) return "";
@@ -650,6 +669,7 @@ const addAssignment = async ({
         throw err;
     }
 
+    let resolvedColumnId = columnId ? String(columnId).trim() : null;
     if (Array.isArray(roster.columns) && roster.columns.length > 0) {
         const matchingShift = roster.columns.find(
             (c) => c.title?.toLowerCase() === shiftTitle?.toLowerCase() || c.id === columnId
@@ -659,6 +679,12 @@ const addAssignment = async ({
             err.code = "VALIDATION_ERROR";
             throw err;
         }
+        if (!resolvedColumnId) {
+            resolvedColumnId = matchingShift.id;
+        }
+    }
+    if (!resolvedColumnId && shiftTitle) {
+        resolvedColumnId = String(shiftTitle).toLowerCase().trim().replace(/\s+/g, "_");
     }
 
     if (Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0) {
@@ -704,11 +730,19 @@ const addAssignment = async ({
         throw err;
     }
 
-    // 2. Check if employee already has an assignment for the same roster date
-    const existingAssignment = await RosterAssignment.findOne({
+    // 2. Check for exact duplicate shift and time overlap across neighbouring dates
+    const targetDateStr = toCalendarDateStr(assignmentDate);
+    const candidateInterval = getShiftIntervalUtc(targetDateStr, startTime, endTime, tz);
+
+    const dayMinus1 = new Date(assignmentDate.getTime() - 24 * 3600 * 1000);
+    const dayPlus1 = new Date(assignmentDate.getTime() + 24 * 3600 * 1000);
+    const { start: windowStart } = getCalendarBounds(dayMinus1);
+    const { end: windowEnd } = getCalendarBounds(dayPlus1);
+
+    const neighbouringAssignments = await RosterAssignment.find({
         hospitalId,
         employeeId: employee._id,
-        date: { $gte: dateStart, $lte: dateEnd },
+        date: { $gte: windowStart, $lte: windowEnd },
     })
         .populate({
             path: "employeeId",
@@ -716,19 +750,43 @@ const addAssignment = async ({
         })
         .lean();
 
-    if (existingAssignment) {
-        const empName = existingAssignment.employeeId
-            ? `${existingAssignment.employeeId.firstName || ""} ${existingAssignment.employeeId.lastName || ""}`.trim() || existingAssignment.employeeId.name || "This employee"
+    for (const ass of neighbouringAssignments) {
+        const assDateStr = toCalendarDateStr(ass.date);
+        const empName = ass.employeeId
+            ? `${ass.employeeId.firstName || ""} ${ass.employeeId.lastName || ""}`.trim() || ass.employeeId.name || "This employee"
             : `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "This employee";
-        const err = new Error(`${empName} is already assigned on this date.`);
-        err.code = "DUPLICATE_ASSIGNMENT";
-        err.existingAssignment = {
-            employeeName: empName,
-            date: existingAssignment.date,
-            existingShift: existingAssignment.shiftTitle,
-            existingDutyArea: existingAssignment.dutyArea,
-        };
-        throw err;
+
+        // Check exact duplicate shift on same date
+        if (assDateStr === targetDateStr) {
+            const isSameCol = ass.columnId && resolvedColumnId && String(ass.columnId) === String(resolvedColumnId);
+            const isSameTitle = ass.shiftTitle?.toLowerCase() === String(shiftTitle).toLowerCase();
+            if (isSameCol || isSameTitle) {
+                const err = new Error(`${empName} is already assigned to the "${ass.shiftTitle}" shift on this date.`);
+                err.code = "DUPLICATE_ASSIGNMENT";
+                err.existingAssignment = {
+                    employeeName: empName,
+                    date: ass.date,
+                    existingShift: ass.shiftTitle,
+                    existingDutyArea: ass.dutyArea,
+                };
+                throw err;
+            }
+        }
+
+        // Check time overlap across neighbouring dates
+        const assInterval = getShiftIntervalUtc(assDateStr, ass.startTime, ass.endTime, tz);
+        if (candidateInterval && assInterval && areShiftsOverlapping(candidateInterval, assInterval)) {
+            const err = new Error(`${empName} has an overlapping shift "${ass.shiftTitle}" (${ass.startTime} - ${ass.endTime}) on ${assDateStr}.`);
+            err.code = "DUPLICATE_ASSIGNMENT";
+            err.existingAssignment = {
+                employeeName: empName,
+                date: ass.date,
+                existingShift: ass.shiftTitle,
+                existingDutyArea: ass.dutyArea,
+                conflictingTime: `${ass.startTime} - ${ass.endTime}`,
+            };
+            throw err;
+        }
     }
 
     // 2. PENDING Leave Check -> Non-blocking notification warning
@@ -756,7 +814,7 @@ const addAssignment = async ({
         hospitalId,
         employeeId: employee._id,
         date: assignmentDate,
-        columnId: columnId || null,
+        columnId: resolvedColumnId,
         shiftTitle: String(shiftTitle).trim(),
         startTime: String(startTime).trim(),
         endTime: String(endTime).trim(),
@@ -790,6 +848,9 @@ const addBulkRangeAssignments = async ({
     employeeId,
     startDate,
     endDate,
+    dates,
+    shiftColumnIds,
+    shifts,
     columnId,
     shiftTitle,
     startTime,
@@ -797,6 +858,7 @@ const addBulkRangeAssignments = async ({
     dutyArea,
     notes,
     overwriteConflicts = false,
+    allOrNothing = false,
 }) => {
     if (!isValidObjectId(rosterId)) {
         const err = new Error("Invalid roster ID.");
@@ -842,50 +904,17 @@ const addBulkRangeAssignments = async ({
         throw err;
     }
 
-    if (!startDate || !endDate || !shiftTitle || !startTime || !endTime || !dutyArea) {
-        const err = new Error("Start date, end date, shift title, times, and duty area are required.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
-    const startRange = new Date(startDate);
-    const endRange = new Date(endDate);
-    if (isNaN(startRange.getTime()) || isNaN(endRange.getTime())) {
-        const err = new Error("Invalid date format.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
+    const Hospital = require("../models/hospital.model");
+    const hospitalObj = await Hospital.findById(hospitalId).select("timezone").lean();
+    const tz = hospitalObj?.timezone || "Asia/Kolkata";
+    const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
 
     const { start: rosterStartBounds } = getCalendarBounds(roster.startDate);
     const { end: rosterEndBounds } = getCalendarBounds(roster.endDate);
 
-    const { start: rangeStartBounds } = getCalendarBounds(startRange);
-    const { end: rangeEndBounds } = getCalendarBounds(endRange);
-
-    if (rangeStartBounds < rosterStartBounds || rangeEndBounds > rosterEndBounds) {
-        const err = new Error("Assignment date range must fall within the roster start and end date period.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
-    if (rangeStartBounds > rangeEndBounds) {
-        const err = new Error("Start date must be less than or equal to end date.");
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
-    if (Array.isArray(roster.columns) && roster.columns.length > 0) {
-        const matchingShift = roster.columns.find(
-            (c) => c.title?.toLowerCase() === shiftTitle?.toLowerCase() || c.id === columnId
-        );
-        if (!matchingShift) {
-            const err = new Error("Selected shift does not belong to this roster.");
-            err.code = "VALIDATION_ERROR";
-            throw err;
-        }
-    }
-
-    if (Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0) {
+    // 1. Resolve Duty Area
+    const defaultDutyArea = dutyArea || (Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0 ? roster.dutyAreas[0].name : "General Ward");
+    if (dutyArea && Array.isArray(roster.dutyAreas) && roster.dutyAreas.length > 0) {
         const matchingDutyArea = roster.dutyAreas.find(
             (da) => da.name?.toLowerCase() === dutyArea?.toLowerCase() || da.id === dutyArea
         );
@@ -896,47 +925,366 @@ const addBulkRangeAssignments = async ({
         }
     }
 
+    // 2. Resolve Shifts
+    let resolvedShifts = [];
+    if (Array.isArray(shifts) && shifts.length > 0) {
+        resolvedShifts = shifts.map((s) => {
+            const col = Array.isArray(roster.columns)
+                ? roster.columns.find(
+                      (c) =>
+                          (s.columnId && c.id === s.columnId) ||
+                          (s.columnId && c._id && String(c._id) === String(s.columnId)) ||
+                          (s.shiftTitle && c.title?.toLowerCase() === s.shiftTitle?.toLowerCase())
+                  )
+                : null;
+            return {
+                columnId: s.columnId || col?.id || (col?._id ? String(col._id) : null),
+                shiftTitle: s.shiftTitle || col?.title || "Duty",
+                startTime: s.startTime || col?.startTime || "08:00",
+                endTime: s.endTime || col?.endTime || "16:00",
+                dutyArea: s.dutyArea || defaultDutyArea,
+            };
+        });
+    } else if (Array.isArray(shiftColumnIds) && shiftColumnIds.length > 0) {
+        for (const colId of shiftColumnIds) {
+            const col = Array.isArray(roster.columns)
+                ? roster.columns.find((c) => c.id === colId || (c._id && String(c._id) === String(colId)))
+                : null;
+            if (!col) {
+                const err = new Error(`Shift column "${colId}" does not belong to this roster.`);
+                err.code = "VALIDATION_ERROR";
+                throw err;
+            }
+            resolvedShifts.push({
+                columnId: col.id || (col._id ? String(col._id) : colId),
+                shiftTitle: col.title,
+                startTime: col.startTime || "08:00",
+                endTime: col.endTime || "16:00",
+                dutyArea: defaultDutyArea,
+            });
+        }
+    } else if (shiftTitle) {
+        let resolvedColId = columnId || null;
+        if (Array.isArray(roster.columns) && roster.columns.length > 0) {
+            const matchingShift = roster.columns.find(
+                (c) => c.title?.toLowerCase() === shiftTitle?.toLowerCase() || (columnId && c.id === columnId)
+            );
+            if (!matchingShift) {
+                const err = new Error("Selected shift does not belong to this roster.");
+                err.code = "VALIDATION_ERROR";
+                throw err;
+            }
+            resolvedColId = matchingShift.id || (matchingShift._id ? String(matchingShift._id) : columnId);
+        }
+        resolvedShifts.push({
+            columnId: resolvedColId,
+            shiftTitle: String(shiftTitle).trim(),
+            startTime: String(startTime || "08:00").trim(),
+            endTime: String(endTime || "16:00").trim(),
+            dutyArea: String(dutyArea || defaultDutyArea).trim(),
+        });
+    }
+
+    if (resolvedShifts.length === 0) {
+        const err = new Error("At least one valid shift must be selected.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    // 3. Check internal overlap between requested shifts on the same day
+    if (resolvedShifts.length > 1) {
+        for (let i = 0; i < resolvedShifts.length; i++) {
+            for (let j = i + 1; j < resolvedShifts.length; j++) {
+                const sA = resolvedShifts[i];
+                const sB = resolvedShifts[j];
+                if (sA.columnId && sB.columnId && sA.columnId === sB.columnId) {
+                    const err = new Error(`Exact duplicate shift "${sA.shiftTitle}" selected multiple times.`);
+                    err.code = "DUPLICATE_ASSIGNMENT";
+                    throw err;
+                }
+                const intA = getShiftIntervalUtc("2026-01-01", sA.startTime, sA.endTime, tz);
+                const intB = getShiftIntervalUtc("2026-01-01", sB.startTime, sB.endTime, tz);
+                if (intA && intB && areShiftsOverlapping(intA, intB)) {
+                    const err = new Error(`Selected shifts "${sA.shiftTitle}" (${sA.startTime} - ${sA.endTime}) and "${sB.shiftTitle}" (${sB.startTime} - ${sB.endTime}) overlap with each other.`);
+                    err.code = "SHIFT_OVERLAP";
+                    throw err;
+                }
+            }
+        }
+    }
+
+    // 4. Resolve Dates
     const datesList = [];
     const parseNoonDate = (dInput) => {
         const dObj = new Date(dInput);
         return new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 12, 0, 0, 0);
     };
 
-    let curr = parseNoonDate(startDate);
-    const lastDate = parseNoonDate(endDate);
+    if (Array.isArray(dates) && dates.length > 0) {
+        for (const dateItem of dates) {
+            const dObj = new Date(dateItem);
+            if (isNaN(dObj.getTime())) {
+                const err = new Error(`Invalid date format in dates list: ${dateItem}`);
+                err.code = "VALIDATION_ERROR";
+                throw err;
+            }
+            const { start: dateBounds } = getCalendarBounds(dObj);
+            if (dateBounds < rosterStartBounds || dateBounds > rosterEndBounds) {
+                const err = new Error(`Date ${toCalendarDateStr(dObj)} is outside the roster date range.`);
+                err.code = "VALIDATION_ERROR";
+                throw err;
+            }
+            datesList.push(new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 12, 0, 0, 0));
+        }
+        datesList.sort((a, b) => a.getTime() - b.getTime());
+    } else {
+        if (!startDate || !endDate) {
+            const err = new Error("Start date, end date, shift title, times, and duty area are required.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
 
-    while (curr <= lastDate) {
-        datesList.push(new Date(curr));
-        curr.setDate(curr.getDate() + 1);
+        const startRange = new Date(startDate);
+        const endRange = new Date(endDate);
+        if (isNaN(startRange.getTime()) || isNaN(endRange.getTime())) {
+            const err = new Error("Invalid date format.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        const { start: rangeStartBounds } = getCalendarBounds(startRange);
+        const { end: rangeEndBounds } = getCalendarBounds(endRange);
+
+        if (rangeStartBounds < rosterStartBounds || rangeEndBounds > rosterEndBounds) {
+            const err = new Error("Assignment date range must fall within the roster start and end date period.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        if (rangeStartBounds > rangeEndBounds) {
+            const err = new Error("Start date must be less than or equal to end date.");
+            err.code = "VALIDATION_ERROR";
+            throw err;
+        }
+
+        let curr = parseNoonDate(startDate);
+        const lastDate = parseNoonDate(endDate);
+
+        while (curr <= lastDate) {
+            datesList.push(new Date(curr));
+            curr.setDate(curr.getDate() + 1);
+        }
     }
+
+    if (datesList.length === 0) {
+        const err = new Error("No valid dates provided for assignment.");
+        err.code = "VALIDATION_ERROR";
+        throw err;
+    }
+
+    const minDate = datesList[0];
+    const maxDate = datesList[datesList.length - 1];
+    const { start: minDateBounds } = getCalendarBounds(minDate);
+    const { end: maxDateBounds } = getCalendarBounds(maxDate);
+
+    // Expand search buffer by 1 day on each side for overnight overlap detection
+    const searchStart = new Date(minDateBounds.getTime() - 24 * 3600 * 1000);
+    const searchEnd = new Date(maxDateBounds.getTime() + 24 * 3600 * 1000);
 
     const existingAssignments = await RosterAssignment.find({
         hospitalId,
         employeeId: employee._id,
-        date: { $gte: rangeStartBounds, $lte: rangeEndBounds },
+        date: { $gte: searchStart, $lte: searchEnd },
     }).lean();
-
-    const existingMap = new Map();
-    existingAssignments.forEach((ass) => {
-        const dateKey = ass.date.toISOString().split("T")[0];
-        existingMap.set(dateKey, ass);
-    });
 
     const approvedLeaves = await Leave.find({
         hospitalId,
         employeeId: employee._id,
         status: { $in: ["APPROVED", "approved"] },
-        startDate: { $lte: rangeEndBounds },
-        endDate: { $gte: rangeStartBounds },
+        startDate: { $lte: searchEnd },
+        endDate: { $gte: searchStart },
     }).lean();
 
     const pendingLeaves = await Leave.find({
         hospitalId,
         employeeId: employee._id,
         status: { $in: ["PENDING", "pending"] },
-        startDate: { $lte: rangeEndBounds },
-        endDate: { $gte: rangeStartBounds },
+        startDate: { $lte: searchEnd },
+        endDate: { $gte: searchStart },
     }).lean();
+
+    const isPhase2MultiShift = Array.isArray(shiftColumnIds) || Array.isArray(shifts) || resolvedShifts.length > 1 || allOrNothing === true;
+
+    // ─── PHASE 2 MULTI-SHIFT & ALL-OR-NOTHING PATH ───────────────────────────
+    if (isPhase2MultiShift) {
+        const conflicts = [];
+        const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
+
+        for (const d of datesList) {
+            const dateStr = toCalendarDateStr(d);
+
+            // Check employment ended
+            if (!isEmployeeEmployedOnDate(employee, d, tz)) {
+                conflicts.push({
+                    type: "EMPLOYMENT_ENDED",
+                    date: dateStr,
+                    message: `${empName} is no longer employed on ${dateStr}.`,
+                });
+                continue;
+            }
+
+            // Check approved leave
+            const approvedOnDate = approvedLeaves.find((l) =>
+                isLeaveConflictOnDate(d, l.startDate, l.endDate)
+            );
+            if (approvedOnDate) {
+                const lStart = toCalendarDateStr(approvedOnDate.startDate);
+                const lEnd = toCalendarDateStr(approvedOnDate.endDate);
+                conflicts.push({
+                    type: "LEAVE_CONFLICT",
+                    date: dateStr,
+                    leaveType: approvedOnDate.leaveType,
+                    reason: approvedOnDate.reason,
+                    message: `${empName} has an approved leave from ${lStart} to ${lEnd} (${approvedOnDate.leaveType}) and cannot be assigned on ${dateStr}.`,
+                });
+                continue;
+            }
+
+            // Check candidate shifts on date d
+            for (const s of resolvedShifts) {
+                const candidateInterval = getShiftIntervalUtc(dateStr, s.startTime, s.endTime, tz);
+
+                // Exact duplicate check
+                const dupAss = existingAssignments.find((a) => {
+                    const aDateStr = toCalendarDateStr(a.date);
+                    if (aDateStr !== dateStr) return false;
+                    if (s.columnId && a.columnId && String(s.columnId) === String(a.columnId)) return true;
+                    if (a.shiftTitle?.toLowerCase() === s.shiftTitle?.toLowerCase()) return true;
+                    return false;
+                });
+                if (dupAss) {
+                    conflicts.push({
+                        type: "DUPLICATE_ASSIGNMENT",
+                        date: dateStr,
+                        shiftTitle: s.shiftTitle,
+                        columnId: s.columnId,
+                        message: `${empName} is already assigned to the "${s.shiftTitle}" shift on this date.`,
+                    });
+                    continue;
+                }
+
+                // Interval overlap check against existing assignments on adjacent dates
+                for (const a of existingAssignments) {
+                    const aDateStr = toCalendarDateStr(a.date);
+                    const assInterval = getShiftIntervalUtc(aDateStr, a.startTime, a.endTime, tz);
+                    if (candidateInterval && assInterval && areShiftsOverlapping(candidateInterval, assInterval)) {
+                        conflicts.push({
+                            type: "SHIFT_OVERLAP",
+                            date: dateStr,
+                            shiftTitle: s.shiftTitle,
+                            conflictingShiftTitle: a.shiftTitle,
+                            conflictingTimes: `${a.startTime} - ${a.endTime}`,
+                            conflictingDate: aDateStr,
+                            message: `${empName} has an overlapping shift "${a.shiftTitle}" (${a.startTime} - ${a.endTime}) on ${aDateStr}.`,
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+
+        // ALL-OR-NOTHING: If any conflict exists, abort immediately and save ZERO assignments
+        if (conflicts.length > 0) {
+            const firstConflict = conflicts[0];
+            const err = new Error(firstConflict.message);
+            err.code = firstConflict.type;
+            err.details = {
+                employeeId: employee._id,
+                employeeName: empName,
+                conflicts,
+                summary: {
+                    totalRequested: datesList.length * resolvedShifts.length,
+                    totalConflicts: conflicts.length,
+                    affectedDates: Array.from(new Set(conflicts.map((c) => c.date))),
+                },
+            };
+            err.existingAssignment = {
+                employeeName: empName,
+                conflicts: conflicts.map((c) => ({
+                    date: c.date,
+                    existingShift: c.conflictingShiftTitle || c.shiftTitle,
+                    reason: c.message,
+                })),
+            };
+            throw err;
+        }
+
+        // Insert all candidate assignments atomically
+        const docsToInsert = [];
+        for (const d of datesList) {
+            for (const s of resolvedShifts) {
+                docsToInsert.push({
+                    rosterId: roster._id,
+                    hospitalId,
+                    employeeId: employee._id,
+                    date: d,
+                    columnId: s.columnId || null,
+                    shiftTitle: String(s.shiftTitle).trim(),
+                    startTime: String(s.startTime).trim(),
+                    endTime: String(s.endTime).trim(),
+                    dutyArea: String(s.dutyArea || defaultDutyArea).trim(),
+                    notes: notes ? String(notes).trim() : null,
+                    isOverride: false,
+                    createdBy: userId,
+                });
+            }
+        }
+
+        let createdAssignments = [];
+        if (docsToInsert.length > 0) {
+            try {
+                createdAssignments = await RosterAssignment.insertMany(docsToInsert, { ordered: true });
+            } catch (insertErr) {
+                if (insertErr.insertedDocs && insertErr.insertedDocs.length) {
+                    await RosterAssignment.deleteMany({ _id: { $in: insertErr.insertedDocs.map((x) => x._id) } });
+                }
+                if (insertErr.code === 11000) {
+                    const err = new Error("This employee is already assigned to this shift on one of the requested dates.");
+                    err.code = "DUPLICATE_ASSIGNMENT";
+                    throw err;
+                }
+                throw insertErr;
+            }
+        }
+
+        roster.updatedBy = userId;
+        await roster.save();
+
+        const populatedCreatedAssignments = createdAssignments.length > 0
+            ? await RosterAssignment.find({ _id: { $in: createdAssignments.map((a) => a._id) } })
+                .populate({
+                    path: "employeeId",
+                    select: "employeeId firstName lastName email phone gender avatarUrl positionId employmentStatus",
+                    populate: { path: "positionId", select: "name" },
+                })
+                .lean()
+            : [];
+
+        return {
+            createdCount: createdAssignments.length,
+            createdAssignments: populatedCreatedAssignments,
+            conflicts: [],
+            leaveWarnings: [],
+            approvedLeaveConflicts: [],
+        };
+    }
+
+    // ─── LEGACY SINGLE-SHIFT BACKWARD COMPATIBILITY PATH ─────────────────────
+    const existingMap = new Map();
+    existingAssignments.forEach((ass) => {
+        const dateKey = ass.date.toISOString().split("T")[0];
+        existingMap.set(dateKey, ass);
+    });
 
     const conflicts = [];
     const leaveWarnings = [];
@@ -944,7 +1292,6 @@ const addBulkRangeAssignments = async ({
     const createdAssignments = [];
 
     if (!overwriteConflicts && existingAssignments.length === datesList.length && datesList.length > 0) {
-        const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
         const err = new Error(`${empName} already has assignments for all dates in this range.`);
         err.code = "DUPLICATE_ASSIGNMENT";
         err.existingAssignment = {
@@ -958,14 +1305,9 @@ const addBulkRangeAssignments = async ({
         throw err;
     }
 
+    const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
     for (const d of datesList) {
         const dateKey = d.toISOString().split("T")[0];
-        const { start: dateStart, end: dateEnd } = getCalendarBounds(d);
-
-        const { isEmployeeEmployedOnDate } = require("../utils/employment.utils");
-        const Hospital = require("../models/hospital.model");
-        const hospitalObj = await Hospital.findById(hospitalId).select("timezone").lean();
-        const tz = hospitalObj?.timezone || "Asia/Kolkata";
 
         if (!isEmployeeEmployedOnDate(employee, d, tz)) {
             approvedLeaveConflicts.push({
@@ -977,7 +1319,6 @@ const addBulkRangeAssignments = async ({
             continue;
         }
 
-        // 1. APPROVED Leave Check -> BLOCKS assignment for date d
         const approvedOnDate = approvedLeaves.find((l) =>
             isLeaveConflictOnDate(d, l.startDate, l.endDate)
         );
@@ -988,10 +1329,9 @@ const addBulkRangeAssignments = async ({
                 reason: approvedOnDate.reason,
                 message: `Employee has APPROVED leave on ${dateKey} (${approvedOnDate.leaveType}) and cannot be assigned.`,
             });
-            continue; // DO NOT create RosterAssignment document for date d
+            continue;
         }
 
-        // 2. PENDING Leave Check -> Non-blocking warning
         const pendingOnDate = pendingLeaves.find((l) =>
             isLeaveConflictOnDate(d, l.startDate, l.endDate)
         );
@@ -1022,16 +1362,17 @@ const addBulkRangeAssignments = async ({
             }
         }
 
+        const s = resolvedShifts[0];
         const newAss = await RosterAssignment.create({
             rosterId: roster._id,
             hospitalId,
             employeeId: employee._id,
             date: d,
-            columnId: columnId || null,
-            shiftTitle: String(shiftTitle).trim(),
-            startTime: String(startTime).trim(),
-            endTime: String(endTime).trim(),
-            dutyArea: String(dutyArea).trim(),
+            columnId: s.columnId || null,
+            shiftTitle: String(s.shiftTitle).trim(),
+            startTime: String(s.startTime).trim(),
+            endTime: String(s.endTime).trim(),
+            dutyArea: String(s.dutyArea).trim(),
             notes: notes ? String(notes).trim() : null,
             isOverride: false,
             createdBy: userId,
@@ -1040,11 +1381,9 @@ const addBulkRangeAssignments = async ({
         createdAssignments.push(newAss);
     }
 
-    // If ALL requested dates were blocked due to employment ended, throw 409
     if (createdAssignments.length === 0 && approvedLeaveConflicts.length > 0) {
-        const hasEmploymentEnded = approvedLeaveConflicts.some(c => c.reason === "EMPLOYMENT_ENDED");
+        const hasEmploymentEnded = approvedLeaveConflicts.some((c) => c.reason === "EMPLOYMENT_ENDED");
         if (hasEmploymentEnded) {
-            const empName = `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Employee";
             const blockedDatesStr = approvedLeaveConflicts.map((c) => c.date).join(", ");
             const err = new Error(`${empName} is no longer employed on the selected duty dates (${blockedDatesStr}).`);
             err.code = "EMPLOYMENT_ENDED";
@@ -1215,11 +1554,48 @@ const updateAssignment = async ({
         throw err;
     }
 
-    const existingAssignment = await RosterAssignment.findOne({
+    // Check attendance protection
+    const attExists = await Attendance.findOne({ hospitalId, rosterAssignmentId: assignment._id }).lean();
+    if (attExists) {
+        const isChangingCore = (employeeId && String(employeeId) !== String(assignment.employeeId)) ||
+            (date && new Date(date).getTime() !== new Date(assignment.date).getTime()) ||
+            (startTime && String(startTime).trim() !== assignment.startTime) ||
+            (endTime && String(endTime).trim() !== assignment.endTime) ||
+            (columnId && String(columnId).trim() !== assignment.columnId);
+        if (isChangingCore) {
+            const err = new Error("Cannot update shift timing, employee, or date because attendance records already exist for this assignment.");
+            err.code = "BUSINESS_CONFLICT";
+            throw err;
+        }
+    }
+
+    const newStartTime = startTime !== undefined ? String(startTime).trim() : assignment.startTime;
+    const newEndTime = endTime !== undefined ? String(endTime).trim() : assignment.endTime;
+    const newShiftTitle = shiftTitle !== undefined ? String(shiftTitle).trim() : assignment.shiftTitle;
+    let newColumnId = columnId !== undefined ? String(columnId).trim() : assignment.columnId;
+    if (!newColumnId && Array.isArray(roster.columns)) {
+        const matchingShift = roster.columns.find(
+            (c) => c.title?.toLowerCase() === newShiftTitle?.toLowerCase() || c.id === newColumnId
+        );
+        if (matchingShift) newColumnId = matchingShift.id;
+    }
+    if (!newColumnId && newShiftTitle) {
+        newColumnId = newShiftTitle.toLowerCase().trim().replace(/\s+/g, "_");
+    }
+
+    const targetDateStr = toCalendarDateStr(targetDate);
+    const candidateInterval = getShiftIntervalUtc(targetDateStr, newStartTime, newEndTime, tz);
+
+    const dayMinus1 = new Date(targetDate.getTime() - 24 * 3600 * 1000);
+    const dayPlus1 = new Date(targetDate.getTime() + 24 * 3600 * 1000);
+    const { start: windowStart } = getCalendarBounds(dayMinus1);
+    const { end: windowEnd } = getCalendarBounds(dayPlus1);
+
+    const neighbouringAssignments = await RosterAssignment.find({
         _id: { $ne: assignment._id },
         hospitalId,
         employeeId: targetEmployeeId,
-        date: { $gte: dateStart, $lte: dateEnd },
+        date: { $gte: windowStart, $lte: windowEnd },
     })
         .populate({
             path: "employeeId",
@@ -1227,19 +1603,43 @@ const updateAssignment = async ({
         })
         .lean();
 
-    if (existingAssignment) {
-        const empName = existingAssignment.employeeId
-            ? `${existingAssignment.employeeId.firstName || ""} ${existingAssignment.employeeId.lastName || ""}`.trim() || existingAssignment.employeeId.name || "This employee"
-            : "This employee";
-        const err = new Error(`${empName} is already assigned on this date.`);
-        err.code = "DUPLICATE_ASSIGNMENT";
-        err.existingAssignment = {
-            employeeName: empName,
-            date: existingAssignment.date,
-            existingShift: existingAssignment.shiftTitle,
-            existingDutyArea: existingAssignment.dutyArea,
-        };
-        throw err;
+    for (const ass of neighbouringAssignments) {
+        const assDateStr = toCalendarDateStr(ass.date);
+        const empName = ass.employeeId
+            ? `${ass.employeeId.firstName || ""} ${ass.employeeId.lastName || ""}`.trim() || ass.employeeId.name || "This employee"
+            : `${targetEmp.firstName || ""} ${targetEmp.lastName || ""}`.trim() || "This employee";
+
+        // Check exact duplicate shift on same date
+        if (assDateStr === targetDateStr) {
+            const isSameCol = ass.columnId && newColumnId && String(ass.columnId) === String(newColumnId);
+            const isSameTitle = ass.shiftTitle?.toLowerCase() === newShiftTitle?.toLowerCase();
+            if (isSameCol || isSameTitle) {
+                const err = new Error(`${empName} is already assigned to the "${ass.shiftTitle}" shift on this date.`);
+                err.code = "DUPLICATE_ASSIGNMENT";
+                err.existingAssignment = {
+                    employeeName: empName,
+                    date: ass.date,
+                    existingShift: ass.shiftTitle,
+                    existingDutyArea: ass.dutyArea,
+                };
+                throw err;
+            }
+        }
+
+        // Check time overlap across neighbouring dates
+        const assInterval = getShiftIntervalUtc(assDateStr, ass.startTime, ass.endTime, tz);
+        if (candidateInterval && assInterval && areShiftsOverlapping(candidateInterval, assInterval)) {
+            const err = new Error(`${empName} has an overlapping shift "${ass.shiftTitle}" (${ass.startTime} - ${ass.endTime}) on ${assDateStr}.`);
+            err.code = "DUPLICATE_ASSIGNMENT";
+            err.existingAssignment = {
+                employeeName: empName,
+                date: ass.date,
+                existingShift: ass.shiftTitle,
+                existingDutyArea: ass.dutyArea,
+                conflictingTime: `${ass.startTime} - ${ass.endTime}`,
+            };
+            throw err;
+        }
     }
 
     if (columnId !== undefined) assignment.columnId = columnId;
@@ -1295,6 +1695,14 @@ const deleteAssignment = async ({ assignmentId, hospitalId, userId, scope = "THI
 
     if (await isHistoricalRoster(assignment.rosterId, hospitalId)) {
         const err = new Error("Historical rosters are read-only and cannot be modified.");
+        err.code = "BUSINESS_CONFLICT";
+        throw err;
+    }
+
+    // Attendance protection check
+    const attExists = await Attendance.findOne({ hospitalId, rosterAssignmentId: assignment._id }).lean();
+    if (attExists) {
+        const err = new Error("Cannot delete assignment because attendance records already exist for this shift.");
         err.code = "BUSINESS_CONFLICT";
         throw err;
     }

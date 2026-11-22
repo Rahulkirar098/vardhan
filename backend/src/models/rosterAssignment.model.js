@@ -69,7 +69,15 @@ const rosterAssignmentSchema = new mongoose.Schema(
     }
 );
 
-rosterAssignmentSchema.index({ hospitalId: 1, employeeId: 1, date: 1 }, { unique: true });
+rosterAssignmentSchema.index(
+    { hospitalId: 1, employeeId: 1, date: 1, columnId: 1 },
+    {
+        unique: true,
+        name: "hospitalId_1_employeeId_1_date_1_columnId_1",
+        partialFilterExpression: { columnId: { $type: "string" } },
+    }
+);
+rosterAssignmentSchema.index({ hospitalId: 1, employeeId: 1, date: 1 });
 
 const RosterAssignment = mongoose.model("RosterAssignment", rosterAssignmentSchema);
 

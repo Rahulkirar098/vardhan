@@ -226,8 +226,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "October 11 to 20 Nursing Schedule",
-                startDate: "2026-10-01",
-                endDate: "2026-10-31",
+                startDate: "2026-12-01",
+                endDate: "2026-12-31",
                 columns: [
                     { id: "col-1", title: "Morning", startTime: "08:00", endTime: "14:00", order: 1 },
                     { id: "col-2", title: "Afternoon", startTime: "14:00", endTime: "20:00", order: 2 },
@@ -253,7 +253,7 @@ async function runTests() {
         const res2 = await makeRequest("/api/v1/rosters", {
             method: "POST",
             headers: { Authorization: `Bearer ${nurse2Token}` },
-            body: { title: "Unauthorized Roster", startDate: "2026-10-01", endDate: "2026-10-31", columns: [], dutyAreas: [] },
+            body: { title: "Unauthorized Roster", startDate: "2026-12-01", endDate: "2026-12-31", columns: [], dutyAreas: [] },
         });
         assert.strictEqual(res2.status, 403);
         console.log("  ✓ 2. User without roster.manage cannot create Roster Draft (403 Forbidden)");
@@ -327,7 +327,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-12",
+                date: "2026-12-12",
                 columnId: "col-1",
                 shiftTitle: "Morning",
                 startTime: "08:00",
@@ -364,13 +364,16 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                date: "2026-10-14",
+                date: "2026-12-14",
                 shiftTitle: "Night",
                 startTime: "20:00",
                 endTime: "08:00",
                 dutyArea: "ICU 3rd Floor",
             },
         });
+        if (resEditPublished.status !== 201) {
+            console.log("resEditPublished error:", resEditPublished.body);
+        }
         assert.strictEqual(resEditPublished.status, 201);
         console.log("  ✓ 13. Published rosters are EDITABLE by authorized managers with roster.manage");
 
@@ -382,7 +385,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-15",
+                date: "2026-12-15",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -393,30 +396,47 @@ async function runTests() {
         const nurse1Sep15AssId = dbRes1.body.data._id;
         console.log("  ✓ DB 1. Employee can be assigned once on a date -> 201 PASS");
 
-        // DB 2: Same employee cannot be assigned to second shift on same date -> 409 Conflict
+        // DB 2: Same nurse can be assigned to second non-overlapping shift on same date -> 201 PASS
         const dbRes2 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
             method: "POST",
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-15",
+                date: "2026-12-15",
                 shiftTitle: "Afternoon",
                 startTime: "14:00",
                 endTime: "20:00",
                 dutyArea: "General Ward",
             },
         });
-        assert.strictEqual(dbRes2.status, 409);
-        assert.strictEqual(dbRes2.body.success, false);
-        console.log("  ✓ DB 2. Same employee cannot be assigned to second shift on same date -> 409 Conflict");
+        assert.strictEqual(dbRes2.status, 201);
+        assert.strictEqual(dbRes2.body.success, true);
+        console.log("  ✓ DB 2. Same nurse can be assigned to second non-overlapping shift on same date -> 201 PASS");
 
-        // DB 3: Same employee cannot be assigned to second duty area on same date -> 409 Conflict
+        // DB 2b: Exact duplicate shift assignment on same date is rejected -> 409 Conflict
+        const dbRes2b = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${hrToken}` },
+            body: {
+                employeeId: nurse1Employee._id,
+                date: "2026-12-15",
+                shiftTitle: "Morning",
+                startTime: "08:00",
+                endTime: "14:00",
+                dutyArea: "General Ward",
+            },
+        });
+        assert.strictEqual(dbRes2b.status, 409);
+        assert.strictEqual(dbRes2b.body.success, false);
+        console.log("  ✓ DB 2b. Exact duplicate shift assignment on same date is rejected -> 409 Conflict");
+
+        // DB 3: Overlapping shift time on same date is rejected -> 409 Conflict
         const dbRes3 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
             method: "POST",
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-15",
+                date: "2026-12-15",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -424,7 +444,7 @@ async function runTests() {
             },
         });
         assert.strictEqual(dbRes3.status, 409);
-        console.log("  ✓ DB 3. Same employee cannot be assigned to second duty area on same date -> 409 Conflict");
+        console.log("  ✓ DB 3. Overlapping shift time on same date is rejected -> 409 Conflict");
 
         // DB 4: Same employee can be assigned on next date -> 201 PASS
         const dbRes4 = await makeRequest(`/api/v1/rosters/${createdRosterId}/assignments`, {
@@ -432,7 +452,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-16",
+                date: "2026-12-16",
                 shiftTitle: "Night",
                 startTime: "20:00",
                 endTime: "08:00",
@@ -449,7 +469,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-11",
+                date: "2026-12-11",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -488,7 +508,7 @@ async function runTests() {
             method: "PUT",
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
-                date: "2026-10-15",
+                date: "2026-12-15",
             },
         });
         assert.strictEqual(dbRes8.status, 409);
@@ -500,7 +520,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                date: "2026-10-15",
+                date: "2026-12-15",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -516,7 +536,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: hrEmployee._id,
-                date: "2026-10-15",
+                date: "2026-12-15",
                 shiftTitle: "Night",
                 startTime: "20:00",
                 endTime: "08:00",
@@ -550,8 +570,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "October Draft Roster",
-                startDate: "2026-10-01",
-                endDate: "2026-10-10",
+                startDate: "2026-12-01",
+                endDate: "2026-12-10",
                 columns: [{ id: "col-1", title: "Morning", startTime: "08:00", endTime: "14:00", order: 1 }],
                 dutyAreas: [{ id: "da-1", name: "General Ward", order: 1 }],
             },
@@ -636,8 +656,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "October 2026 Nursing Roster",
-                startDate: "2026-10-01",
-                endDate: "2026-10-31",
+                startDate: "2026-12-01",
+                endDate: "2026-12-31",
                 columns: [{ id: "col-1", title: "Morning", startTime: "08:00", endTime: "14:00", order: 1 }],
                 dutyAreas: [{ id: "da-1", name: "ICU 3rd Floor", order: 1 }],
             },
@@ -822,7 +842,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-05",
+                date: "2026-12-05",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -838,7 +858,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: ineligibleEmp._id,
-                date: "2026-10-06",
+                date: "2026-12-06",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -876,7 +896,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: inactiveEmp._id,
-                date: "2026-10-07",
+                date: "2026-12-07",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -919,7 +939,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: hospBEmp._id,
-                date: "2026-10-08",
+                date: "2026-12-08",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -938,8 +958,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "Emergency October Roster",
-                startDate: "2026-10-01",
-                endDate: "2026-10-31",
+                startDate: "2026-12-01",
+                endDate: "2026-12-31",
                 columns: [{ id: "col-1", title: "Evening", startTime: "16:00", endTime: "00:00", order: 1 }],
                 dutyAreas: [{ id: "da-1", name: "Emergency", order: 1 }],
             },
@@ -958,7 +978,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-05", // Same date Nurse 1 is assigned in ICU roster
+                date: "2026-12-05", // Same date Nurse 1 is assigned in ICU roster
                 shiftTitle: "Evening",
                 startTime: "16:00",
                 endTime: "00:00",
@@ -1002,8 +1022,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "Phase 3 Operational Roster",
-                startDate: "2026-10-01",
-                endDate: "2026-10-31",
+                startDate: "2026-12-01",
+                endDate: "2026-12-31",
                 columns: [{ id: "col-m", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
                 dutyAreas: [{ id: "da-icu", name: "ICU", order: 1 }],
             },
@@ -1017,7 +1037,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                date: "2026-10-10",
+                date: "2026-12-10",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -1033,7 +1053,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: ineligibleEmp._id,
-                date: "2026-10-11",
+                date: "2026-12-11",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -1049,7 +1069,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: inactiveEmp._id,
-                date: "2026-10-12",
+                date: "2026-12-12",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -1081,7 +1101,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                date: "2026-10-13",
+                date: "2026-12-13",
                 shiftTitle: "Graveyard Shift", // Not in roster columns
                 startTime: "00:00",
                 endTime: "08:00",
@@ -1097,7 +1117,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                date: "2026-10-14",
+                date: "2026-12-14",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -1113,7 +1133,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-05", // Nurse 1 is already assigned on Oct 5 in Oct Roster
+                date: "2026-12-05", // Nurse 1 is already assigned on Oct 5 in Oct Roster
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -1129,7 +1149,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-20", // Nurse 1 not assigned on Oct 20
+                date: "2026-12-20", // Nurse 1 not assigned on Oct 20
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -1148,8 +1168,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "Invalid Empty Draft Roster",
-                startDate: "2026-10-01",
-                endDate: "2026-10-31",
+                startDate: "2026-12-01",
+                endDate: "2026-12-31",
                 columns: [], // No shifts!
                 dutyAreas: [],
             },
@@ -1185,7 +1205,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hospitalBAdminToken}` },
             body: {
                 employeeId: hospBEmp._id,
-                date: "2026-10-25",
+                date: "2026-12-25",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -1243,8 +1263,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "Active Roster C",
-                startDate: "2026-10-01",
-                endDate: "2026-11-15",
+                startDate: "2026-11-01",
+                endDate: "2026-12-15",
                 columns: [{ id: "col-1", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
                 dutyAreas: [{ id: "da-1", name: "OPD", order: 1 }],
             },
@@ -1262,8 +1282,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "Active Roster D",
-                startDate: "2026-10-10",
-                endDate: "2026-11-25",
+                startDate: "2026-11-10",
+                endDate: "2026-12-25",
                 columns: [{ id: "col-1", title: "Evening", startTime: "16:00", endTime: "00:00", order: 1 }],
                 dutyAreas: [{ id: "da-1", name: "OT", order: 1 }],
             },
@@ -1526,8 +1546,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "October Template-Based Roster",
-                startDate: "2026-10-01",
-                endDate: "2026-10-10",
+                startDate: "2026-12-01",
+                endDate: "2026-12-10",
                 templateId: createdTpl._id,
             },
         });
@@ -1581,8 +1601,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: rangeTestNurse._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-10",
+                startDate: "2026-12-01",
+                endDate: "2026-12-10",
                 columnId: "tpl-col-1",
                 shiftTitle: "Morning",
                 startTime: "08:00",
@@ -1601,7 +1621,7 @@ async function runTests() {
             body: {
                 employeeId: nurse2Employee._id,
                 startDate: "2026-09-30",
-                endDate: "2026-10-05",
+                endDate: "2026-12-05",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1616,8 +1636,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                startDate: "2026-10-05",
-                endDate: "2026-10-11",
+                startDate: "2026-12-05",
+                endDate: "2026-12-11",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1644,8 +1664,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: inactiveEmpObj._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-05",
+                startDate: "2026-12-01",
+                endDate: "2026-12-05",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1672,8 +1692,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: ineligEmpObj._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-05",
+                startDate: "2026-12-01",
+                endDate: "2026-12-05",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1689,8 +1709,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hospitalBAdminToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-05",
+                startDate: "2026-12-01",
+                endDate: "2026-12-05",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1706,8 +1726,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-05",
+                startDate: "2026-12-01",
+                endDate: "2026-12-05",
                 shiftTitle: "NonExistentShift",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1722,8 +1742,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-05",
+                startDate: "2026-12-01",
+                endDate: "2026-12-05",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1758,8 +1778,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: rangeTestNurse._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-10",
+                startDate: "2026-12-01",
+                endDate: "2026-12-10",
                 shiftTitle: "Evening",
                 startTime: "14:00",
                 endTime: "20:00",
@@ -1776,8 +1796,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: rangeTestNurse._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-10",
+                startDate: "2026-12-01",
+                endDate: "2026-12-10",
                 shiftTitle: "Evening",
                 startTime: "14:00",
                 endTime: "20:00",
@@ -1794,8 +1814,8 @@ async function runTests() {
             hospitalId: hospitalA._id,
             employeeId: nurse2Employee._id,
             leaveType: "CASUAL",
-            startDate: new Date("2026-10-05"),
-            endDate: new Date("2026-10-05"),
+            startDate: new Date("2026-12-05"),
+            endDate: new Date("2026-12-05"),
             totalDays: 1,
             appliedBy: tempAdminIdA,
             reason: "Personal work",
@@ -1808,8 +1828,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse2Employee._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-10",
+                startDate: "2026-12-01",
+                endDate: "2026-12-10",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1818,27 +1838,27 @@ async function runTests() {
         });
         assert.strictEqual(leaveBulkRes.status, 201);
         assert.ok(leaveBulkRes.body.approvedLeaveConflicts.length >= 1);
-        assert.strictEqual(leaveBulkRes.body.approvedLeaveConflicts[0].date, "2026-10-05");
-        // Verify 2026-10-05 assignment was NOT created
+        assert.strictEqual(leaveBulkRes.body.approvedLeaveConflicts[0].date, "2026-12-05");
+        // Verify 2026-12-05 assignment was NOT created
         const fetchRosterAssAfterBulk = await makeRequest(`/api/v1/rosters/${tplRoster._id}`, {
             method: "GET",
             headers: { Authorization: `Bearer ${hrToken}` },
         });
         const nurse2Oct5 = fetchRosterAssAfterBulk.body.data.assignments.find(
-            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-05" && a.employeeId._id === nurse2Employee._id.toString()
+            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-12-05" && a.employeeId._id === nurse2Employee._id.toString()
         );
         assert.strictEqual(nurse2Oct5, undefined);
-        console.log("  ✓ C4. Bulk range assignment skips approved leave date (2026-10-05) and returns conflict info");
+        console.log("  ✓ C4. Bulk range assignment skips approved leave date (2026-12-05) and returns conflict info");
 
         console.log("\n--- 9B. DEDICATED LEAVE ↔ ROSTER INTEGRATION TESTS ---");
         await RosterAssignment.deleteMany({ employeeId: nurse1Employee._id });
-        // Create an approved leave for nurse1 on 2026-10-07 to 2026-10-08
+        // Create an approved leave for nurse1 on 2026-12-07 to 2026-12-08
         await Leave.create({
             hospitalId: hospitalA._id,
             employeeId: nurse1Employee._id,
             leaveType: "SICK",
-            startDate: new Date("2026-10-07"),
-            endDate: new Date("2026-10-08"),
+            startDate: new Date("2026-12-07"),
+            endDate: new Date("2026-12-08"),
             totalDays: 2,
             appliedBy: tempAdminIdA,
             reason: "Medical leave",
@@ -1852,7 +1872,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-07",
+                date: "2026-12-07",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1869,7 +1889,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
         });
         const nurse1Oct7 = verifyNoAssRes.body.data.assignments.find(
-            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-07" && a.employeeId._id === nurse1Employee._id.toString()
+            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-12-07" && a.employeeId._id === nurse1Employee._id.toString()
         );
         assert.strictEqual(nurse1Oct7, undefined);
         console.log("  ✓ Test B. Confirmed 0 RosterAssignment documents created for blocked date");
@@ -1880,7 +1900,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-09",
+                date: "2026-12-09",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1895,8 +1915,8 @@ async function runTests() {
             hospitalId: hospitalA._id,
             employeeId: nurse1Employee._id,
             leaveType: "CASUAL",
-            startDate: new Date("2026-10-10"),
-            endDate: new Date("2026-10-10"),
+            startDate: new Date("2026-12-10"),
+            endDate: new Date("2026-12-10"),
             totalDays: 1,
             appliedBy: nurse1Employee._id,
             reason: "Personal work",
@@ -1908,7 +1928,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-10",
+                date: "2026-12-10",
                 shiftTitle: "Evening",
                 startTime: "14:00",
                 endTime: "20:00",
@@ -1923,8 +1943,8 @@ async function runTests() {
             hospitalId: hospitalA._id,
             employeeId: nurse1Employee._id,
             leaveType: "CASUAL",
-            startDate: new Date("2026-10-06"),
-            endDate: new Date("2026-10-06"),
+            startDate: new Date("2026-12-06"),
+            endDate: new Date("2026-12-06"),
             totalDays: 1,
             appliedBy: nurse1Employee._id,
             reason: "Rejected leave",
@@ -1936,7 +1956,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                date: "2026-10-06",
+                date: "2026-12-06",
                 shiftTitle: "Night",
                 startTime: "20:00",
                 endTime: "08:00",
@@ -1952,8 +1972,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse1Employee._id,
-                startDate: "2026-10-01",
-                endDate: "2026-10-10",
+                startDate: "2026-12-01",
+                endDate: "2026-12-10",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "14:00",
@@ -1971,7 +1991,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
         });
         const oct5Ass = fetchTplRosterAss.body.data.assignments.find(
-            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-05" && a.employeeId._id === rangeTestNurse._id.toString()
+            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-12-05" && a.employeeId._id === rangeTestNurse._id.toString()
         );
         assert.ok(oct5Ass);
 
@@ -1994,10 +2014,10 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
         });
         const oct4Ass = verifyOverrideRoster.body.data.assignments.find(
-            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-04" && a.employeeId._id === rangeTestNurse._id.toString()
+            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-12-04" && a.employeeId._id === rangeTestNurse._id.toString()
         );
         const oct6Ass = verifyOverrideRoster.body.data.assignments.find(
-            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-06" && a.employeeId._id === rangeTestNurse._id.toString()
+            (a) => new Date(a.date).toISOString().split("T")[0] === "2026-12-06" && a.employeeId._id === rangeTestNurse._id.toString()
         );
         assert.strictEqual(oct4Ass.shiftTitle, "Evening");
         assert.strictEqual(oct6Ass.shiftTitle, "Evening");
@@ -2050,8 +2070,8 @@ async function runTests() {
         const remRoster = await Roster.create({
             hospitalId: hospitalA._id,
             title: `Duty Removal Test Roster ${testSuffix}`,
-            startDate: new Date("2026-10-01T00:00:00.000Z"),
-            endDate: new Date("2026-10-10T23:59:59.999Z"),
+            startDate: new Date("2026-12-01T00:00:00.000Z"),
+            endDate: new Date("2026-12-10T23:59:59.999Z"),
             status: "DRAFT",
             shifts: [
                 { title: "Morning", startTime: "08:00", endTime: "16:00" },
@@ -2064,7 +2084,7 @@ async function runTests() {
         // Create assignments for remNurseEmployee: Morning -> ICU from 01 Oct to 10 Oct
         const nurse1AssignIds = {};
         for (let d = 1; d <= 10; d++) {
-            const dateStr = `2026-10-${String(d).padStart(2, "0")}`;
+            const dateStr = `2026-12-${String(d).padStart(2, "0")}`;
             const ass = await RosterAssignment.create({
                 rosterId: remRoster._id,
                 hospitalId: hospitalA._id,
@@ -2084,7 +2104,7 @@ async function runTests() {
             rosterId: remRoster._id,
             hospitalId: hospitalA._id,
             employeeId: nurse2Employee._id,
-            date: new Date("2026-10-05T00:00:00.000Z"),
+            date: new Date("2026-12-05T00:00:00.000Z"),
             shiftTitle: "Evening",
             startTime: "16:00",
             endTime: "00:00",
@@ -2096,11 +2116,11 @@ async function runTests() {
         const nurse1Attendance = await Attendance.create({
             hospitalId: hospitalA._id,
             employeeId: nurse1Employee._id,
-            date: new Date("2026-10-05T00:00:00.000Z"),
-            dateStr: "2026-10-05",
+            date: new Date("2026-12-05T00:00:00.000Z"),
+            dateStr: "2026-12-05",
             status: "PRESENT",
-            checkIn: new Date("2026-10-05T08:00:00.000Z"),
-            checkOut: new Date("2026-10-05T16:00:00.000Z"),
+            checkIn: new Date("2026-12-05T08:00:00.000Z"),
+            checkOut: new Date("2026-12-05T16:00:00.000Z"),
             workingMinutes: 480,
         });
 
@@ -2190,13 +2210,13 @@ async function runTests() {
             createdBy: tempAdminIdA,
         });
 
-        // Approved leave for Nurse 5: 2026-10-12 to 2026-10-13
+        // Approved leave for Nurse 5: 2026-12-12 to 2026-12-13
         const nurse5Leave = await Leave.create({
             hospitalId: hospitalA._id,
             employeeId: nurse5Employee._id,
             leaveType: "CASUAL",
-            startDate: new Date("2026-10-12"),
-            endDate: new Date("2026-10-13"),
+            startDate: new Date("2026-12-12"),
+            endDate: new Date("2026-12-13"),
             totalDays: 2,
             appliedBy: tempAdminIdA,
             reason: "Vacation",
@@ -2210,8 +2230,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "Nurse 5 Roster Oct 11-20",
-                startDate: "2026-10-11",
-                endDate: "2026-10-20",
+                startDate: "2026-12-11",
+                endDate: "2026-12-20",
                 columns: [{ id: "col-m", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
                 dutyAreas: [{ id: "da-gw", name: "General Ward", order: 1 }],
             },
@@ -2225,8 +2245,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse5Employee._id,
-                startDate: "2026-10-11",
-                endDate: "2026-10-20",
+                startDate: "2026-12-11",
+                endDate: "2026-12-20",
             },
         });
         assert.strictEqual(checkConflictRes.status, 200);
@@ -2237,19 +2257,19 @@ async function runTests() {
         const conflictDates = checkConflictRes.body.conflictingDates.map((c) => c.date);
 
         // TC-R2.1-002: Oct 11 does not conflict
-        assert.strictEqual(conflictDates.includes("2026-10-11"), false);
+        assert.strictEqual(conflictDates.includes("2026-12-11"), false);
         console.log("  ✓ TC-R2.1-002. Oct 11 does not conflict");
 
         // TC-R2.1-003: Oct 12 conflicts
-        assert.strictEqual(conflictDates.includes("2026-10-12"), true);
+        assert.strictEqual(conflictDates.includes("2026-12-12"), true);
         console.log("  ✓ TC-R2.1-003. Oct 12 conflicts");
 
         // TC-R2.1-004: Oct 13 conflicts
-        assert.strictEqual(conflictDates.includes("2026-10-13"), true);
+        assert.strictEqual(conflictDates.includes("2026-12-13"), true);
         console.log("  ✓ TC-R2.1-004. Oct 13 conflicts");
 
         // TC-R2.1-005: Oct 14 does not conflict
-        assert.strictEqual(conflictDates.includes("2026-10-14"), false);
+        assert.strictEqual(conflictDates.includes("2026-12-14"), false);
         console.log("  ✓ TC-R2.1-005. Oct 14 does not conflict");
 
         // TC-R2.1-013: Approved leave boundary is inclusive
@@ -2257,7 +2277,7 @@ async function runTests() {
         console.log("  ✓ TC-R2.1-013. Approved leave boundary is inclusive (exactly Oct 12 and Oct 13)");
 
         // TC-R2.1-014: A leave ending Oct 13 does NOT block Oct 14
-        assert.strictEqual(conflictDates.includes("2026-10-14"), false);
+        assert.strictEqual(conflictDates.includes("2026-12-14"), false);
         console.log("  ✓ TC-R2.1-014. A leave ending Oct 13 does NOT block Oct 14");
 
         // TC-R2.1-007: Cancel after leave confirmation creates zero assignments
@@ -2274,8 +2294,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse5Employee._id,
-                startDate: "2026-10-11",
-                endDate: "2026-10-20",
+                startDate: "2026-12-11",
+                endDate: "2026-12-20",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -2287,20 +2307,20 @@ async function runTests() {
         assert.strictEqual(bulkAssignRes.body.data.length, 8); // 10 days - 2 leave days = 8 assignments
 
         const assignedDates = bulkAssignRes.body.data.map((a) => new Date(a.date).toISOString().split("T")[0]);
-        assert.strictEqual(assignedDates.includes("2026-10-11"), true);
-        assert.strictEqual(assignedDates.includes("2026-10-12"), false);
-        assert.strictEqual(assignedDates.includes("2026-10-13"), false);
-        assert.strictEqual(assignedDates.includes("2026-10-14"), true);
-        assert.strictEqual(assignedDates.includes("2026-10-15"), true);
-        assert.strictEqual(assignedDates.includes("2026-10-16"), true);
-        assert.strictEqual(assignedDates.includes("2026-10-17"), true);
-        assert.strictEqual(assignedDates.includes("2026-10-18"), true);
-        assert.strictEqual(assignedDates.includes("2026-10-19"), true);
-        assert.strictEqual(assignedDates.includes("2026-10-20"), true);
+        assert.strictEqual(assignedDates.includes("2026-12-11"), true);
+        assert.strictEqual(assignedDates.includes("2026-12-12"), false);
+        assert.strictEqual(assignedDates.includes("2026-12-13"), false);
+        assert.strictEqual(assignedDates.includes("2026-12-14"), true);
+        assert.strictEqual(assignedDates.includes("2026-12-15"), true);
+        assert.strictEqual(assignedDates.includes("2026-12-16"), true);
+        assert.strictEqual(assignedDates.includes("2026-12-17"), true);
+        assert.strictEqual(assignedDates.includes("2026-12-18"), true);
+        assert.strictEqual(assignedDates.includes("2026-12-19"), true);
+        assert.strictEqual(assignedDates.includes("2026-12-20"), true);
         console.log("  ✓ TC-R2.1-006. Continue assignment creates assignments for Oct 11 and Oct 14-20 but not Oct 12-13");
 
         // TC-R2.1-008: Remove "this date only" removes only the selected date
-        const oct11Ass = bulkAssignRes.body.data.find((a) => new Date(a.date).toISOString().split("T")[0] === "2026-10-11");
+        const oct11Ass = bulkAssignRes.body.data.find((a) => new Date(a.date).toISOString().split("T")[0] === "2026-12-11");
         const removeThisDateRes = await makeRequest(`/api/v1/rosters/${tcRosterId}/assignments/${oct11Ass._id}?scope=THIS_DATE`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${hrToken}` },
@@ -2312,8 +2332,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
         });
         const remainingAssDatesSingle = afterSingleDeleteRoster.body.data.assignments.map((a) => new Date(a.date).toISOString().split("T")[0]);
-        assert.strictEqual(remainingAssDatesSingle.includes("2026-10-11"), false);
-        assert.strictEqual(remainingAssDatesSingle.includes("2026-10-14"), true);
+        assert.strictEqual(remainingAssDatesSingle.includes("2026-12-11"), false);
+        assert.strictEqual(remainingAssDatesSingle.includes("2026-12-14"), true);
         console.log("  ✓ TC-R2.1-008. Remove 'this date only' removes only the selected date");
 
         // Re-assign Oct 11 to test full removal
@@ -2322,7 +2342,7 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 employeeId: nurse5Employee._id,
-                date: "2026-10-11",
+                date: "2026-12-11",
                 shiftTitle: "Morning",
                 startTime: "08:00",
                 endTime: "16:00",
@@ -2336,8 +2356,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "Outside Roster Before",
-                startDate: "2026-10-01",
-                endDate: "2026-10-10",
+                startDate: "2026-12-01",
+                endDate: "2026-12-10",
                 columns: [{ id: "col-m", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
                 dutyAreas: [{ id: "da-gw", name: "General Ward", order: 1 }],
             },
@@ -2347,7 +2367,7 @@ async function runTests() {
             rosterId: outsideBeforeRosterId,
             hospitalId: hospitalA._id,
             employeeId: nurse5Employee._id,
-            date: new Date("2026-10-10"),
+            date: new Date("2026-12-10"),
             shiftTitle: "Morning",
             startTime: "08:00",
             endTime: "16:00",
@@ -2360,8 +2380,8 @@ async function runTests() {
             headers: { Authorization: `Bearer ${hrToken}` },
             body: {
                 title: "Outside Roster After",
-                startDate: "2026-10-21",
-                endDate: "2026-10-30",
+                startDate: "2026-12-21",
+                endDate: "2026-12-30",
                 columns: [{ id: "col-m", title: "Morning", startTime: "08:00", endTime: "16:00", order: 1 }],
                 dutyAreas: [{ id: "da-gw", name: "General Ward", order: 1 }],
             },
@@ -2371,7 +2391,7 @@ async function runTests() {
             rosterId: outsideAfterRosterId,
             hospitalId: hospitalA._id,
             employeeId: nurse5Employee._id,
-            date: new Date("2026-10-21"),
+            date: new Date("2026-12-21"),
             shiftTitle: "Morning",
             startTime: "08:00",
             endTime: "16:00",
@@ -2419,5 +2439,14 @@ async function runTests() {
 }
 
 if (require.main === module) {
-    runTests();
+    runTests()
+        .then(async () => {
+            await mongoose.disconnect();
+            process.exit(0);
+        })
+        .catch(async (err) => {
+            console.error("Roster Test Suite Failure:", err);
+            await mongoose.disconnect();
+            process.exit(1);
+        });
 }

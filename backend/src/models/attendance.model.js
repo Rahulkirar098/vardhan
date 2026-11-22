@@ -29,6 +29,13 @@ const attendanceSchema = new mongoose.Schema(
             default: null,
         },
 
+        rosterAssignmentId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "RosterAssignment",
+            default: null,
+            index: true,
+        },
+
         dateStr: {
             type: String,
             required: true,

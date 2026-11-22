@@ -381,10 +381,11 @@ const addAssignment = async (req, res) => {
                 details: error.details,
             });
         }
-        if (error.code === "DUPLICATE_ASSIGNMENT") {
+        if (error.code === 11000 || error.code === "DUPLICATE_ASSIGNMENT" || error.code === "SHIFT_OVERLAP") {
             return res.status(409).json({
                 success: false,
-                message: error.message,
+                code: error.code === 11000 ? "DUPLICATE_ASSIGNMENT" : error.code,
+                message: error.code === 11000 ? "This employee is already assigned to this shift on this date." : error.message,
                 details: error.existingAssignment,
             });
         }
@@ -438,10 +439,11 @@ const updateAssignment = async (req, res) => {
                 details: error.details,
             });
         }
-        if (error.code === "DUPLICATE_ASSIGNMENT") {
+        if (error.code === 11000 || error.code === "DUPLICATE_ASSIGNMENT" || error.code === "SHIFT_OVERLAP") {
             return res.status(409).json({
                 success: false,
-                message: error.message,
+                code: error.code === 11000 ? "DUPLICATE_ASSIGNMENT" : error.code,
+                message: error.code === 11000 ? "This employee is already assigned to this shift on this date." : error.message,
                 details: error.existingAssignment,
             });
         }
@@ -501,7 +503,23 @@ const addBulkRangeAssignments = async (req, res) => {
             return res.status(404).json({ success: false, message: "Hospital not found" });
         }
 
-        const { employeeId, startDate, endDate, columnId, shiftTitle, startTime, endTime, dutyArea, notes, overwriteConflicts } = req.body;
+        const {
+            employeeId,
+            startDate,
+            endDate,
+            dates,
+            shiftColumnIds,
+            shifts,
+            columnId,
+            shiftTitle,
+            startTime,
+            endTime,
+            dutyArea,
+            notes,
+            overwriteConflicts,
+            allOrNothing,
+        } = req.body;
+
         const result = await rosterService.addBulkRangeAssignments({
             hospitalId,
             userId: req.user.id || req.user._id,
@@ -509,6 +527,9 @@ const addBulkRangeAssignments = async (req, res) => {
             employeeId,
             startDate,
             endDate,
+            dates,
+            shiftColumnIds,
+            shifts,
             columnId,
             shiftTitle,
             startTime,
@@ -516,6 +537,7 @@ const addBulkRangeAssignments = async (req, res) => {
             dutyArea,
             notes,
             overwriteConflicts: !!overwriteConflicts,
+            allOrNothing: !!allOrNothing,
         });
 
         return res.status(201).json({
@@ -533,17 +555,26 @@ const addBulkRangeAssignments = async (req, res) => {
                 code: "LEAVE_CONFLICT",
                 message: error.message,
                 details: error.details,
+                conflicts: error.details?.conflicts || [],
             });
         }
-        if (error.code === "DUPLICATE_ASSIGNMENT") {
+        if (
+            error.code === 11000 ||
+            error.code === "DUPLICATE_ASSIGNMENT" ||
+            error.code === "SHIFT_OVERLAP" ||
+            error.code === "BUSINESS_CONFLICT" ||
+            error.code === "EMPLOYMENT_ENDED"
+        ) {
             return res.status(409).json({
                 success: false,
-                message: error.message,
-                details: error.existingAssignment,
+                code: error.code === 11000 ? "DUPLICATE_ASSIGNMENT" : error.code,
+                message:
+                    error.code === 11000
+                        ? "This employee is already assigned to this shift on one of the requested dates."
+                        : error.message,
+                details: error.details || error.existingAssignment,
+                conflicts: error.details?.conflicts || [],
             });
-        }
-        if (error.code === "BUSINESS_CONFLICT") {
-            return res.status(409).json({ success: false, message: error.message });
         }
         if (error.code === "VALIDATION_ERROR") {
             return res.status(400).json({ success: false, message: error.message });
