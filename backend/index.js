@@ -25,8 +25,32 @@ app.use(cors());
 
 // Serverless Mongoose Connection Middleware
 let isDbConnecting = null;
+let indexesMigrated = false;
+
+const ensureRosterAssignmentIndexes = async () => {
+    if (indexesMigrated) return;
+    try {
+        const coll = mongoose.connection.db.collection("rosterassignments");
+        const indexes = await coll.indexes();
+        const legacyIdx = indexes.find((i) => i.name === "hospitalId_1_employeeId_1_date_1");
+        if (legacyIdx && legacyIdx.unique) {
+            console.log("Dropping legacy unique index hospitalId_1_employeeId_1_date_1 on rosterassignments...");
+            await coll.dropIndex("hospitalId_1_employeeId_1_date_1");
+            await coll.createIndex(
+                { hospitalId: 1, employeeId: 1, date: 1 },
+                { name: "hospitalId_1_employeeId_1_date_1" }
+            );
+            console.log("Successfully migrated hospitalId_1_employeeId_1_date_1 to non-unique.");
+        }
+        indexesMigrated = true;
+    } catch (e) {
+        // Ignore if collection does not exist yet or index already dropped
+    }
+};
+
 const connectDB = async () => {
     if (mongoose.connection.readyState >= 1) {
+        await ensureRosterAssignmentIndexes();
         return;
     }
     if (!isDbConnecting) {
@@ -37,6 +61,7 @@ const connectDB = async () => {
         isDbConnecting = mongoose.connect(mongoUri);
     }
     await isDbConnecting;
+    await ensureRosterAssignmentIndexes();
 };
 
 app.use(async (req, res, next) => {
@@ -171,6 +196,7 @@ if (require.main === module) {
                 await Attendance.syncIndexes();
                 await AttendanceRegularization.syncIndexes();
                 await Roster.syncIndexes();
+                await ensureRosterAssignmentIndexes();
                 await RosterAssignment.syncIndexes();
                 await RosterTemplate.syncIndexes();
             } catch (indexErr) {
