@@ -1,0 +1,220 @@
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const path = require("path");
+
+require("dotenv").config({ path: path.join(__dirname, ".env") });
+
+const { authUserRoute } = require("./src/routes/auth.route");
+const { hospitalRoute } = require("./src/routes/hospital.route");
+const { superAdminRoute } = require("./src/routes/superAdmin.route");
+const { structureRoute } = require("./src/routes/structure.route");
+const { moduleRoute } = require("./src/routes/module.route");
+const { employeeRoute } = require("./src/routes/employee.route");
+const positionRoute = require("./src/routes/position.route");
+const { accessManagementRoute } = require("./src/routes/accessManagement.route");
+const { leaveRoute } = require("./src/routes/leave.route");
+const { attendanceRoute } = require("./src/routes/attendance.route");
+const rosterRoute = require("./src/routes/roster.routes");
+const rosterTemplateRoute = require("./src/routes/rosterTemplate.routes");
+
+const app = express();
+
+app.use(express.json());
+app.use(cors());
+
+// Serverless Mongoose Connection Middleware
+let isDbConnecting = null;
+let indexesMigrated = false;
+
+const ensureRosterAssignmentIndexes = async () => {
+    if (indexesMigrated) return;
+    try {
+        const coll = mongoose.connection.db.collection("rosterassignments");
+        const indexes = await coll.indexes();
+        const legacyIdx = indexes.find((i) => i.name === "hospitalId_1_employeeId_1_date_1");
+        if (legacyIdx && legacyIdx.unique) {
+            console.log("Dropping legacy unique index hospitalId_1_employeeId_1_date_1 on rosterassignments...");
+            await coll.dropIndex("hospitalId_1_employeeId_1_date_1");
+            await coll.createIndex(
+                { hospitalId: 1, employeeId: 1, date: 1 },
+                { name: "hospitalId_1_employeeId_1_date_1" }
+            );
+            console.log("Successfully migrated hospitalId_1_employeeId_1_date_1 to non-unique.");
+        }
+        indexesMigrated = true;
+    } catch (e) {
+        // Ignore if collection does not exist yet or index already dropped
+    }
+};
+
+const connectDB = async () => {
+    if (mongoose.connection.readyState >= 1) {
+        await ensureRosterAssignmentIndexes();
+        return;
+    }
+    if (!isDbConnecting) {
+        const mongoUri = process.env.MONGODB_URI;
+        if (!mongoUri) {
+            throw new Error("MONGODB_URI environment variable is missing");
+        }
+        isDbConnecting = mongoose.connect(mongoUri);
+    }
+    await isDbConnecting;
+    await ensureRosterAssignmentIndexes();
+};
+
+app.use(async (req, res, next) => {
+    if (req.path === "/") {
+        return next();
+    }
+    try {
+        await connectDB();
+        next();
+    } catch (dbErr) {
+        console.error("Database Connection Error:", dbErr.message);
+        return res.status(500).json({
+            success: false,
+            message: "Database connection failure: " + dbErr.message,
+        });
+    }
+});
+
+app.get("/", (req, res) => {
+    const Employee = require("./src/models/employee.model");
+
+    res.json({
+        message: "Welcome to Nuvince API!",
+        name: "Nuvince",
+        description: "Hospital Workforce Management Platform",
+        version: "1.0.0",
+        runtimeMarker: "NUVINCE-V1",
+        employeeModelSchemaPaths: Object.keys(Employee.schema.paths),
+    });
+});
+
+app.use("/api/auth", authUserRoute);
+app.use("/api/v1/auth", authUserRoute);
+app.use("/api/hospitals", hospitalRoute);
+app.use("/api/v1/hospitals", hospitalRoute);
+app.use("/api/super-admin", superAdminRoute);
+app.use("/api/v1/super-admin", superAdminRoute);
+app.use("/api/v1/hospitals/:hospitalId", structureRoute);
+app.use("/api/v1/modules", moduleRoute);
+app.use("/api/modules", moduleRoute);
+app.use("/api/v1/hrms/leaves", leaveRoute);
+app.use("/api/hrms/leaves", leaveRoute);
+app.use("/api/v1/leaves", leaveRoute);
+app.use("/api/leaves", leaveRoute);
+app.use("/api/v1/hrms/attendance", attendanceRoute);
+app.use("/api/hrms/attendance", attendanceRoute);
+app.use("/api/v1/attendance", attendanceRoute);
+app.use("/api/attendance", attendanceRoute);
+app.use("/api/v1/rosters", rosterRoute);
+app.use("/api/rosters", rosterRoute);
+app.use("/api/v1/hrms/rosters", rosterRoute);
+app.use("/api/hrms/rosters", rosterRoute);
+app.use("/api/v1/roster-templates", rosterTemplateRoute);
+app.use("/api/roster-templates", rosterTemplateRoute);
+app.use("/api/v1/hrms/roster-templates", rosterTemplateRoute);
+app.use("/api/hrms/roster-templates", rosterTemplateRoute);
+app.use("/api/v1/hrms", employeeRoute);
+app.use("/api/hrms", employeeRoute);
+app.use("/api/positions", positionRoute);
+app.use("/api/v1/positions", positionRoute);
+app.use("/api/v1/access-management", accessManagementRoute);
+app.use("/api/access-management", accessManagementRoute);
+
+const Floor = require("./src/models/floor.model");
+const Room = require("./src/models/room.model");
+const Invitation = require("./src/models/invitation.model");
+const Position = require("./src/models/position.model");
+const Leave = require("./src/models/leave.model");
+const Attendance = require("./src/models/attendance.model");
+const AttendanceRegularization = require("./src/models/attendanceRegularization.model");
+const Roster = require("./src/models/roster.model");
+const RosterAssignment = require("./src/models/rosterAssignment.model");
+const RosterTemplate = require("./src/models/rosterTemplate.model");
+
+const attendanceService = require("./src/services/attendance.service");
+
+let automaticAbsenceTimer = null;
+const AUTOMATIC_ABSENCE_INTERVAL_MS = 60 * 1000; // 1 minute
+
+const runAutomaticAbsenceJob = async () => {
+    try {
+        if (mongoose.connection.readyState >= 1) {
+            await attendanceService.processAutomaticAbsence();
+        }
+    } catch (err) {
+        console.error("Automatic Absence Scheduler Error:", err.message || err);
+    }
+};
+
+const startAutomaticAbsenceScheduler = (intervalMs = AUTOMATIC_ABSENCE_INTERVAL_MS) => {
+    if (automaticAbsenceTimer) {
+        return automaticAbsenceTimer;
+    }
+    runAutomaticAbsenceJob();
+    automaticAbsenceTimer = setInterval(runAutomaticAbsenceJob, intervalMs);
+    if (automaticAbsenceTimer && automaticAbsenceTimer.unref) {
+        automaticAbsenceTimer.unref();
+    }
+    return automaticAbsenceTimer;
+};
+
+const stopAutomaticAbsenceScheduler = () => {
+    if (automaticAbsenceTimer) {
+        clearInterval(automaticAbsenceTimer);
+        automaticAbsenceTimer = null;
+    }
+};
+
+process.on("SIGINT", () => {
+    stopAutomaticAbsenceScheduler();
+});
+
+process.on("SIGTERM", () => {
+    stopAutomaticAbsenceScheduler();
+});
+
+app.startAutomaticAbsenceScheduler = startAutomaticAbsenceScheduler;
+app.stopAutomaticAbsenceScheduler = stopAutomaticAbsenceScheduler;
+app.runAutomaticAbsenceJob = runAutomaticAbsenceJob;
+
+if (require.main === module) {
+    mongoose
+        .connect(process.env.MONGODB_URI)
+        .then(async () => {
+            console.log("Connected to MongoDB");
+            try {
+                await Floor.syncIndexes();
+                await Room.syncIndexes();
+                await Invitation.syncIndexes();
+                await Position.syncIndexes();
+                await Leave.syncIndexes();
+                await Attendance.syncIndexes();
+                await AttendanceRegularization.syncIndexes();
+                await Roster.syncIndexes();
+                await ensureRosterAssignmentIndexes();
+                await RosterAssignment.syncIndexes();
+                await RosterTemplate.syncIndexes();
+            } catch (indexErr) {
+                console.error("Error syncing indexes:", indexErr);
+            }
+
+            // Start automatic absence background scheduler
+            startAutomaticAbsenceScheduler();
+
+            app.listen(process.env.PORT || 3000, () => {
+                console.log(
+                    `Server started on port ${process.env.PORT || 3000}`
+                );
+            });
+        })
+        .catch((error) => {
+            console.log(`Connection error: ${error}`);
+        });
+}
+
+module.exports = app;
