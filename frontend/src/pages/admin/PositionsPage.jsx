@@ -3,7 +3,6 @@ import {
   Box,
   Chip,
   FormControlLabel,
-  FormGroup,
   IconButton,
   Paper,
   Stack,

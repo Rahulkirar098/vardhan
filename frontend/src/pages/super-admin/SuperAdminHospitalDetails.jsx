@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert, Box, Stack } from '@mui/material';
+import { Alert, Box } from '@mui/material';
 import { AppButton, MainContentLoader, PageHeader } from '../../components/common';
 import { ArrowBackRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';

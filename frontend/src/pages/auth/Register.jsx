@@ -3,14 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Alert,
   Box,
-  CircularProgress,
   Divider,
-  IconButton,
-  InputAdornment,
   Stack,
   Typography,
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../wrapper/AuthLayout';
 import { useSnackbar } from '../../theme/SnackbarProvider';

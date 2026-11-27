@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Box, Stack, Typography } from '@mui/material';
 import { AppInput, AppButton, MainContentLoader, PageHeader, KPICard } from '../../components/common';
-import { LocalHospitalRounded, SearchRounded, VisibilityRounded } from '@mui/icons-material';
+import { LocalHospitalRounded, VisibilityRounded } from '@mui/icons-material';
 import superAdmin from '../../services/superAdmin.service';
 import auth from '../../services/auth.service';
 import AppLayout from '../../wrapper/AppLayout';

@@ -13,19 +13,16 @@ import {
 } from '@mui/material';
 import { AppInput, AppButton, MainContentLoader, PageHeader, KPICard } from '../../components/common';
 import {
-  AccessTimeRounded,
   AddRounded,
   CalendarMonthRounded,
   CheckCircleOutlineRounded,
   CheckRounded,
   CloseRounded,
-  EditCalendarRounded,
   EventAvailableRounded,
   EventBusyRounded,
   HourglassEmptyRounded,
   LoginRounded,
   LogoutRounded,
-  PersonOutlineRounded,
   RefreshRounded,
   ScheduleRounded,
   SearchRounded,
