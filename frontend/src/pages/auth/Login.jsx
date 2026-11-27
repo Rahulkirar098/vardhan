@@ -5,7 +5,6 @@ import {
   Box,
   Divider,
   Stack,
-  Typography,
 } from '@mui/material';
 import auth from '../../services/auth.service';
 import AuthLayout from '../../wrapper/AuthLayout';
